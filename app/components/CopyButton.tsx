@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { track } from "../lib/analytics";
 
-export default function CopyButton({ text, platform }: { text: string; platform: string }) {
+function CopyButton({ text, platform }: { text: string; platform: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -61,3 +61,5 @@ export default function CopyButton({ text, platform }: { text: string; platform:
     </button>
   );
 }
+
+export default memo(CopyButton);

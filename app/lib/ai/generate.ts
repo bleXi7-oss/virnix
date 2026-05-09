@@ -3,14 +3,12 @@ import { SYSTEM_PROMPT, buildPrompt } from "../prompts";
 import { getTranscript } from "./transcript";
 import { getMockResult } from "./mock";
 import { parseAnthropicResponse } from "./parser";
+import { isEnabled } from "../flags";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
-// 1. Copy env.example → .env.local
-// 2. Set ANTHROPIC_API_KEY to your key from console.anthropic.com
-// 3. Change MOCK to false below
-// 4. Restart the dev server (npm run dev)
+// Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
+// and set ANTHROPIC_API_KEY to your key from console.anthropic.com.
 // ─────────────────────────────────────────────────────────────────────────────
-const MOCK = true;
 
 // Cap transcript input to keep prompt size and cost predictable.
 const MAX_WORDS = 3000;
@@ -23,7 +21,7 @@ function truncateTranscript(text: string): string {
 
 export async function generate(req: GenerateRequest): Promise<GenerateResult> {
   // Short-circuit before any network call — Vercel blocks youtube-transcript requests
-  if (MOCK) return getMockResult();
+  if (!isEnabled("real_ai_generation")) return getMockResult();
 
   let transcript: string;
   try {

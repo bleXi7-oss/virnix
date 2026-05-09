@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
 import { LOADING_STEPS } from "./lib/outputCards";
@@ -8,6 +8,7 @@ import type { OutputCardData } from "./lib/outputCards";
 import type { GenerateResponse } from "./lib/types/generation";
 import { isValidYouTubeUrl } from "./lib/youtube";
 import { track } from "./lib/analytics";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -37,16 +38,16 @@ export default function Home() {
   const apiResultRef = useRef<OutputCardData[] | null>(null);
   const genStartRef = useRef<number>(0);
 
-  function tryFinish() {
+  const tryFinish = useCallback(() => {
     if (animDoneRef.current && apiResultRef.current !== null) {
       setCards(apiResultRef.current);
       setPhase("done");
     }
-  }
+  }, []);
 
   // Core generation runner — accepts URL directly to avoid stale closure issues
   // when called from paste handler or example selection before setUrl flushes.
-  async function runGeneration(targetUrl: string) {
+  const runGeneration = useCallback(async (targetUrl: string) => {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -90,9 +91,9 @@ export default function Home() {
       setPhase("error");
       setError(message);
     }
-  }
+  }, [tryFinish]);
 
-  async function handleGenerate() {
+  const handleGenerate = useCallback(async () => {
     if (phase === "loading") return;
     const trimmedUrl = url.trim();
     if (!trimmedUrl) {
@@ -108,7 +109,7 @@ export default function Home() {
     }
     track("generate_clicked", { url: trimmedUrl });
     await runGeneration(trimmedUrl);
-  }
+  }, [phase, url, runGeneration]);
 
   function handleExampleSelect(exampleUrl: string, exampleLabel: string) {
     if (phase === "loading") return;
@@ -127,23 +128,23 @@ export default function Home() {
     setTimeout(() => void runGeneration(pasted), 200);
   }
 
-  function handleReset() {
+  const handleReset = useCallback(() => {
     timersRef.current.forEach(clearTimeout);
     setPhase("idle");
     setError(null);
     setCards([]);
     setStepIndex(-1);
-  }
+  }, []);
 
   function handleUrlChange(val: string) {
     setUrl(val);
     if (error && phase !== "loading") setError(null);
   }
 
-  function handleClearUrl() {
+  const handleClearUrl = useCallback(() => {
     setUrl("");
     setError(null);
-  }
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-white text-zinc-900 dark:bg-black dark:text-white">
@@ -177,7 +178,11 @@ export default function Home() {
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
 
-        {phase === "done" && <OutputPanel cards={cards} onReset={handleReset} />}
+        {phase === "done" && (
+          <ErrorBoundary>
+            <OutputPanel cards={cards} onReset={handleReset} />
+          </ErrorBoundary>
+        )}
 
         {phase === "error" && <ErrorPanel message={error} onRetry={handleReset} />}
 
@@ -208,7 +213,8 @@ function HeroCard({
   onClearUrl: () => void;
   error: string | null;
 }) {
-  const isValidUrl = url.trim().length > 0 && isValidYouTubeUrl(url.trim());
+  const trimmedUrl = url.trim();
+  const isValidUrl = trimmedUrl.length > 0 && isValidYouTubeUrl(trimmedUrl);
 
   function handleInputPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData("text");
@@ -347,7 +353,7 @@ function ExamplesRow({
 
 // ─── LoadingPanel ──────────────────────────────────────────────────────────────
 
-function ProgressBar() {
+const ProgressBar = memo(function ProgressBar() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -363,7 +369,7 @@ function ProgressBar() {
       />
     </div>
   );
-}
+});
 
 function LoadingPanel({ stepIndex, url }: { stepIndex: number; url: string }) {
   const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1];
@@ -508,7 +514,7 @@ function ErrorPanel({
 
 // ─── PlatformList ─────────────────────────────────────────────────────────────
 
-function PlatformList() {
+const PlatformList = memo(function PlatformList() {
   return (
     <div className="mt-8 flex flex-wrap justify-center gap-2">
       {["TikTok", "Twitter / X", "LinkedIn", "Instagram", "YouTube"].map((name) => (
@@ -521,7 +527,7 @@ function PlatformList() {
       ))}
     </div>
   );
-}
+});
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
@@ -536,7 +542,7 @@ function YouTubeIcon() {
   );
 }
 
-function GenerateButton({
+const GenerateButton = memo(function GenerateButton({
   phase,
   onClick,
 }: {
@@ -559,4 +565,4 @@ function GenerateButton({
       )}
     </button>
   );
-}
+});

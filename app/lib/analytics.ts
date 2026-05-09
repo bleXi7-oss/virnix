@@ -11,7 +11,11 @@
 //   Custom API: fetch("/api/events", { method: "POST", body: JSON.stringify({ event, properties }) })
 //
 // The public API (track, AnalyticsEvent, EventProperties) never needs to change.
+// Real provider calls are gated by the analytics_enabled feature flag —
+// set NEXT_PUBLIC_FLAG_ANALYTICS_ENABLED=true to activate them once wired.
 // ─────────────────────────────────────────────────────────────────────────────
+
+import { isEnabled } from "./flags";
 
 export type AnalyticsEvent =
   | "generate_clicked"
@@ -40,5 +44,6 @@ export function track<E extends AnalyticsEvent>(
   if (process.env.NODE_ENV === "development") {
     console.log("[analytics]", event, properties);
   }
+  if (!isEnabled("analytics_enabled")) return;
   // Future: analytics_provider.capture(event, properties)
 }

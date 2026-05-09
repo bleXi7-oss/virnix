@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { OutputCardData, IconType } from "../lib/outputCards";
 import CopyButton from "./CopyButton";
 
@@ -42,7 +43,7 @@ function PlatformIcon({ type }: { type: IconType }) {
   return null;
 }
 
-export default function OutputCard({
+function OutputCard({
   card,
   index,
 }: {
@@ -84,3 +85,5 @@ export default function OutputCard({
     </div>
   );
 }
+
+export default memo(OutputCard);
