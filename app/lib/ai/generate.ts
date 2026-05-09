@@ -22,7 +22,17 @@ function truncateTranscript(text: string): string {
 }
 
 export async function generate(req: GenerateRequest): Promise<GenerateResult> {
-  const transcript = await getTranscript(req.youtubeUrl);
+  // Short-circuit before any network call — Vercel blocks youtube-transcript requests
+  if (MOCK) return getMockResult();
+
+  let transcript: string;
+  try {
+    transcript = await getTranscript(req.youtubeUrl);
+  } catch (err) {
+    console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
+    // Fall back to mock cards so the user sees output rather than an error
+    return getMockResult();
+  }
 
   const words = transcript.split(/\s+/).filter(Boolean).length;
   const truncated = truncateTranscript(transcript);
@@ -31,9 +41,7 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
   console.log(
     `[virnix] transcript: ${words} words${wasTruncated ? ` → truncated to ${MAX_WORDS}` : ""}`
   );
-  console.log(`[virnix] preview: "${truncated.slice(0, 300)}${truncated.length > 300 ? "…" : ""}"`);
 
-  if (MOCK) return getMockResult();
   return realGenerate(truncated);
 }
 

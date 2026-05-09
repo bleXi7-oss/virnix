@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
     const data = await generate(body);
     return NextResponse.json({ ok: true, data } satisfies GenerateResponse);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal server error";
+    console.error("[virnix] /api/generate unhandled error:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { ok: false, error: message } satisfies GenerateResponse,
+      { ok: false, error: "Something went wrong. Please try again." } satisfies GenerateResponse,
       { status: 500 }
     );
   }
