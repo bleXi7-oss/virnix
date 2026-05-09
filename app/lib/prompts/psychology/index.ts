@@ -8,6 +8,8 @@ export const STORYTELLING_PATTERNS = [
   "problem → insight → solution: earn the answer before giving it",
   "contrarian take: challenge the assumed truth, then reveal the real truth",
   "confession + lesson: vulnerability builds more trust than credentials",
+  "name the villain: give the reader something to oppose — an idea, a norm, a lie they were told",
+  "delayed payoff: withhold the answer one beat longer than feels comfortable — tension drives reads",
 ] as const;
 
 // Phrases that create an irresistible need to keep reading.
@@ -17,6 +19,8 @@ export const CURIOSITY_TRIGGERS = [
   "The part they always leave out:",
   "Here's what actually happened:",
   "Stop doing X — do this instead:",
+  "The data says something completely different:",
+  "I've never said this publicly, but —",
 ] as const;
 
 // How to close content without sounding desperate for engagement.
@@ -25,13 +29,16 @@ export const CTA_PATTERNS = [
   "Ask for saves ('Save this') before asking for follows",
   "The best CTAs feel like a natural next step, not a demand",
   "End with a specific question, not 'What do you think?'",
+  "Challenge the reader: name a thing they can audit or test immediately",
 ] as const;
 
 // Rules that prevent generic AI writing. Apply to every output.
 export const ANTI_GENERIC_RULES = [
   "Never open with 'In today's world' or 'I'm excited to share'",
-  "Never use: leverage, synergy, game-changer, actionable insights",
+  "Never use: leverage, synergy, game-changer, actionable insights, unlock, journey",
   "Extract — don't summarize. One sharp insight beats five vague ones",
   "Write like a person, not a press release",
   "Cut hedging language: 'might', 'could possibly', 'perhaps consider'",
+  "Avoid: 'It's important to note', 'At the end of the day', 'The truth is...'",
+  "Replace vague with specific — '47%' beats 'many people', '3x revenue' beats 'significant growth'",
 ] as const;

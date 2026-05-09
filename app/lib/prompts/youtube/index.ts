@@ -9,6 +9,8 @@ export const YOUTUBE_TITLE_FORMULAS = [
   "Number hook: 'I Did X for 30 Days — Here's What Happened'",
   "Contrarian: 'Stop [Popular Thing] — Do This Instead'",
   "Before/after: '[Problem State] to [Result]: The Full System'",
+  "Data hook: 'I Studied [Number] [People/Cases] — Here's the Pattern'",
+  "Confession: 'I Was Wrong About [Conventional Wisdom] for Years'",
 ] as const;
 
 // Quality rules that prevent weak or misleading titles.
@@ -17,4 +19,6 @@ export const YOUTUBE_TITLE_RULES = [
   "Front-load the hook — the first 6 words are what viewers scan",
   "Numbers and specifics outperform vague superlatives",
   "Question titles perform in search; statement titles perform in feeds",
+  "Avoid overused phrases: 'Ultimate Guide', 'Changed My Life', 'Nobody Talks About'",
+  "The best titles create a knowledge gap the viewer must close by watching",
 ] as const;

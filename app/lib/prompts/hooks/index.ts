@@ -9,6 +9,8 @@ export const HOOK_PATTERNS = [
   "Curiosity gap: hint at the payoff without revealing it",
   "Confession: 'I used to think X. I was completely wrong.'",
   "Social proof inversion: 'Everyone does X — that's why it doesn't work'",
+  "Consequence first: start with what happened before explaining why",
+  "Counterintuitive number: lead with a specific result that seems wrong",
 ] as const;
 
 // Proven TikTok/Reels first-line openers.
@@ -19,4 +21,7 @@ export const TIKTOK_OPENING_LINES = [
   "Stop scrolling. This one's different.",
   "Here's the part they always skip:",
   "I wish someone had told me this earlier:",
+  "I was wrong about this for years.",
+  "The data says something completely different.",
+  "This broke everything I thought I knew.",
 ] as const;

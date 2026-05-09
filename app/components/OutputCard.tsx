@@ -51,7 +51,7 @@ export default function OutputCard({
 }) {
   return (
     <div
-      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] hover:border-zinc-300 dark:border-zinc-800 dark:bg-[#0a0a0a] dark:hover:border-zinc-700${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
+      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-[#0a0a0a] dark:hover:border-zinc-700 dark:hover:shadow-none${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="mb-4 flex items-start justify-between gap-2">
@@ -74,9 +74,6 @@ export default function OutputCard({
 
       <div className="mt-5 flex items-center gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800/50">
         <PlatformIcon type={card.iconType} />
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-600">
-          Ready
-        </span>
         <span className="text-[10px] text-zinc-400 dark:text-zinc-700">
           {card.charCount}
         </span>

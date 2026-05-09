@@ -10,6 +10,11 @@ import { isValidYouTubeUrl } from "./lib/youtube";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
+const EXAMPLES = [
+  { label: "Simon Sinek · TEDx", url: "https://www.youtube.com/watch?v=u4ZoJKF_VuA" },
+  { label: "Steve Jobs · Stanford", url: "https://www.youtube.com/watch?v=UF8uR6Z6KLc" },
+] as const;
+
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [stepIndex, setStepIndex] = useState(-1);
@@ -20,8 +25,6 @@ export default function Home() {
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
 
-  // Called by both the animation timer and the API response handler.
-  // Only proceeds once both have finished — whichever is last wins.
   function tryFinish() {
     if (animDoneRef.current && apiResultRef.current !== null) {
       setCards(apiResultRef.current);
@@ -29,19 +32,9 @@ export default function Home() {
     }
   }
 
-  async function handleGenerate() {
-    if (phase === "loading") return;
-
-    const trimmedUrl = url.trim();
-    if (!trimmedUrl) {
-      setError("Please paste a YouTube URL to get started.");
-      return;
-    }
-    if (!isValidYouTubeUrl(trimmedUrl)) {
-      setError("That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/...");
-      return;
-    }
-
+  // Core generation runner — accepts the URL directly to avoid stale closure issues
+  // when called from example selection (where setUrl hasn't flushed yet).
+  async function runGeneration(targetUrl: string) {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -64,11 +57,10 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ youtubeUrl: trimmedUrl }),
+        body: JSON.stringify({ youtubeUrl: targetUrl }),
       });
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
-
       const json: GenerateResponse = await res.json();
       if (!json.ok) throw new Error(json.error);
 
@@ -81,6 +73,27 @@ export default function Home() {
         err instanceof Error ? err.message : "Something went wrong. Please try again."
       );
     }
+  }
+
+  async function handleGenerate() {
+    if (phase === "loading") return;
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+      setError("Please paste a YouTube URL to get started.");
+      return;
+    }
+    if (!isValidYouTubeUrl(trimmedUrl)) {
+      setError("That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/...");
+      return;
+    }
+    await runGeneration(trimmedUrl);
+  }
+
+  function handleExampleSelect(exampleUrl: string) {
+    if (phase === "loading") return;
+    setUrl(exampleUrl);
+    setError(null);
+    void runGeneration(exampleUrl);
   }
 
   function handleReset() {
@@ -104,9 +117,9 @@ export default function Home() {
         aria-hidden="true"
       />
 
-      <div className="relative z-10 flex flex-col items-center px-4 pt-16 pb-28">
+      <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-28 sm:pt-16">
         {/* Top bar */}
-        <div className="relative mb-16 flex w-full max-w-2xl items-center justify-center">
+        <div className="relative mb-14 flex w-full max-w-2xl items-center justify-center sm:mb-16">
           <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-zinc-400 dark:text-zinc-600">
             VIRNIX
           </p>
@@ -120,13 +133,14 @@ export default function Home() {
           url={url}
           onUrlChange={handleUrlChange}
           onGenerate={handleGenerate}
+          onExampleSelect={handleExampleSelect}
           error={phase === "idle" ? error : null}
         />
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} />}
 
         {phase === "done" && (
-          <OutputPanel cards={cards} onGenerateAgain={handleGenerate} />
+          <OutputPanel cards={cards} onReset={handleReset} />
         )}
 
         {phase === "error" && (
@@ -134,9 +148,8 @@ export default function Home() {
         )}
 
         {phase === "idle" && !error && (
-          <p className="mt-10 text-center text-[12px] text-zinc-400 dark:text-zinc-600">
-            Generates &middot; TikTok Hook &middot; X Thread &middot; LinkedIn
-            Post &middot; Instagram Caption &middot; YouTube Titles
+          <p className="mt-8 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
+            TikTok &middot; Twitter/X &middot; LinkedIn &middot; Instagram &middot; YouTube
           </p>
         )}
       </div>
@@ -151,12 +164,14 @@ function HeroCard({
   url,
   onUrlChange,
   onGenerate,
+  onExampleSelect,
   error,
 }: {
   phase: Phase;
   url: string;
   onUrlChange: (val: string) => void;
   onGenerate: () => void;
+  onExampleSelect: (url: string) => void;
   error: string | null;
 }) {
   return (
@@ -166,10 +181,16 @@ function HeroCard({
         aria-hidden="true"
       />
       <div className="relative rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] transition-colors duration-300 dark:border-zinc-800/80 dark:bg-[#0a0a0a] dark:shadow-[0_40px_80px_rgba(0,0,0,0.9)] md:p-12">
-        <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-            AI Content Engine
+
+        <div className="mb-7 flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 dark:border-zinc-800 dark:bg-zinc-900/80">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+              AI Content Engine
+            </span>
+          </div>
+          <span className="text-[11px] text-zinc-400 dark:text-zinc-600">
+            ✦ Powered by Claude
           </span>
         </div>
 
@@ -192,6 +213,7 @@ function HeroCard({
               placeholder="https://youtube.com/watch?v=..."
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && onGenerate()}
               disabled={phase === "loading"}
               className="flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50 dark:text-white dark:placeholder-zinc-600"
             />
@@ -199,16 +221,39 @@ function HeroCard({
           <GenerateButton phase={phase} onClick={onGenerate} />
         </div>
 
+        {phase === "idle" && (
+          <ExamplesRow onSelect={onExampleSelect} />
+        )}
+
         <p className="mt-4 text-[12px]">
           {error ? (
             <span className="text-red-500 dark:text-red-400">{error}</span>
           ) : (
             <span className="text-zinc-400 dark:text-zinc-700">
-              No account required &middot; Works with any YouTube podcast
+              No account required &middot; Works with any captioned YouTube video
             </span>
           )}
         </p>
       </div>
+    </div>
+  );
+}
+
+// ─── ExamplesRow ──────────────────────────────────────────────────────────────
+
+function ExamplesRow({ onSelect }: { onSelect: (url: string) => void }) {
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-2">
+      <span className="text-[11px] text-zinc-400 dark:text-zinc-600">Try:</span>
+      {EXAMPLES.map(({ label, url }) => (
+        <button
+          key={url}
+          onClick={() => onSelect(url)}
+          className="cursor-pointer rounded-full border border-zinc-200 bg-transparent px-3 py-1 text-[11px] text-zinc-500 transition-all hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-500 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-300"
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -266,19 +311,35 @@ function LoadingPanel({ stepIndex }: { stepIndex: number }) {
 
 function OutputPanel({
   cards,
-  onGenerateAgain,
+  onReset,
 }: {
   cards: OutputCardData[];
-  onGenerateAgain: () => void;
+  onReset: () => void;
 }) {
   return (
     <>
-      <div className="mt-10 mb-5 flex w-full max-w-2xl items-center gap-4 animate-[fade-in_0.4s_ease_forwards]">
-        <div className="h-px flex-1 bg-gradient-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-700">
-          Generated Output
-        </span>
-        <div className="h-px flex-1 bg-gradient-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
+      <div className="mt-10 mb-5 w-full max-w-2xl animate-[fade-in_0.4s_ease_forwards]">
+        <div className="flex items-center gap-4">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
+          <div className="flex items-center gap-2">
+            <svg
+              className="h-3 w-3 text-emerald-500"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+              {cards.length} pieces ready to post
+            </span>
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
+        </div>
       </div>
 
       <div className="w-full max-w-2xl grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -288,10 +349,10 @@ function OutputPanel({
       </div>
 
       <button
-        onClick={onGenerateAgain}
+        onClick={onReset}
         className="mt-8 cursor-pointer text-[12px] font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400"
       >
-        Generate again ↺
+        ← Try another URL
       </button>
     </>
   );

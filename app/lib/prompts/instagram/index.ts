@@ -7,11 +7,14 @@ export const INSTAGRAM_TONE = [
   "POV framing works well: 'POV: you just discovered...'",
   "Relatable openers outperform motivational openers",
   "Emojis add meaning — they never replace words",
+  "Saves > likes: write so people want to come back to this later",
+  "Create the 'that's so me' moment in the opening line",
 ] as const;
 
 // Ready-to-use format block injected into buildPrompt.
 export const INSTAGRAM_FORMAT = `Open with a relatable moment or bold claim.
 Use → for bullet points — platform-native visual shorthand.
 2–3 emojis max, placed for emphasis not decoration.
-Close with a CTA question to drive comments.
-Keep under 400 chars. No hashtag blocks inside the caption body.`;
+Close with 'Save this' CTA or a specific question to drive saves and comments.
+Keep under 400 chars. No hashtag blocks inside the caption body.
+Never close with: 'What do you think?' or 'Drop a comment!' — too generic.`;

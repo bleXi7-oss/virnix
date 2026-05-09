@@ -1,5 +1,6 @@
 // Prompt assembler — imports from modular engines and composes the final prompts.
 // To improve any platform: edit its module. To improve core psychology: edit psychology/.
+// To add new variation patterns: edit variation/.
 // The public API (SYSTEM_PROMPT, buildPrompt) stays stable so generate.ts never changes.
 
 import { STORYTELLING_PATTERNS, ANTI_GENERIC_RULES } from "./psychology";
@@ -9,6 +10,7 @@ import { LINKEDIN_TONE, LINKEDIN_FORMAT } from "./linkedin";
 import { INSTAGRAM_TONE, INSTAGRAM_FORMAT } from "./instagram";
 import { YOUTUBE_TITLE_FORMULAS, YOUTUBE_TITLE_RULES } from "./youtube";
 import { CLEANUP_RULES } from "./cleanup";
+import { pickVariation, pickRandom, formatVariationBlock } from "./variation";
 
 function list(items: readonly string[]): string {
   return items.map((i) => `- ${i}`).join("\n");
@@ -43,19 +45,28 @@ Output schema (return exactly this structure):
 }`;
 
 // ─── User Prompt ───────────────────────────────────────────────────────────────
-// Injects the transcript and platform-specific guidance.
-// Each section is driven by its module — improve one platform by editing one file.
+// Injects the transcript, a freshly picked variation profile, and platform guidance.
+// Variation is re-picked on every call — same transcript produces a different emotional
+// angle each time, making repeated generations feel genuinely different.
 
 export function buildPrompt(transcript: string): string {
+  const variation = pickVariation();
+  const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+
   return `Transform this podcast transcript into viral content for 5 platforms.
 
 TRANSCRIPT:
 ${transcript}
 
+━━━ GENERATION PROFILE ━━━
+${formatVariationBlock(variation)}
+
+Apply this angle to all 5 platforms. Don't name the angle. Don't explain it. Embody it.
+
 Platform requirements:
 
 TikTok / Reels (~300 chars):
-Opening lines to use: ${TIKTOK_OPENING_LINES.slice(0, 3).join(" | ")}
+Opening line to use: "${tiktokOpener}"
 End with "Here's the exact system...". No hashtags.
 
 Twitter / X (~2000 chars):
