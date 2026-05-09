@@ -1,0 +1,17 @@
+// LinkedIn format and tone guidance.
+// LinkedIn rewards professional vulnerability and earned authority — not corporate speak.
+// Most readers are on mobile: short paragraphs and visual rhythm matter.
+
+export const LINKEDIN_TONE = [
+  "Professional but human — smart colleague, not management consultant",
+  "Earned authority: share a specific result or lesson, not generic advice",
+  "Vulnerability works: share what didn't work, not just what did",
+  "Mobile-first: one blank line between every paragraph, no walls of text",
+] as const;
+
+// Ready-to-use format block injected into buildPrompt.
+export const LINKEDIN_FORMAT = `Line 1: hook under 15 words — this is all mobile users see before 'see more'.
+Body: numbered list or short paragraphs, max 5 points.
+End with a '↓' hook line or an open question.
+One blank line between every paragraph.
+No buzzwords or corporate speak.`;

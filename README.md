@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Virnix
 
-## Getting Started
+Turn 1 podcast into 30 viral posts in 60 seconds.
 
-First, run the development server:
+Paste any YouTube link — get TikTok hooks, X threads, LinkedIn posts, Instagram captions, and YouTube title ideas ready to post.
+
+## Local setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install dependencies
+npm install
+
+# 2. Copy the env template
+cp .env.example .env.local
+
+# 3. Start the dev server
+npm run dev -- -p 3005
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3005](http://localhost:3005) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Mock mode (default)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Out of the box, Virnix runs in **mock mode** — no API key required, no AI calls, no cost. It fetches a real YouTube transcript and returns hardcoded demo cards so you can develop and test the full UI flow freely.
 
-## Learn More
+Mock mode is controlled by a single flag in `app/lib/ai/generate.ts`:
 
-To learn more about Next.js, take a look at the following resources:
+```ts
+const MOCK = true; // ← default, safe for development
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Enable real AI generation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+When you're ready to generate real content with Claude:
 
-## Deploy on Vercel
+1. Add your Anthropic API key to `.env.local`:
+   ```
+   ANTHROPIC_API_KEY=sk-ant-...
+   ```
+   Get a key at [console.anthropic.com](https://console.anthropic.com/).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. In `app/lib/ai/generate.ts`, change:
+   ```ts
+   const MOCK = false;
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Restart the dev server.
+
+That's it. The transcript layer, prompt, and parser are already wired — no other changes needed.
+
+> **Cost note:** Each generation call sends up to 3,000 words to Claude. At current Anthropic pricing this is a few cents per request.
+
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | For real AI only | Claude API key from console.anthropic.com |
+| `NEXT_PUBLIC_APP_URL` | For production | Absolute URL used in OG/Twitter metadata |
+
+See `.env.example` for the full template.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org/) — App Router
+- [Tailwind CSS](https://tailwindcss.com/) — styling
+- [youtube-transcript](https://www.npmjs.com/package/youtube-transcript) — transcript extraction
+- [Anthropic SDK](https://docs.anthropic.com/) — AI generation (real mode)

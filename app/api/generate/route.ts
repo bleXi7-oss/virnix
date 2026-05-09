@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generate } from "../../lib/ai/generate";
 import type { GenerateRequest, GenerateResponse } from "../../lib/types/generation";
+import { isValidYouTubeUrl } from "../../lib/youtube";
 
 export async function POST(req: NextRequest) {
   let body: GenerateRequest;
@@ -17,6 +18,13 @@ export async function POST(req: NextRequest) {
   if (!body.youtubeUrl || typeof body.youtubeUrl !== "string") {
     return NextResponse.json(
       { ok: false, error: "youtubeUrl is required" } satisfies GenerateResponse,
+      { status: 400 }
+    );
+  }
+
+  if (!isValidYouTubeUrl(body.youtubeUrl)) {
+    return NextResponse.json(
+      { ok: false, error: "Please provide a valid YouTube URL" } satisfies GenerateResponse,
       { status: 400 }
     );
   }

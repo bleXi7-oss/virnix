@@ -3,26 +3,97 @@
 import { useRef, useState } from "react";
 import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
-import { LOADING_STEPS, OUTPUT_CARDS } from "./lib/outputCards";
+import { LOADING_STEPS } from "./lib/outputCards";
+import type { OutputCardData } from "./lib/outputCards";
+import type { GenerateResponse } from "./lib/types/generation";
+import { isValidYouTubeUrl } from "./lib/youtube";
 
-type Phase = "idle" | "loading" | "done";
+type Phase = "idle" | "loading" | "done" | "error";
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [stepIndex, setStepIndex] = useState(-1);
+  const [url, setUrl] = useState("");
+  const [cards, setCards] = useState<OutputCardData[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const animDoneRef = useRef(false);
+  const apiResultRef = useRef<OutputCardData[] | null>(null);
 
-  function handleGenerate() {
+  // Called by both the animation timer and the API response handler.
+  // Only proceeds once both have finished — whichever is last wins.
+  function tryFinish() {
+    if (animDoneRef.current && apiResultRef.current !== null) {
+      setCards(apiResultRef.current);
+      setPhase("done");
+    }
+  }
+
+  async function handleGenerate() {
     if (phase === "loading") return;
+
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+      setError("Please paste a YouTube URL to get started.");
+      return;
+    }
+    if (!isValidYouTubeUrl(trimmedUrl)) {
+      setError("That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/...");
+      return;
+    }
+
     timersRef.current.forEach(clearTimeout);
+    animDoneRef.current = false;
+    apiResultRef.current = null;
     setPhase("loading");
     setStepIndex(0);
+    setError(null);
+    setCards([]);
+
     timersRef.current = [
       setTimeout(() => setStepIndex(1), 750),
       setTimeout(() => setStepIndex(2), 1450),
       setTimeout(() => setStepIndex(3), 2100),
-      setTimeout(() => setPhase("done"), 2750),
+      setTimeout(() => {
+        animDoneRef.current = true;
+        tryFinish();
+      }, 2750),
     ];
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ youtubeUrl: trimmedUrl }),
+      });
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+      const json: GenerateResponse = await res.json();
+      if (!json.ok) throw new Error(json.error);
+
+      apiResultRef.current = json.data.cards;
+      tryFinish();
+    } catch (err) {
+      timersRef.current.forEach(clearTimeout);
+      setPhase("error");
+      setError(
+        err instanceof Error ? err.message : "Something went wrong. Please try again."
+      );
+    }
+  }
+
+  function handleReset() {
+    timersRef.current.forEach(clearTimeout);
+    setPhase("idle");
+    setError(null);
+    setCards([]);
+    setStepIndex(-1);
+  }
+
+  function handleUrlChange(val: string) {
+    setUrl(val);
+    if (error && phase === "idle") setError(null);
   }
 
   return (
@@ -44,17 +115,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Hero card */}
-        <HeroCard phase={phase} onGenerate={handleGenerate} />
+        <HeroCard
+          phase={phase}
+          url={url}
+          onUrlChange={handleUrlChange}
+          onGenerate={handleGenerate}
+          error={phase === "idle" ? error : null}
+        />
 
-        {/* Loading steps */}
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} />}
 
-        {/* Generated output */}
-        {phase === "done" && <OutputPanel onGenerateAgain={handleGenerate} />}
+        {phase === "done" && (
+          <OutputPanel cards={cards} onGenerateAgain={handleGenerate} />
+        )}
 
-        {/* Idle hint */}
-        {phase === "idle" && (
+        {phase === "error" && (
+          <ErrorPanel message={error} onRetry={handleReset} />
+        )}
+
+        {phase === "idle" && !error && (
           <p className="mt-10 text-center text-[12px] text-zinc-400 dark:text-zinc-600">
             Generates &middot; TikTok Hook &middot; X Thread &middot; LinkedIn
             Post &middot; Instagram Caption &middot; YouTube Titles
@@ -69,10 +148,16 @@ export default function Home() {
 
 function HeroCard({
   phase,
+  url,
+  onUrlChange,
   onGenerate,
+  error,
 }: {
   phase: Phase;
+  url: string;
+  onUrlChange: (val: string) => void;
   onGenerate: () => void;
+  error: string | null;
 }) {
   return (
     <div className="relative w-full max-w-2xl">
@@ -81,7 +166,6 @@ function HeroCard({
         aria-hidden="true"
       />
       <div className="relative rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] transition-colors duration-300 dark:border-zinc-800/80 dark:bg-[#0a0a0a] dark:shadow-[0_40px_80px_rgba(0,0,0,0.9)] md:p-12">
-        {/* Eyebrow */}
         <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 dark:border-zinc-800 dark:bg-zinc-900/80">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
@@ -91,9 +175,7 @@ function HeroCard({
 
         <h1 className="mb-5 text-[2.5rem] font-bold leading-[1.1] tracking-[-0.03em] md:text-[3.4rem]">
           Turn 1 podcast into{" "}
-          <span className="text-zinc-400 dark:text-zinc-500">
-            30 viral posts
-          </span>{" "}
+          <span className="text-zinc-400 dark:text-zinc-500">30 viral posts</span>{" "}
           in 60 seconds.
         </h1>
 
@@ -102,13 +184,14 @@ function HeroCard({
           ready to post. No editing. No rewriting.
         </p>
 
-        {/* Input row */}
         <div className="flex flex-col gap-2.5 sm:flex-row">
           <div className="group flex flex-1 items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-3.5 transition-colors focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600">
             <YouTubeIcon />
             <input
               type="url"
               placeholder="https://youtube.com/watch?v=..."
+              value={url}
+              onChange={(e) => onUrlChange(e.target.value)}
               disabled={phase === "loading"}
               className="flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50 dark:text-white dark:placeholder-zinc-600"
             />
@@ -116,8 +199,14 @@ function HeroCard({
           <GenerateButton phase={phase} onClick={onGenerate} />
         </div>
 
-        <p className="mt-4 text-[12px] text-zinc-400 dark:text-zinc-700">
-          No account required &middot; Works with any YouTube podcast
+        <p className="mt-4 text-[12px]">
+          {error ? (
+            <span className="text-red-500 dark:text-red-400">{error}</span>
+          ) : (
+            <span className="text-zinc-400 dark:text-zinc-700">
+              No account required &middot; Works with any YouTube podcast
+            </span>
+          )}
         </p>
       </div>
     </div>
@@ -175,7 +264,13 @@ function LoadingPanel({ stepIndex }: { stepIndex: number }) {
 
 // ─── OutputPanel ──────────────────────────────────────────────────────────────
 
-function OutputPanel({ onGenerateAgain }: { onGenerateAgain: () => void }) {
+function OutputPanel({
+  cards,
+  onGenerateAgain,
+}: {
+  cards: OutputCardData[];
+  onGenerateAgain: () => void;
+}) {
   return (
     <>
       <div className="mt-10 mb-5 flex w-full max-w-2xl items-center gap-4 animate-[fade-in_0.4s_ease_forwards]">
@@ -187,7 +282,7 @@ function OutputPanel({ onGenerateAgain }: { onGenerateAgain: () => void }) {
       </div>
 
       <div className="w-full max-w-2xl grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {OUTPUT_CARDS.map((card, i) => (
+        {cards.map((card, i) => (
           <OutputCard key={card.platform} card={card} index={i} />
         ))}
       </div>
@@ -199,6 +294,32 @@ function OutputPanel({ onGenerateAgain }: { onGenerateAgain: () => void }) {
         Generate again ↺
       </button>
     </>
+  );
+}
+
+// ─── ErrorPanel ───────────────────────────────────────────────────────────────
+
+function ErrorPanel({
+  message,
+  onRetry,
+}: {
+  message: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="mt-8 w-full max-w-2xl animate-[fade-in_0.3s_ease_forwards]">
+      <div className="rounded-xl border border-red-200 bg-red-50 px-6 py-5 dark:border-red-900/40 dark:bg-red-950/20">
+        <p className="text-sm text-red-600 dark:text-red-400">
+          {message ?? "Something went wrong. Please try again."}
+        </p>
+        <button
+          onClick={onRetry}
+          className="mt-3 cursor-pointer text-[12px] font-medium text-red-500 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+        >
+          ← Try again
+        </button>
+      </div>
+    </div>
   );
 }
 

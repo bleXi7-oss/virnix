@@ -4,17 +4,40 @@ import { getTranscript } from "./transcript";
 import { getMockResult } from "./mock";
 import { parseAnthropicResponse } from "./parser";
 
-// Set to false once ANTHROPIC_API_KEY is in .env.local and transcript fetching works
+// ─── To enable real AI generation ────────────────────────────────────────────
+// 1. Copy env.example → .env.local
+// 2. Set ANTHROPIC_API_KEY to your key from console.anthropic.com
+// 3. Change MOCK to false below
+// 4. Restart the dev server (npm run dev)
+// ─────────────────────────────────────────────────────────────────────────────
 const MOCK = true;
 
-export async function generate(req: GenerateRequest): Promise<GenerateResult> {
-  if (MOCK) return getMockResult();
-  return realGenerate(req);
+// Cap transcript input to keep prompt size and cost predictable.
+const MAX_WORDS = 3000;
+
+function truncateTranscript(text: string): string {
+  const words = text.split(/\s+/);
+  if (words.length <= MAX_WORDS) return text;
+  return words.slice(0, MAX_WORDS).join(" ");
 }
 
-async function realGenerate(req: GenerateRequest): Promise<GenerateResult> {
+export async function generate(req: GenerateRequest): Promise<GenerateResult> {
   const transcript = await getTranscript(req.youtubeUrl);
 
+  const words = transcript.split(/\s+/).filter(Boolean).length;
+  const truncated = truncateTranscript(transcript);
+  const wasTruncated = truncated.length < transcript.length;
+
+  console.log(
+    `[virnix] transcript: ${words} words${wasTruncated ? ` → truncated to ${MAX_WORDS}` : ""}`
+  );
+  console.log(`[virnix] preview: "${truncated.slice(0, 300)}${truncated.length > 300 ? "…" : ""}"`);
+
+  if (MOCK) return getMockResult();
+  return realGenerate(truncated);
+}
+
+async function realGenerate(transcript: string): Promise<GenerateResult> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {

@@ -13,7 +13,18 @@ type RawOutput = {
 // Parses the raw JSON string from the Anthropic response into GenerateResult.
 // If Claude ever changes its output format, only this file needs to change.
 export function parseAnthropicResponse(text: string): GenerateResult {
-  const raw = JSON.parse(text) as RawOutput;
+  // Strip markdown code fences — Claude occasionally wraps JSON in ```json ... ```
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "")
+    .trim();
+
+  let raw: RawOutput;
+  try {
+    raw = JSON.parse(cleaned) as RawOutput;
+  } catch {
+    throw new Error("AI returned an unexpected format. Please try again.");
+  }
 
   const cards: OutputCardData[] = [
     {
