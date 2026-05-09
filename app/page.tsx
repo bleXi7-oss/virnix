@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
 import { LOADING_STEPS } from "./lib/outputCards";
@@ -14,6 +14,16 @@ const EXAMPLES = [
   { label: "Simon Sinek · TEDx", url: "https://www.youtube.com/watch?v=u4ZoJKF_VuA" },
   { label: "Steve Jobs · Stanford", url: "https://www.youtube.com/watch?v=UF8uR6Z6KLc" },
 ] as const;
+
+// Extracts a YouTube URL from arbitrary text (handles both plain URLs and embedded ones).
+function extractYouTubeUrl(text: string): string | null {
+  const trimmed = text.trim();
+  if (isValidYouTubeUrl(trimmed)) return trimmed;
+  const match = trimmed.match(
+    /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?[^\s]+|youtu\.be\/[^\s]+)/
+  );
+  return match ? match[0] : null;
+}
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -32,8 +42,8 @@ export default function Home() {
     }
   }
 
-  // Core generation runner — accepts the URL directly to avoid stale closure issues
-  // when called from example selection (where setUrl hasn't flushed yet).
+  // Core generation runner — accepts URL directly to avoid stale closure issues
+  // when called from paste handler or example selection before setUrl flushes.
   async function runGeneration(targetUrl: string) {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
@@ -79,11 +89,13 @@ export default function Home() {
     if (phase === "loading") return;
     const trimmedUrl = url.trim();
     if (!trimmedUrl) {
-      setError("Please paste a YouTube URL to get started.");
+      setError("Paste a YouTube URL above to get started.");
       return;
     }
     if (!isValidYouTubeUrl(trimmedUrl)) {
-      setError("That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/...");
+      setError(
+        "That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/..."
+      );
       return;
     }
     await runGeneration(trimmedUrl);
@@ -96,6 +108,15 @@ export default function Home() {
     void runGeneration(exampleUrl);
   }
 
+  // Called when a valid YouTube URL is detected in a paste event.
+  // Sets URL state immediately so the input shows the URL, then starts generation.
+  function handlePaste(pasted: string) {
+    if (phase === "loading") return;
+    setUrl(pasted);
+    setError(null);
+    setTimeout(() => void runGeneration(pasted), 200);
+  }
+
   function handleReset() {
     timersRef.current.forEach(clearTimeout);
     setPhase("idle");
@@ -106,7 +127,12 @@ export default function Home() {
 
   function handleUrlChange(val: string) {
     setUrl(val);
-    if (error && phase === "idle") setError(null);
+    if (error && phase !== "loading") setError(null);
+  }
+
+  function handleClearUrl() {
+    setUrl("");
+    setError(null);
   }
 
   return (
@@ -134,24 +160,18 @@ export default function Home() {
           onUrlChange={handleUrlChange}
           onGenerate={handleGenerate}
           onExampleSelect={handleExampleSelect}
+          onPaste={handlePaste}
+          onClearUrl={handleClearUrl}
           error={phase === "idle" ? error : null}
         />
 
-        {phase === "loading" && <LoadingPanel stepIndex={stepIndex} />}
+        {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
 
-        {phase === "done" && (
-          <OutputPanel cards={cards} onReset={handleReset} />
-        )}
+        {phase === "done" && <OutputPanel cards={cards} onReset={handleReset} />}
 
-        {phase === "error" && (
-          <ErrorPanel message={error} onRetry={handleReset} />
-        )}
+        {phase === "error" && <ErrorPanel message={error} onRetry={handleReset} />}
 
-        {phase === "idle" && !error && (
-          <p className="mt-8 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-            TikTok &middot; Twitter/X &middot; LinkedIn &middot; Instagram &middot; YouTube
-          </p>
-        )}
+        {phase === "idle" && !error && <PlatformList />}
       </div>
     </div>
   );
@@ -165,6 +185,8 @@ function HeroCard({
   onUrlChange,
   onGenerate,
   onExampleSelect,
+  onPaste,
+  onClearUrl,
   error,
 }: {
   phase: Phase;
@@ -172,8 +194,38 @@ function HeroCard({
   onUrlChange: (val: string) => void;
   onGenerate: () => void;
   onExampleSelect: (url: string) => void;
+  onPaste: (pasted: string) => void;
+  onClearUrl: () => void;
   error: string | null;
 }) {
+  const isValidUrl = url.trim().length > 0 && isValidYouTubeUrl(url.trim());
+
+  function handleInputPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    const youtubeUrl = extractYouTubeUrl(text);
+    if (youtubeUrl) {
+      e.preventDefault();
+      onPaste(youtubeUrl);
+    }
+  }
+
+  let hintText: React.ReactNode;
+  if (error) {
+    hintText = <span className="text-red-500 dark:text-red-400">{error}</span>;
+  } else if (isValidUrl) {
+    hintText = (
+      <span className="text-emerald-600 dark:text-emerald-500">
+        YouTube URL detected — press Enter or Generate to continue
+      </span>
+    );
+  } else {
+    hintText = (
+      <span className="text-zinc-400 dark:text-zinc-700">
+        No account required · Works with any captioned YouTube video
+      </span>
+    );
+  }
+
   return (
     <div className="relative w-full max-w-2xl">
       <div
@@ -206,34 +258,46 @@ function HeroCard({
         </p>
 
         <div className="flex flex-col gap-2.5 sm:flex-row">
-          <div className="group flex flex-1 items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-3.5 transition-colors focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600">
-            <YouTubeIcon />
+          <div
+            className={`group flex flex-1 items-center gap-3 rounded-xl border px-4 py-3.5 transition-all duration-200 ${
+              isValidUrl
+                ? "border-emerald-300 bg-emerald-50/40 dark:border-emerald-800/60 dark:bg-emerald-950/15"
+                : "border-zinc-200 bg-zinc-100 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600"
+            }`}
+          >
+            {isValidUrl ? (
+              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+            ) : (
+              <YouTubeIcon />
+            )}
             <input
               type="url"
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="Paste a YouTube URL..."
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onGenerate()}
+              onPaste={handleInputPaste}
               disabled={phase === "loading"}
-              className="flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50 dark:text-white dark:placeholder-zinc-600"
+              className="flex-1 bg-transparent text-base text-zinc-900 placeholder-zinc-400 outline-none disabled:opacity-50 sm:text-sm dark:text-white dark:placeholder-zinc-600"
             />
+            {url && phase !== "loading" && (
+              <button
+                onClick={onClearUrl}
+                aria-label="Clear URL"
+                className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-200 hover:text-zinc-600 dark:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-400"
+              >
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+                  <path d="M1 1l6 6M7 1L1 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
           </div>
           <GenerateButton phase={phase} onClick={onGenerate} />
         </div>
 
-        {phase === "idle" && (
-          <ExamplesRow onSelect={onExampleSelect} />
-        )}
+        {phase === "idle" && <ExamplesRow onSelect={onExampleSelect} currentUrl={url} />}
 
-        <p className="mt-4 text-[12px]">
-          {error ? (
-            <span className="text-red-500 dark:text-red-400">{error}</span>
-          ) : (
-            <span className="text-zinc-400 dark:text-zinc-700">
-              No account required &middot; Works with any captioned YouTube video
-            </span>
-          )}
-        </p>
+        <p className="mt-4 text-[12px]">{hintText}</p>
       </div>
     </div>
   );
@@ -241,33 +305,75 @@ function HeroCard({
 
 // ─── ExamplesRow ──────────────────────────────────────────────────────────────
 
-function ExamplesRow({ onSelect }: { onSelect: (url: string) => void }) {
+function ExamplesRow({
+  onSelect,
+  currentUrl,
+}: {
+  onSelect: (url: string) => void;
+  currentUrl: string;
+}) {
   return (
     <div className="mt-5 flex flex-wrap items-center gap-2">
       <span className="text-[11px] text-zinc-400 dark:text-zinc-600">Try:</span>
-      {EXAMPLES.map(({ label, url }) => (
-        <button
-          key={url}
-          onClick={() => onSelect(url)}
-          className="cursor-pointer rounded-full border border-zinc-200 bg-transparent px-3 py-1 text-[11px] text-zinc-500 transition-all hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-500 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-300"
-        >
-          {label}
-        </button>
-      ))}
+      {EXAMPLES.map(({ label, url }) => {
+        const isActive = currentUrl === url;
+        return (
+          <button
+            key={url}
+            onClick={() => onSelect(url)}
+            className={`cursor-pointer rounded-full border px-3 py-1 text-[11px] transition-all ${
+              isActive
+                ? "border-zinc-400 bg-zinc-100 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                : "border-zinc-200 bg-transparent text-zinc-500 hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-500 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-300"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
 // ─── LoadingPanel ──────────────────────────────────────────────────────────────
 
-function LoadingPanel({ stepIndex }: { stepIndex: number }) {
+function ProgressBar() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setProgress(100), 50);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <div className="mb-5 h-px w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900">
+      <div
+        className="h-full bg-gradient-to-r from-zinc-300 to-zinc-400 transition-[width] duration-[2400ms] ease-out dark:from-zinc-700 dark:to-zinc-500"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
+}
+
+function LoadingPanel({ stepIndex, url }: { stepIndex: number; url: string }) {
+  const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1];
+
   return (
     <div className="mt-8 w-full max-w-2xl animate-[fade-in_0.3s_ease_forwards]">
       <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 dark:border-zinc-800 dark:bg-[#0a0a0a]">
+        <ProgressBar />
+
+        {videoId && (
+          <p className="mb-4 font-mono text-[10px] text-zinc-400 dark:text-zinc-700">
+            youtu.be/{videoId}
+          </p>
+        )}
+
         <div className="space-y-3.5">
           {LOADING_STEPS.map((label, i) => {
             if (i > stepIndex) return null;
             const isDone = i < stepIndex;
+            const isActive = i === stepIndex;
             return (
               <div
                 key={label}
@@ -290,10 +396,12 @@ function LoadingPanel({ stepIndex }: { stepIndex: number }) {
                   <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent dark:border-zinc-600" />
                 )}
                 <span
-                  className={`text-sm ${
+                  className={`text-sm transition-colors ${
                     isDone
                       ? "text-zinc-400 dark:text-zinc-600"
-                      : "text-zinc-700 dark:text-zinc-300"
+                      : isActive
+                        ? "font-medium text-zinc-800 dark:text-zinc-200"
+                        : "text-zinc-700 dark:text-zinc-300"
                   }`}
                 >
                   {label}
@@ -348,9 +456,13 @@ function OutputPanel({
         ))}
       </div>
 
+      <p className="mt-6 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
+        Copy any card · {cards.length} platforms covered
+      </p>
+
       <button
         onClick={onReset}
-        className="mt-8 cursor-pointer text-[12px] font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400"
+        className="mt-3 cursor-pointer text-[12px] font-medium text-zinc-400 transition-colors hover:text-zinc-700 dark:text-zinc-600 dark:hover:text-zinc-400"
       >
         ← Try another URL
       </button>
@@ -380,6 +492,23 @@ function ErrorPanel({
           ← Try again
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── PlatformList ─────────────────────────────────────────────────────────────
+
+function PlatformList() {
+  return (
+    <div className="mt-8 flex flex-wrap justify-center gap-2">
+      {["TikTok", "Twitter / X", "LinkedIn", "Instagram", "YouTube"].map((name) => (
+        <span
+          key={name}
+          className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-600"
+        >
+          {name}
+        </span>
+      ))}
     </div>
   );
 }

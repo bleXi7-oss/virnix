@@ -11,10 +11,10 @@ export interface OutputCardData {
 }
 
 export const LOADING_STEPS = [
-  "Fetching transcript...",
-  "Spotting viral moments...",
-  "Writing your hooks...",
-  "Packaging your content kit...",
+  "Analyzing your video...",
+  "Spotting the viral moments...",
+  "Writing hooks for each platform...",
+  "Building your content kit...",
 ] as const;
 
 export const OUTPUT_CARDS: OutputCardData[] = [
