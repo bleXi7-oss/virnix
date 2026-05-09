@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { track } from "../lib/analytics";
 
 type Theme = "dark" | "light";
 
@@ -75,7 +76,11 @@ export default function ThemeToggle() {
 
   return (
     <button
-      onClick={() => applyTheme(isDark ? "light" : "dark")}
+      onClick={() => {
+        const next = isDark ? "light" : "dark";
+        applyTheme(next);
+        track("theme_changed", { theme: next });
+      }}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-zinc-500 transition-all hover:border-zinc-300 hover:bg-zinc-200 hover:text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
     >

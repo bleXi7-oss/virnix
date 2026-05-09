@@ -78,7 +78,7 @@ export default function OutputCard({
           {card.charCount}
         </span>
         <div className="ml-auto">
-          <CopyButton text={card.content} />
+          <CopyButton text={card.content} platform={card.platform} />
         </div>
       </div>
     </div>

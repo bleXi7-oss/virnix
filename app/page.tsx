@@ -7,6 +7,7 @@ import { LOADING_STEPS } from "./lib/outputCards";
 import type { OutputCardData } from "./lib/outputCards";
 import type { GenerateResponse } from "./lib/types/generation";
 import { isValidYouTubeUrl } from "./lib/youtube";
+import { track } from "./lib/analytics";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -34,6 +35,7 @@ export default function Home() {
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
+  const genStartRef = useRef<number>(0);
 
   function tryFinish() {
     if (animDoneRef.current && apiResultRef.current !== null) {
@@ -48,6 +50,7 @@ export default function Home() {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
+    genStartRef.current = Date.now();
     setPhase("loading");
     setStepIndex(0);
     setError(null);
@@ -75,13 +78,17 @@ export default function Home() {
       if (!json.ok) throw new Error(json.error);
 
       apiResultRef.current = json.data.cards;
+      track("generation_completed", {
+        duration_ms: Date.now() - genStartRef.current,
+        card_count: json.data.cards.length,
+      });
       tryFinish();
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      track("generation_failed", { error: message });
       timersRef.current.forEach(clearTimeout);
       setPhase("error");
-      setError(
-        err instanceof Error ? err.message : "Something went wrong. Please try again."
-      );
+      setError(message);
     }
   }
 
@@ -93,16 +100,19 @@ export default function Home() {
       return;
     }
     if (!isValidYouTubeUrl(trimmedUrl)) {
+      track("invalid_url", { url: trimmedUrl });
       setError(
         "That doesn't look like a YouTube URL. Try youtube.com/watch?v=... or youtu.be/..."
       );
       return;
     }
+    track("generate_clicked", { url: trimmedUrl });
     await runGeneration(trimmedUrl);
   }
 
-  function handleExampleSelect(exampleUrl: string) {
+  function handleExampleSelect(exampleUrl: string, exampleLabel: string) {
     if (phase === "loading") return;
+    track("example_clicked", { label: exampleLabel, url: exampleUrl });
     setUrl(exampleUrl);
     setError(null);
     void runGeneration(exampleUrl);
@@ -193,7 +203,7 @@ function HeroCard({
   url: string;
   onUrlChange: (val: string) => void;
   onGenerate: () => void;
-  onExampleSelect: (url: string) => void;
+  onExampleSelect: (url: string, label: string) => void;
   onPaste: (pasted: string) => void;
   onClearUrl: () => void;
   error: string | null;
@@ -309,7 +319,7 @@ function ExamplesRow({
   onSelect,
   currentUrl,
 }: {
-  onSelect: (url: string) => void;
+  onSelect: (url: string, label: string) => void;
   currentUrl: string;
 }) {
   return (
@@ -320,7 +330,7 @@ function ExamplesRow({
         return (
           <button
             key={url}
-            onClick={() => onSelect(url)}
+            onClick={() => onSelect(url, label)}
             className={`cursor-pointer rounded-full border px-3 py-1 text-[11px] transition-all ${
               isActive
                 ? "border-zinc-400 bg-zinc-100 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"

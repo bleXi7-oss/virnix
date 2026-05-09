@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { track } from "../lib/analytics";
 
-export default function CopyButton({ text }: { text: string }) {
+export default function CopyButton({ text, platform }: { text: string; platform: string }) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
     navigator.clipboard.writeText(text).catch(() => {});
+    track("copy_clicked", { platform });
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
