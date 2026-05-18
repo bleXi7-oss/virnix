@@ -1,13 +1,17 @@
 import type { GenerateRequest, GenerateResult } from "../types/generation";
-import { SYSTEM_PROMPT, buildPrompt } from "../prompts";
+import { SYSTEM_PROMPT, ADVANCED_SYSTEM_PROMPT, buildPrompt, buildAdvancedPrompt } from "../prompts";
 import { getTranscript } from "./transcript";
 import { getMockResult } from "./mock";
 import { parseAnthropicResponse } from "./parser";
 import { isEnabled } from "../flags";
+import { getProvider } from "./provider";
+import { estimateTokens, estimateCost } from "./chunker";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
 // Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
 // and set ANTHROPIC_API_KEY to your key from console.anthropic.com.
+// For advanced outputs (blog, timestamps, short-form): also set
+// NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=true.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Cap transcript input to keep prompt size and cost predictable.
@@ -44,23 +48,25 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
 }
 
 async function realGenerate(transcript: string): Promise<GenerateResult> {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": process.env.ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-opus-4-7",
-      max_tokens: 4096,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: buildPrompt(transcript) }],
-    }),
+  const useAdvanced = isEnabled("advanced_outputs");
+  const systemPrompt = useAdvanced ? ADVANCED_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const userPrompt = useAdvanced ? buildAdvancedPrompt(transcript) : buildPrompt(transcript);
+
+  const provider = getProvider();
+
+  // Log estimated cost before the API call for cost observability
+  const estimatedInput = estimateTokens(systemPrompt + userPrompt);
+  const { estimatedUSD } = estimateCost(estimatedInput, 4096);
+  console.log(
+    `[virnix] AI call — provider: ${provider.name}, ~${estimatedInput} input tokens, ~$${estimatedUSD.toFixed(4)} estimated`
+  );
+
+  // TODO: add a circuit breaker here once per-user cost tracking is implemented
+  const text = await provider.complete({
+    system: systemPrompt,
+    user: userPrompt,
+    maxTokens: useAdvanced ? 6144 : 4096,
   });
 
-  if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
-
-  const data = await res.json();
-  return parseAnthropicResponse(data.content[0].text);
+  return parseAnthropicResponse(text);
 }

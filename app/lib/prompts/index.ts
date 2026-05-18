@@ -1,7 +1,9 @@
 // Prompt assembler — imports from modular engines and composes the final prompts.
 // To improve any platform: edit its module. To improve core psychology: edit psychology/.
 // To add new variation patterns: edit variation/.
-// The public API (SYSTEM_PROMPT, buildPrompt) stays stable so generate.ts never changes.
+// Public API:
+//   SYSTEM_PROMPT / buildPrompt           → core 5 outputs
+//   ADVANCED_SYSTEM_PROMPT / buildAdvancedPrompt → all 8 outputs (advanced_outputs flag)
 
 import { STORYTELLING_PATTERNS, ANTI_GENERIC_RULES } from "./psychology";
 import { TIKTOK_OPENING_LINES } from "./hooks";
@@ -11,16 +13,16 @@ import { INSTAGRAM_TONE, INSTAGRAM_FORMAT } from "./instagram";
 import { YOUTUBE_TITLE_FORMULAS, YOUTUBE_TITLE_RULES } from "./youtube";
 import { CLEANUP_RULES } from "./cleanup";
 import { pickVariation, pickRandom, formatVariationBlock } from "./variation";
+import { CORE_OUTPUT_SCHEMA, ADVANCED_OUTPUT_SCHEMA } from "../ai/schemas";
 
 function list(items: readonly string[]): string {
   return items.map((i) => `- ${i}`).join("\n");
 }
 
-// ─── System Prompt ─────────────────────────────────────────────────────────────
-// Establishes Virnix identity, creator psychology, and anti-generic rules.
-// Sent once per request as the system message — kept lean intentionally.
+// ─── Shared preamble ──────────────────────────────────────────────────────────
+// Common identity + rules injected into both system prompts.
 
-export const SYSTEM_PROMPT = `You are Virnix, an AI content repurposing engine for creators.
+const IDENTITY_BLOCK = `You are Virnix, an AI content repurposing engine for creators.
 
 Your job: transform podcast/video transcripts into platform-native viral content.
 
@@ -33,18 +35,41 @@ ${list(ANTI_GENERIC_RULES)}
 Rules:
 - Return only valid JSON, no commentary, no markdown fences
 - Write in a creator voice: direct, punchy, hook-driven
-- Prioritize viral potential over comprehensiveness
+- Prioritize viral potential over comprehensiveness`;
+
+// ─── Core system prompt (5 outputs) ──────────────────────────────────────────
+
+export const SYSTEM_PROMPT = `${IDENTITY_BLOCK}
 
 Output schema (return exactly this structure):
-{
-  "tiktok":    { "content": "<60-sec hook script, ~300 chars>" },
-  "twitter":   { "content": "<8-tweet thread numbered 1/ through 8/, ~2000 chars>" },
-  "linkedin":  { "content": "<professional post with line breaks, ~600 chars>" },
-  "instagram": { "content": "<casual caption with arrows and CTA, ~400 chars>" },
-  "youtube":   { "content": "<5 title options numbered 1-5, ~300 chars total>" }
-}`;
+${CORE_OUTPUT_SCHEMA}`;
 
-// ─── User Prompt ───────────────────────────────────────────────────────────────
+// ─── Advanced system prompt (8 outputs) ──────────────────────────────────────
+// Used when NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=true.
+// Requests blog summary, YouTube timestamps, and a short-form script in addition
+// to the core 5 outputs. Increases max_tokens to 6144.
+
+export const ADVANCED_SYSTEM_PROMPT = `${IDENTITY_BLOCK}
+
+Output schema (return exactly this structure):
+${ADVANCED_OUTPUT_SCHEMA}
+
+Additional output guidance:
+
+Short-Form Script (~500 chars):
+Structure: HOOK (one punchy line) → BODY (2-3 tight sentences with the insight) → CTA (one specific action)
+No hashtags. No filler. Every word earns its place.
+
+YouTube Timestamps (~300 chars):
+Format: "0:00 [Chapter name]\n1:23 [Chapter name]"
+Infer plausible timestamps from the transcript content. Keep chapter names under 5 words.
+Start at 0:00. Include 5-8 chapters.
+
+Blog Summary (~800 chars):
+Structure: one-sentence intro → 3 bullet-point key insights (specific, no fluff) → one-sentence conclusion CTA
+Each bullet: bold insight in plain language, not academic.`;
+
+// ─── Core user prompt ─────────────────────────────────────────────────────────
 // Injects the transcript, a freshly picked variation profile, and platform guidance.
 // Variation is re-picked on every call — same transcript produces a different emotional
 // angle each time, making repeated generations feel genuinely different.
@@ -89,6 +114,68 @@ Formulas:
 ${list(YOUTUBE_TITLE_FORMULAS)}
 Rules:
 ${list(YOUTUBE_TITLE_RULES)}
+
+Output cleanup — apply to all platforms:
+${list(CLEANUP_RULES)}
+
+Return only the JSON object, nothing else.`;
+}
+
+// ─── Advanced user prompt (8 outputs) ────────────────────────────────────────
+// Extends buildPrompt with 3 additional platform sections.
+
+export function buildAdvancedPrompt(transcript: string): string {
+  const variation = pickVariation();
+  const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+
+  return `Transform this podcast transcript into viral content for 8 platforms.
+
+TRANSCRIPT:
+${transcript}
+
+━━━ GENERATION PROFILE ━━━
+${formatVariationBlock(variation)}
+
+Apply this angle to all platforms. Don't name the angle. Don't explain it. Embody it.
+
+Platform requirements:
+
+TikTok / Reels (~300 chars):
+Opening line to use: "${tiktokOpener}"
+End with "Here's the exact system...". No hashtags.
+
+Twitter / X (~2000 chars):
+Tone:
+${list(TWITTER_TONE)}
+Format: ${TWITTER_FORMAT}
+
+LinkedIn (~600 chars):
+Tone:
+${list(LINKEDIN_TONE)}
+Format: ${LINKEDIN_FORMAT}
+
+Instagram (~400 chars):
+Tone:
+${list(INSTAGRAM_TONE)}
+Format: ${INSTAGRAM_FORMAT}
+
+YouTube (5 titles, ~300 chars total):
+Formulas:
+${list(YOUTUBE_TITLE_FORMULAS)}
+Rules:
+${list(YOUTUBE_TITLE_RULES)}
+
+Short-Form Script (~500 chars):
+Structure: HOOK → BODY (2-3 sentences) → CTA (one action).
+No hashtags. Punchy. Every word earns its place.
+
+YouTube Timestamps (~300 chars):
+Format: "0:00 Chapter Name". 5-8 chapters. Start at 0:00.
+Infer plausible timestamps from the transcript. Chapter names under 5 words.
+
+Blog Summary (~800 chars):
+Intro sentence → 3 bullet key insights (bold, specific) → conclusion CTA.
+Write like a person, not a press release.
 
 Output cleanup — apply to all platforms:
 ${list(CLEANUP_RULES)}
