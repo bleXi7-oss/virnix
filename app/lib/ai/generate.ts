@@ -62,6 +62,9 @@ async function realGenerate(transcript: string): Promise<GenerateResult> {
   );
 
   // TODO: add a circuit breaker here once per-user cost tracking is implemented
+  // TODO: tune maxTokens after real production testing — 4096 may truncate long transcripts
+  // and 6144 for advanced outputs may be insufficient for very dense content.
+  // Monitor stop_reason=max_tokens warnings in logs to identify when to raise these values.
   const text = await provider.complete({
     system: systemPrompt,
     user: userPrompt,

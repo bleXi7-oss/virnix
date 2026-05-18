@@ -24,6 +24,10 @@ export interface CostEstimate {
 }
 
 // Claude Opus 4.7 pricing (approximate, update if Anthropic changes rates).
+// WARNING: These estimates are approximations only (1 word ≈ 1.3 tokens).
+// They are suitable for logging and rough guardrails ONLY — NOT for billing,
+// accounting, invoicing, or any financial reporting. Always use the actual
+// token counts returned by the Anthropic API for cost accounting.
 // TODO: pull these from env vars once pricing is stable and multi-provider support lands.
 const INPUT_COST_PER_MILLION = 15; // USD
 const OUTPUT_COST_PER_MILLION = 75; // USD

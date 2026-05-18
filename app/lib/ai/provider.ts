@@ -67,6 +67,18 @@ class AnthropicProvider implements AIProvider {
     }
 
     const data = (await res.json()) as AnthropicResponse;
+
+    // Warn when Anthropic cuts off the response mid-generation.
+    // This most commonly means max_tokens was too low for the requested output.
+    // The caller (parser.ts) handles truncated/malformed JSON gracefully via safeParse,
+    // but the output will be degraded — empty or partial cards will surface to the user.
+    if (data.stop_reason === "max_tokens") {
+      console.warn(
+        `[virnix] Anthropic stop_reason=max_tokens — response was truncated. ` +
+        `Increase maxTokens or reduce transcript size. Output may be partial.`
+      );
+    }
+
     const textBlock = data.content?.find((b) => b.type === "text");
 
     if (!textBlock?.text) {
