@@ -468,7 +468,7 @@ function OutputPanel({
 
       <div className="w-full max-w-2xl grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card, i) => (
-          <OutputCard key={card.platform} card={card} index={i} />
+          <OutputCard key={`${card.platform}-${card.type}`} card={card} index={i} />
         ))}
       </div>
 
