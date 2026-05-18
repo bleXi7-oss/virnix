@@ -14,6 +14,7 @@ import { YOUTUBE_TITLE_FORMULAS, YOUTUBE_TITLE_RULES } from "./youtube";
 import { CLEANUP_RULES } from "./cleanup";
 import { pickVariation, pickRandom, formatVariationBlock } from "./variation";
 import { CORE_OUTPUT_SCHEMA, ADVANCED_OUTPUT_SCHEMA } from "../ai/schemas";
+import { buildPromptContext, formatPromptContext } from "../intelligence/prompt-context";
 
 function list(items: readonly string[]): string {
   return items.map((i) => `- ${i}`).join("\n");
@@ -77,6 +78,7 @@ Each bullet: bold insight in plain language, not academic.`;
 export function buildPrompt(transcript: string): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+  const context = buildPromptContext(variation.angle);
 
   return `Transform this podcast transcript into viral content for 5 platforms.
 
@@ -85,6 +87,7 @@ ${transcript}
 
 ━━━ GENERATION PROFILE ━━━
 ${formatVariationBlock(variation)}
+${formatPromptContext(context)}
 
 Apply this angle to all 5 platforms. Don't name the angle. Don't explain it. Embody it.
 
@@ -127,6 +130,7 @@ Return only the JSON object, nothing else.`;
 export function buildAdvancedPrompt(transcript: string): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+  const context = buildPromptContext(variation.angle);
 
   return `Transform this podcast transcript into viral content for 8 platforms.
 
@@ -135,6 +139,7 @@ ${transcript}
 
 ━━━ GENERATION PROFILE ━━━
 ${formatVariationBlock(variation)}
+${formatPromptContext(context)}
 
 Apply this angle to all platforms. Don't name the angle. Don't explain it. Embody it.
 
