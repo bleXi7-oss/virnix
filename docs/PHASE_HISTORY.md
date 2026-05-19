@@ -140,3 +140,38 @@ No code changes. Documentation and test fixtures only.
 - Lint: ✅ clean
 - Real AI: ⏳ requires ANTHROPIC_API_KEY
 - Test fixtures: ✅ 3 original transcripts ready
+
+---
+
+## Phase 4 — Mock Runtime QA (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+No new features. Targeted fixes from code + API review.
+
+**API tested (mock mode):**
+- HTTP 200 on valid YouTube URL → 5 cards, correct diagnostics shape
+- HTTP 400 on empty URL, invalid URL, missing field — all with `ok: false` + descriptive error
+
+**Mock content reviewed:**
+All 5 cards pass quality bar — strong hooks, platform-native tone, numbers, curiosity gaps, no generic language.
+
+**Fixes applied:**
+
+1. `DebugPanel` moved outside `ErrorBoundary` in `app/page.tsx`
+   — Prevents a debug panel crash from hiding the output panel via the error boundary
+
+2. Tailwind v4 canonical class updates in `app/page.tsx`
+   — `bg-gradient-to-{b,r,l}` → `bg-linear-to-{b,r,l}`
+   — `duration-[2400ms]` → `duration-2400`
+
+3. `charCount` labels corrected in `app/lib/outputCards.ts`
+   — TikTok: `~280` → `~240`, Twitter: `~1,800` → `~1,400`, Instagram: `~390` → `~430`, YouTube: `~295` → `~280`
+
+### Validation Status at End of Phase
+- Build: ✅ clean
+- Lint: ✅ clean
+- API (mock): ✅ all paths verified
+- Real AI: ⏳ requires ANTHROPIC_API_KEY

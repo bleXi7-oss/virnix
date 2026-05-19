@@ -184,10 +184,12 @@ export default function Home() {
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
 
         {phase === "done" && (
-          <ErrorBoundary>
-            <OutputPanel cards={cards} onReset={handleReset} />
+          <>
+            <ErrorBoundary>
+              <OutputPanel cards={cards} onReset={handleReset} />
+            </ErrorBoundary>
             <DebugPanel diagnostics={diagnostics} />
-          </ErrorBoundary>
+          </>
         )}
 
         {phase === "error" && <ErrorPanel message={error} onRetry={handleReset} />}
@@ -251,7 +253,7 @@ function HeroCard({
   return (
     <div className="relative w-full max-w-2xl">
       <div
-        className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-b from-zinc-300/40 via-zinc-200/10 to-transparent dark:from-zinc-600/25 dark:via-zinc-800/10"
+        className="pointer-events-none absolute -inset-px rounded-2xl bg-linear-to-b from-zinc-300/40 via-zinc-200/10 to-transparent dark:from-zinc-600/25 dark:via-zinc-800/10"
         aria-hidden="true"
       />
       <div className="relative rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] transition-colors duration-300 dark:border-zinc-800/80 dark:bg-[#0a0a0a] dark:shadow-[0_40px_80px_rgba(0,0,0,0.9)] md:p-12">
@@ -370,7 +372,7 @@ const ProgressBar = memo(function ProgressBar() {
   return (
     <div className="mb-5 h-px w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-900">
       <div
-        className="h-full bg-gradient-to-r from-zinc-300 to-zinc-400 transition-[width] duration-[2400ms] ease-out dark:from-zinc-700 dark:to-zinc-500"
+        className="h-full bg-linear-to-r from-zinc-300 to-zinc-400 transition-[width] duration-2400 ease-out dark:from-zinc-700 dark:to-zinc-500"
         style={{ width: `${progress}%` }}
       />
     </div>
@@ -450,7 +452,7 @@ function OutputPanel({
     <>
       <div className="mt-10 mb-5 w-full max-w-2xl animate-[fade-in_0.4s_ease_forwards]">
         <div className="flex items-center gap-4">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
+          <div className="h-px flex-1 bg-linear-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
           <div className="flex items-center gap-2">
             <svg
               className="h-3 w-3 text-emerald-500"
@@ -468,7 +470,7 @@ function OutputPanel({
               {cards.length} pieces ready to post
             </span>
           </div>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
+          <div className="h-px flex-1 bg-linear-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
         </div>
       </div>
 
