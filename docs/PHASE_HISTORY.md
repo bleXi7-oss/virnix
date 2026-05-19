@@ -947,3 +947,28 @@ Border, shadow, chrome glow, inner highlight, dark banner opacity (0.14) unchang
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
 - Light + dark: banner wave visible through card surface
+
+---
+
+## Phase 26 — Hero Card Internal Atmosphere (UI-POLISH-K, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Replaced opacity-only approach with layered internal atmosphere inside the card.
+
+- `app/page.tsx` card: `overflow-hidden` added
+- Light: `bg-white/20` → `bg-white/40`, blur `md` → `lg`
+- Dark: `dark:bg-[#0a0a0a]/25` → `dark:bg-[#0a0a0a]/52`, blur `md` → `lg`
+- New internal atmosphere layer (z-0, absolute inset-0):
+  - Light: banner.png grayscale+brightness(1.6) at opacity 0.18 + multiply blend + radial gradient
+  - Dark: banner.png at opacity 0.12 + subtle radial highlight
+- Content wrapped in `relative z-10`
+
+Root cause of milky appearance: transparency showed only blurred background.
+Fix: internal banner layer gives chrome texture *inside* the card boundary.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean

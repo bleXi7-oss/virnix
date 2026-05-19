@@ -306,8 +306,29 @@ function HeroCard({
         className="pointer-events-none absolute -inset-px rounded-2xl bg-linear-to-b from-zinc-300/40 via-zinc-200/10 to-transparent dark:from-zinc-600/20 dark:via-zinc-800/5"
         aria-hidden="true"
       />
-      <div className="relative rounded-2xl border border-zinc-200/70 bg-white/20 p-8 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_56px_rgba(0,0,0,0.13),inset_0_1px_0_rgba(255,255,255,0.95)] transition-colors duration-300 dark:border-zinc-700/40 dark:bg-[#0a0a0a]/25 dark:backdrop-blur-md dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
+      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/70 bg-white/40 p-8 backdrop-blur-lg shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_56px_rgba(0,0,0,0.13),inset_0_1px_0_rgba(255,255,255,0.95)] transition-colors duration-300 dark:border-zinc-700/40 dark:bg-[#0a0a0a]/52 dark:backdrop-blur-lg dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
 
+        {/* Internal card atmosphere */}
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]" aria-hidden="true">
+          <Image
+            src="/banner.png"
+            alt=""
+            fill
+            sizes="(max-width: 672px) 100vw, 672px"
+            className="object-cover object-[center_30%] [filter:grayscale(1)_brightness(1.6)] opacity-[0.18] mix-blend-multiply dark:hidden"
+          />
+          <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(200,200,220,0.15),transparent)] dark:hidden" />
+          <Image
+            src="/banner.png"
+            alt=""
+            fill
+            sizes="(max-width: 672px) 100vw, 672px"
+            className="hidden object-cover object-[center_30%] opacity-[0.12] dark:block"
+          />
+          <div className="absolute inset-x-0 top-0 h-40 hidden bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(255,255,255,0.05),transparent)] dark:block" />
+        </div>
+
+        <div className="relative z-10">
         <h1 className="mb-5 text-[2.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[3.6rem]">
           Turn 1 podcast into{" "}
           <span className="text-zinc-500 dark:text-zinc-600">30 viral posts</span>{" "}
@@ -360,6 +381,7 @@ function HeroCard({
         {phase === "idle" && <ExamplesRow onSelect={onExampleSelect} currentUrl={url} />}
 
         <p className="mt-4 text-[12px]">{hintText}</p>
+        </div>
       </div>
     </div>
   );
