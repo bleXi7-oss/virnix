@@ -183,7 +183,7 @@ export default function Home() {
             alt=""
             fill
             sizes="100vw"
-            className="object-cover object-[center_25%] opacity-[0.10]"
+            className="object-cover object-[center_25%] opacity-[0.14]"
           />
         </div>
         {/* Bottom fade to page background */}
@@ -306,7 +306,7 @@ function HeroCard({
         className="pointer-events-none absolute -inset-px rounded-2xl bg-linear-to-b from-zinc-300/40 via-zinc-200/10 to-transparent dark:from-zinc-600/20 dark:via-zinc-800/5"
         aria-hidden="true"
       />
-      <div className="relative rounded-2xl border border-zinc-200/70 bg-white/45 p-8 backdrop-blur-xl shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_56px_rgba(0,0,0,0.13),inset_0_1px_0_rgba(255,255,255,0.95)] transition-colors duration-300 dark:border-zinc-700/40 dark:bg-[#0a0a0a]/65 dark:backdrop-blur-xl dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
+      <div className="relative rounded-2xl border border-zinc-200/70 bg-white/30 p-8 backdrop-blur-lg shadow-[0_2px_8px_rgba(0,0,0,0.06),0_16px_56px_rgba(0,0,0,0.13),inset_0_1px_0_rgba(255,255,255,0.95)] transition-colors duration-300 dark:border-zinc-700/40 dark:bg-[#0a0a0a]/40 dark:backdrop-blur-lg dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
 
         <h1 className="mb-5 text-[2.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[3.6rem]">
           Turn 1 podcast into{" "}

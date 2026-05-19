@@ -903,3 +903,26 @@ Banner chrome wave now shows clearly through the card surface in both modes.
 - Lint: ✅ clean
 - Light mode: banner clearly visible through card
 - Dark mode: banner clearly visible through card, premium feel maintained
+
+---
+
+## Phase 24 — Hero Card Transparency (UI-POLISH-H, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Large transparency jump on the hero card — banner now visible through the card surface.
+
+- `app/page.tsx` light card: `bg-white/45` → `bg-white/30` (70% transparent)
+- `app/page.tsx` dark card: `dark:bg-[#0a0a0a]/65` → `dark:bg-[#0a0a0a]/40` (60% transparent)
+- `app/page.tsx` blur: `backdrop-blur-xl` → `backdrop-blur-lg` (both modes)
+- Dark banner image: `opacity-[0.10]` → `opacity-[0.14]`
+
+Input, button, chrome glow, inner highlight unchanged.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Light mode: pearl-chrome wave visible through card
+- Dark mode: chrome wave visible through card
