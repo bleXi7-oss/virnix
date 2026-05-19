@@ -86,15 +86,87 @@ export function chunkTranscript(
   return chunks;
 }
 
+// ─── Content quality scoring ──────────────────────────────────────────────────
+// Heuristics that identify content-dense sections of a transcript.
+// Used by selectBestSegment to prefer emotionally rich, story-driven content
+// over intros, greetings, sponsor segments, and dead air.
+
+// Signals that indicate high-quality content sections
+const CONTENT_SIGNALS = [
+  "but", "however", "actually", "wrong", "mistake", "discovered",
+  "realized", "suddenly", "the truth", "nobody", "secret", "failed",
+  "stopped", "changed", "here's why", "the reason", "what happened",
+  "turned out", "the problem", "the real", "i found",
+] as const;
+
+// Signals that indicate low-value sections (intros, sponsors, filler)
+const LOW_VALUE_SIGNALS = [
+  "welcome back", "hey everyone", "thanks for watching", "subscribe",
+  "hit the bell", "like and subscribe", "sponsored by", "discount code",
+  "promo code", "use code", "check out", "today i want to", "in this video",
+  "going to be talking", "um ", "uh ", "so basically", "you know what i mean",
+] as const;
+
+// Score a word slice for content density. Higher = better.
+function scoreSegment(words: string[]): number {
+  const text = words.join(" ").toLowerCase();
+  let score = 0;
+
+  // Question marks indicate engagement and tension
+  score += (text.match(/\?/g) ?? []).length * 3;
+
+  // Content signal words
+  for (const signal of CONTENT_SIGNALS) {
+    if (text.includes(signal)) score += 2;
+  }
+
+  // Specificity: numbers signal authority and concrete claims
+  score += Math.min((text.match(/\b\d+\b/g) ?? []).length, 5) * 2;
+
+  // Low-value penalties
+  for (const signal of LOW_VALUE_SIGNALS) {
+    if (text.includes(signal)) score -= 5;
+  }
+
+  return score;
+}
+
 // ─── Smart truncation ─────────────────────────────────────────────────────────
 
-// Selects up to maxWords of transcript, preferring the opening segment where
-// podcasts and videos typically front-load their key arguments and hooks.
-// Falls back to simple head-truncation when the content is already short enough.
+// Selects up to maxWords of transcript, preferring sections with high content
+// density (questions, specific claims, conflict language, story markers) over
+// intros, sponsor breaks, and filler.
 //
-// TODO: replace with an extractive summarisation pass once multi-call pipeline is tested.
+// Approach: score non-overlapping 500-word segments, then take the highest-scoring
+// contiguous block that fits within maxWords. O(n) and deterministic.
 export function selectBestSegment(text: string, maxWords: number): string {
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length <= maxWords) return text;
-  return words.slice(0, maxWords).join(" ");
+
+  const SEGMENT_SIZE = 500;
+  const numSegments = Math.ceil(words.length / SEGMENT_SIZE);
+
+  // Score each segment
+  const scores: number[] = [];
+  for (let i = 0; i < numSegments; i++) {
+    const segWords = words.slice(i * SEGMENT_SIZE, (i + 1) * SEGMENT_SIZE);
+    scores.push(scoreSegment(segWords));
+  }
+
+  // Find the highest-scoring segment as the anchor
+  let bestSegIdx = 0;
+  for (let i = 1; i < scores.length; i++) {
+    if (scores[i] > scores[bestSegIdx]) bestSegIdx = i;
+  }
+
+  // Expand from the best segment anchor to fill up to maxWords.
+  // Prefer expanding forward, then backward if more room is available.
+  const segmentsNeeded = Math.ceil(maxWords / SEGMENT_SIZE);
+  let startSeg = Math.max(0, bestSegIdx - Math.floor(segmentsNeeded / 2));
+  const endSeg = Math.min(numSegments, startSeg + segmentsNeeded);
+  startSeg = Math.max(0, endSeg - segmentsNeeded); // adjust if we hit the end
+
+  const startWord = startSeg * SEGMENT_SIZE;
+  const selectedWords = words.slice(startWord, startWord + maxWords);
+  return selectedWords.join(" ");
 }

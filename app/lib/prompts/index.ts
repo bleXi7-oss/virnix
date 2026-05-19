@@ -145,9 +145,13 @@ Apply this angle to all platforms. Don't name the angle. Don't explain it. Embod
 
 Platform requirements:
 
-TikTok / Reels (~300 chars):
+TikTok / Reels — primary hook (~300 chars):
 Opening line to use: "${tiktokOpener}"
 End with "Here's the exact system...". No hashtags.
+
+TikTok / Reels — alternate hook (~300 chars, key "tiktok_alt"):
+Use a different emotional angle than the primary. Same length and format rules.
+This is a candidate — the stronger hook will be selected automatically.
 
 Twitter / X (~2000 chars):
 Tone:
@@ -164,11 +168,15 @@ Tone:
 ${list(INSTAGRAM_TONE)}
 Format: ${INSTAGRAM_FORMAT}
 
-YouTube (5 titles, ~300 chars total):
+YouTube titles — primary (5 titles, ~300 chars total):
 Formulas:
 ${list(YOUTUBE_TITLE_FORMULAS)}
 Rules:
 ${list(YOUTUBE_TITLE_RULES)}
+
+YouTube titles — alternate (5 titles, ~300 chars total, key "youtube_alt"):
+Use different curiosity styles than the primary titles. Same format rules.
+This is a candidate — the stronger set will be selected automatically.
 
 Short-Form Script (~500 chars):
 Structure: HOOK → BODY (2-3 sentences) → CTA (one action).

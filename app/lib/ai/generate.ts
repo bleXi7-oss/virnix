@@ -1,75 +1,188 @@
 import type { GenerateRequest, GenerateResult } from "../types/generation";
+import type { AIDiagnostics } from "./diagnostics";
 import { SYSTEM_PROMPT, ADVANCED_SYSTEM_PROMPT, buildPrompt, buildAdvancedPrompt } from "../prompts";
 import { getTranscript } from "./transcript";
 import { getMockResult } from "./mock";
 import { parseAnthropicResponse } from "./parser";
 import { isEnabled } from "../flags";
 import { getProvider } from "./provider";
-import { estimateTokens, estimateCost } from "./chunker";
+import { estimateTokens, estimateCost, selectBestSegment } from "./chunker";
+import { logDiagnostics } from "./diagnostics";
+import { estimateViralityScore } from "../intelligence/quality";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
 // Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
 // and set ANTHROPIC_API_KEY to your key from console.anthropic.com.
-// For advanced outputs (blog, timestamps, short-form): also set
-// NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=true.
+// For advanced outputs (blog, timestamps, short-form, alt hook selection):
+// also set NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=true.
+// For the developer debug panel: set NEXT_PUBLIC_FLAG_DEV_DEBUG=true.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Cap transcript input to keep prompt size and cost predictable.
 const MAX_WORDS = 3000;
 
-function truncateTranscript(text: string): string {
-  const words = text.split(/\s+/);
-  if (words.length <= MAX_WORDS) return text;
-  return words.slice(0, MAX_WORDS).join(" ");
-}
-
 export async function generate(req: GenerateRequest): Promise<GenerateResult> {
-  // Short-circuit before any network call — Vercel blocks youtube-transcript requests
+  // Short-circuit before any network call — keeps mock mode fast and free
   if (!isEnabled("real_ai_generation")) return getMockResult();
+
+  const startMs = Date.now();
 
   let transcript: string;
   try {
     transcript = await getTranscript(req.youtubeUrl);
   } catch (err) {
     console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
-    // Fall back to mock cards so the user sees output rather than an error
-    return getMockResult();
+    // Fall back to mock cards — user sees output rather than an error screen
+    return { ...getMockResult(), diagnostics: makeFallbackDiagnostics("transcript-fetch-failed", startMs) };
   }
 
   const words = transcript.split(/\s+/).filter(Boolean).length;
-  const truncated = truncateTranscript(transcript);
-  const wasTruncated = truncated.length < transcript.length;
+  const truncated = selectBestSegment(transcript, MAX_WORDS);
+  const wasTruncated = truncated.split(/\s+/).filter(Boolean).length < words;
 
   console.log(
-    `[virnix] transcript: ${words} words${wasTruncated ? ` → truncated to ${MAX_WORDS}` : ""}`
+    `[virnix] transcript: ${words} words${wasTruncated ? ` → best ${MAX_WORDS}-word segment selected` : ""}`
   );
 
-  return realGenerate(truncated);
+  return realGenerate(truncated, startMs);
 }
 
-async function realGenerate(transcript: string): Promise<GenerateResult> {
+async function realGenerate(transcript: string, startMs: number): Promise<GenerateResult> {
   const useAdvanced = isEnabled("advanced_outputs");
+  const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
   const systemPrompt = useAdvanced ? ADVANCED_SYSTEM_PROMPT : SYSTEM_PROMPT;
-  const userPrompt = useAdvanced ? buildAdvancedPrompt(transcript) : buildPrompt(transcript);
+  const userPrompt   = useAdvanced ? buildAdvancedPrompt(transcript) : buildPrompt(transcript);
 
   const provider = getProvider();
 
-  // Log estimated cost before the API call for cost observability
   const estimatedInput = estimateTokens(systemPrompt + userPrompt);
-  const { estimatedUSD } = estimateCost(estimatedInput, 4096);
+  const maxTokens = useAdvanced ? 6144 : 4096;
+  const { estimatedUSD } = estimateCost(estimatedInput, maxTokens);
+
+  // Log cost estimate before calling — visible in Vercel Functions logs
+  // WARNING: estimate is approximate only. Use Anthropic dashboard for billing.
   console.log(
     `[virnix] AI call — provider: ${provider.name}, ~${estimatedInput} input tokens, ~$${estimatedUSD.toFixed(4)} estimated`
   );
 
-  // TODO: add a circuit breaker here once per-user cost tracking is implemented
-  // TODO: tune maxTokens after real production testing — 4096 may truncate long transcripts
-  // and 6144 for advanced outputs may be insufficient for very dense content.
-  // Monitor stop_reason=max_tokens warnings in logs to identify when to raise these values.
-  const text = await provider.complete({
+  // TODO: add a circuit breaker once per-user cost tracking is implemented
+  // TODO: tune maxTokens after production testing — monitor stop_reason=max_tokens in logs
+  const { text, retryCount, stopReason } = await provider.complete({
     system: systemPrompt,
     user: userPrompt,
-    maxTokens: useAdvanced ? 6144 : 4096,
+    maxTokens,
   });
 
-  return parseAnthropicResponse(text);
+  const { result, parseRepaired, coercionUsed } = parseAnthropicResponse(text);
+
+  // For advanced mode, score the alt hook/title candidates and keep the stronger ones
+  const finalCards = useAdvanced
+    ? selectBestOutputs(result.cards, text)
+    : result.cards;
+
+  // Score the TikTok hook for diagnostics — first card is always TikTok
+  const viralityScore = estimateViralityScore(finalCards[0]?.content ?? "", "tiktok");
+
+  const diagnostics: AIDiagnostics = {
+    provider: provider.name,
+    elapsedMs: Date.now() - startMs,
+    estimatedTokens: estimatedInput,
+    chunkCount: 1, // future: multi-chunk for 1h+ podcasts
+    outputType,
+    stopReason,
+    retryCount,
+    fallbackUsed: false,
+    parseRepaired,
+    coercionUsed,
+    viralityScore,
+  };
+
+  logDiagnostics(diagnostics);
+
+  return { cards: finalCards, generatedAt: result.generatedAt, diagnostics };
 }
+
+// ─── Best-output selection ────────────────────────────────────────────────────
+// When advanced_outputs is on, the prompt asks for tiktok_alt and youtube_alt.
+// This function scores both candidates and swaps in the stronger one.
+// Isolated, deterministic — no API calls, no loops.
+
+function selectBestOutputs(
+  cards: GenerateResult["cards"],
+  rawText: string
+): GenerateResult["cards"] {
+  // Re-parse to access the advanced fields (tiktok_alt, youtube_alt)
+  // We already parsed once; this is a cheap in-memory re-parse of the same text
+  let parsed: unknown = null;
+  try {
+    // Try to find the JSON object in the raw text
+    const start = rawText.indexOf("{");
+    const end = rawText.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      parsed = JSON.parse(rawText.slice(start, end + 1));
+    }
+  } catch {
+    // If re-parse fails, return original cards unchanged
+    return cards;
+  }
+
+  if (typeof parsed !== "object" || parsed === null) return cards;
+  const obj = parsed as Record<string, unknown>;
+
+  const result = [...cards];
+
+  // Score and select TikTok hook
+  const tiktokIdx = result.findIndex((c) => c.platform === "TikTok / Reels");
+  if (tiktokIdx !== -1) {
+    const alt = extractContent(obj.tiktok_alt);
+    if (alt) {
+      const mainScore = estimateViralityScore(result[tiktokIdx].content, "tiktok");
+      const altScore  = estimateViralityScore(alt, "tiktok");
+      if (altScore > mainScore) {
+        result[tiktokIdx] = { ...result[tiktokIdx], content: alt, charCount: `~${alt.length} chars` };
+        console.log(`[virnix] tiktok_alt selected (score ${altScore} vs ${mainScore})`);
+      }
+    }
+  }
+
+  // Score and select YouTube titles
+  const youtubeIdx = result.findIndex((c) => c.platform === "YouTube" && c.type === "Title Ideas");
+  if (youtubeIdx !== -1) {
+    const alt = extractContent(obj.youtube_alt);
+    if (alt) {
+      const mainScore = estimateViralityScore(result[youtubeIdx].content, "youtube");
+      const altScore  = estimateViralityScore(alt, "youtube");
+      if (altScore > mainScore) {
+        result[youtubeIdx] = { ...result[youtubeIdx], content: alt, charCount: `~${alt.length} chars` };
+        console.log(`[virnix] youtube_alt selected (score ${altScore} vs ${mainScore})`);
+      }
+    }
+  }
+
+  return result;
+}
+
+function extractContent(val: unknown): string | null {
+  if (typeof val === "object" && val !== null && "content" in val) {
+    const c = (val as Record<string, unknown>).content;
+    return typeof c === "string" && c.trim() ? c : null;
+  }
+  return null;
+}
+
+// ─── Fallback diagnostics ─────────────────────────────────────────────────────
+
+function makeFallbackDiagnostics(reason: string, startMs: number): AIDiagnostics {
+  return {
+    provider: "mock",
+    elapsedMs: Date.now() - startMs,
+    estimatedTokens: 0,
+    chunkCount: 0,
+    outputType: "core",
+    stopReason: reason,
+    retryCount: 0,
+    fallbackUsed: true,
+    parseRepaired: false,
+    coercionUsed: false,
+  };
+}
+

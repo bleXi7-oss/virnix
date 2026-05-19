@@ -9,6 +9,8 @@ import type { GenerateResponse } from "./lib/types/generation";
 import { isValidYouTubeUrl } from "./lib/youtube";
 import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
+import DebugPanel from "./components/DebugPanel";
+import type { AIDiagnostics } from "./lib/ai/diagnostics";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -33,6 +35,7 @@ export default function Home() {
   const [url, setUrl] = useState("");
   const [cards, setCards] = useState<OutputCardData[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<AIDiagnostics | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -79,6 +82,7 @@ export default function Home() {
       if (!json.ok) throw new Error(json.error);
 
       apiResultRef.current = json.data.cards;
+      setDiagnostics(json.data.diagnostics ?? null);
       track("generation_completed", {
         duration_ms: Date.now() - genStartRef.current,
         card_count: json.data.cards.length,
@@ -134,6 +138,7 @@ export default function Home() {
     setError(null);
     setCards([]);
     setStepIndex(-1);
+    setDiagnostics(null);
   }, []);
 
   function handleUrlChange(val: string) {
@@ -181,6 +186,7 @@ export default function Home() {
         {phase === "done" && (
           <ErrorBoundary>
             <OutputPanel cards={cards} onReset={handleReset} />
+            <DebugPanel diagnostics={diagnostics} />
           </ErrorBoundary>
         )}
 

@@ -21,7 +21,8 @@ export type FeatureFlag =
   | "transcript_preview"   // show fetched transcript before generating
   | "analytics_enabled"    // send events to a real analytics provider
   | "experimental_hooks"   // test new hook generation strategies
-  | "premium_mode";        // gated features for paid users
+  | "premium_mode"         // gated features for paid users
+  | "dev_debug";           // show AI diagnostics panel in the UI (developer only)
 
 type FlagMap = Record<FeatureFlag, boolean>;
 
@@ -33,6 +34,7 @@ const DEFAULTS: FlagMap = {
   analytics_enabled:  false,
   experimental_hooks: false,
   premium_mode:       false,
+  dev_debug:          false,
 };
 
 // Reads a NEXT_PUBLIC_FLAG_* env var and converts it to boolean.
@@ -54,6 +56,7 @@ function resolveFlags(): FlagMap {
     analytics_enabled:  envBool("NEXT_PUBLIC_FLAG_ANALYTICS_ENABLED")  ?? DEFAULTS.analytics_enabled,
     experimental_hooks: envBool("NEXT_PUBLIC_FLAG_EXPERIMENTAL_HOOKS") ?? DEFAULTS.experimental_hooks,
     premium_mode:       envBool("NEXT_PUBLIC_FLAG_PREMIUM_MODE")        ?? DEFAULTS.premium_mode,
+    dev_debug:          envBool("NEXT_PUBLIC_FLAG_DEV_DEBUG")           ?? DEFAULTS.dev_debug,
   };
 }
 

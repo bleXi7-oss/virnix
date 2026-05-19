@@ -52,11 +52,15 @@ export interface CoreAIOutput {
   youtube: YouTubeTitlesSchema;
 }
 
-// The 3 extended outputs — only requested when advanced_outputs flag is on
+// The 3 extended outputs — only requested when advanced_outputs flag is on.
+// tiktok_alt / youtube_alt are optional: when present they are scored against
+// the primary outputs and the stronger one is selected before returning to the UI.
 export interface AdvancedAIOutput {
   shortform: ShortFormScriptSchema;
   timestamps: YouTubeTimestampsSchema;
   blog: BlogSummarySchema;
+  tiktok_alt?: TikTokSchema;
+  youtube_alt?: YouTubeTitlesSchema;
 }
 
 // Full output: core always present, advanced fields optional
@@ -73,14 +77,16 @@ export const CORE_OUTPUT_SCHEMA = `{
 }`;
 
 export const ADVANCED_OUTPUT_SCHEMA = `{
-  "tiktok":    { "content": "<60-sec hook script, ~300 chars>" },
-  "twitter":   { "content": "<8-tweet thread numbered 1/ through 8/, ~2000 chars>" },
-  "linkedin":  { "content": "<professional post with line breaks, ~600 chars>" },
-  "instagram": { "content": "<casual caption with arrows and CTA, ~400 chars>" },
-  "youtube":   { "content": "<5 title ideas numbered 1-5, ~300 chars total>" },
-  "shortform": { "content": "<30-sec structured script HOOK→BODY→CTA, ~500 chars>" },
-  "timestamps":{ "content": "<YouTube chapter markers '0:00 Intro\\n1:23 ...', ~300 chars>" },
-  "blog":      { "content": "<blog summary: intro + 3 key points + conclusion, ~800 chars>" }
+  "tiktok":     { "content": "<60-sec hook script, ~300 chars>" },
+  "tiktok_alt": { "content": "<alternate hook with different emotional angle, ~300 chars>" },
+  "twitter":    { "content": "<8-tweet thread numbered 1/ through 8/, ~2000 chars>" },
+  "linkedin":   { "content": "<professional post with line breaks, ~600 chars>" },
+  "instagram":  { "content": "<casual caption with arrows and CTA, ~400 chars>" },
+  "youtube":    { "content": "<5 title ideas numbered 1-5, ~300 chars total>" },
+  "youtube_alt":{ "content": "<alternate 5 title ideas with different curiosity style, ~300 chars>" },
+  "shortform":  { "content": "<30-sec structured script HOOK→BODY→CTA, ~500 chars>" },
+  "timestamps": { "content": "<YouTube chapter markers '0:00 Intro\\n1:23 ...', ~300 chars>" },
+  "blog":       { "content": "<blog summary: intro + 3 key points + conclusion, ~800 chars>" }
 }`;
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -131,8 +137,10 @@ export function extractAdvancedOutput(raw: unknown): Partial<AdvancedAIOutput> {
   if (typeof raw !== "object" || raw === null) return {};
   const obj = raw as Record<string, unknown>;
   const result: Partial<AdvancedAIOutput> = {};
-  if (hasContent(obj.shortform)) result.shortform = obj.shortform;
-  if (hasContent(obj.timestamps)) result.timestamps = obj.timestamps;
-  if (hasContent(obj.blog)) result.blog = obj.blog;
+  if (hasContent(obj.shortform))   result.shortform   = obj.shortform;
+  if (hasContent(obj.timestamps))  result.timestamps  = obj.timestamps;
+  if (hasContent(obj.blog))        result.blog        = obj.blog;
+  if (hasContent(obj.tiktok_alt))  result.tiktok_alt  = obj.tiktok_alt;
+  if (hasContent(obj.youtube_alt)) result.youtube_alt = obj.youtube_alt;
   return result;
 }

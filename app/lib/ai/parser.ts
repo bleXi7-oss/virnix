@@ -1,11 +1,10 @@
 // Parses raw AI text into GenerateResult.
 //
 // Defensive by design — every failure mode (empty, malformed JSON, missing fields,
-// partial output, markdown-wrapped) produces a usable result via coercion rather
-// than throwing. The caller gets cards even in degraded cases; empty content strings
-// surface to the user as blank cards rather than uncaught errors.
+// partial output, markdown-wrapped, leading/trailing prose) produces a usable result
+// via coercion rather than throwing. The caller gets cards even in degraded cases.
 //
-// If Claude changes its output format, only this file + schemas.ts need to change.
+// ParseOutcome carries parse quality flags so callers can track diagnostic state.
 
 import type { OutputCardData } from "../outputCards";
 import type { GenerateResult } from "../types/generation";
@@ -18,24 +17,70 @@ import {
 } from "./schemas";
 import { isEnabled } from "../flags";
 
+// ─── Public result type ───────────────────────────────────────────────────────
+
+export interface ParseOutcome {
+  result: GenerateResult;
+  parseRepaired: boolean;  // true when JSON was recovered by deep-scan fallback
+  coercionUsed: boolean;   // true when any required fields were missing/malformed
+}
+
 // ─── JSON extraction ──────────────────────────────────────────────────────────
 
-// Strips markdown fences and extracts the outermost { } block.
-// Guards against: ```json...```, leading prose, trailing prose.
+// Fast path: strips markdown fences and finds the outermost { } using bracket
+// counting. More reliable than lastIndexOf("}") when the AI adds trailing prose.
 function extractJSON(raw: string): string {
-  let cleaned = raw
+  const cleaned = raw
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```\s*$/, "")
     .trim();
 
-  // Find outermost braces — handles leading/trailing prose from the model
   const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start !== -1 && end > start) {
-    cleaned = cleaned.slice(start, end + 1);
+  if (start === -1) return cleaned;
+
+  let depth = 0;
+  for (let i = start; i < cleaned.length; i++) {
+    if (cleaned[i] === "{") depth++;
+    else if (cleaned[i] === "}") {
+      depth--;
+      if (depth === 0) return cleaned.slice(start, i + 1);
+    }
   }
 
-  return cleaned;
+  // Unclosed block — return from start to end as best effort
+  return cleaned.slice(start);
+}
+
+// Deep-scan fallback: finds ALL balanced { } blocks in the raw string and returns
+// the largest one that parses as valid JSON. Handles cases where the AI wraps the
+// JSON in explanatory prose or includes stray braces in commentary.
+// Deterministic — no regex patterns for the actual extraction, only bracket counting.
+export function extractLargestJsonObject(raw: string): string {
+  const candidates: string[] = [];
+
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] !== "{") continue;
+    let depth = 0;
+    for (let j = i; j < raw.length; j++) {
+      if (raw[j] === "{") depth++;
+      else if (raw[j] === "}") {
+        depth--;
+        if (depth === 0) {
+          candidates.push(raw.slice(i, j + 1));
+          break;
+        }
+      }
+    }
+  }
+
+  // Largest block first — the full AI response is almost always the biggest JSON object
+  candidates.sort((a, b) => b.length - a.length);
+
+  for (const candidate of candidates) {
+    if (safeParse(candidate) !== null) return candidate;
+  }
+
+  return candidates[0] ?? "";
 }
 
 // Returns parsed value or null — never throws.
@@ -50,26 +95,40 @@ function safeParse(text: string): unknown {
 
 // ─── Public parser ────────────────────────────────────────────────────────────
 
-export function parseAnthropicResponse(text: string): GenerateResult {
+export function parseAnthropicResponse(text: string): ParseOutcome {
+  let parseRepaired = false;
+  let coercionUsed = false;
+
   // Empty response — model returned nothing
   if (!text?.trim()) {
-    // TODO: increment an error counter in analytics once the monitoring pipeline is live
     console.warn("[virnix] AI returned an empty response — using coerced fallback");
-    return buildResult(coerceCoreOutput(null));
+    coercionUsed = true;
+    return { result: buildResult(coerceCoreOutput(null)), parseRepaired, coercionUsed };
   }
 
+  // Fast path: extract outermost {} block
   const extracted = extractJSON(text);
-  const parsed = safeParse(extracted);
+  let parsed = safeParse(extracted);
+
+  // Deep-scan fallback: the AI may have included prose before/after the JSON
+  if (parsed === null) {
+    const largest = extractLargestJsonObject(text);
+    parsed = safeParse(largest);
+    if (parsed !== null) {
+      parseRepaired = true;
+      console.warn("[virnix] JSON recovered via deep scan — AI included commentary around the response");
+    }
+  }
 
   if (parsed === null) {
-    // TODO: log raw text (truncated) to a debug store once structured logging is wired up
     console.warn("[virnix] AI response was not valid JSON — using coerced fallback");
-    return buildResult(coerceCoreOutput(null));
+    coercionUsed = true;
+    return { result: buildResult(coerceCoreOutput(null)), parseRepaired, coercionUsed };
   }
 
   if (!validateCoreOutput(parsed)) {
-    // TODO: log which keys failed validation to track model drift over time
     console.warn("[virnix] AI response missing required fields — coercing partial output");
+    coercionUsed = true;
   }
 
   const core = coerceCoreOutput(parsed);
@@ -77,7 +136,7 @@ export function parseAnthropicResponse(text: string): GenerateResult {
     ? extractAdvancedOutput(parsed)
     : {};
 
-  return buildResult(core, advanced);
+  return { result: buildResult(core, advanced), parseRepaired, coercionUsed };
 }
 
 // ─── Result builder ───────────────────────────────────────────────────────────
