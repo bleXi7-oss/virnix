@@ -21,4 +21,5 @@ export const YOUTUBE_TITLE_RULES = [
   "Question titles perform in search; statement titles perform in feeds",
   "Avoid overused phrases: 'Ultimate Guide', 'Changed My Life', 'Nobody Talks About'",
   "The best titles create a knowledge gap the viewer must close by watching",
+  "Use a different formula for each of the 5 titles — no two titles with the same structure",
 ] as const;

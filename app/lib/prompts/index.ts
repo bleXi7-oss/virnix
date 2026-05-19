@@ -59,7 +59,9 @@ Additional output guidance:
 
 Short-Form Script (~500 chars):
 Structure: HOOK (one punchy line) → BODY (2-3 tight sentences with the insight) → CTA (one specific action)
-No hashtags. No filler. Every word earns its place.
+Cut filler transitions: 'So', 'Basically', 'What I mean is'.
+Momentum must not break — if a line doesn't advance the idea, delete it.
+No hashtags.
 
 YouTube Timestamps (~300 chars):
 Format: "0:00 [Chapter name]\n1:23 [Chapter name]"
@@ -68,7 +70,8 @@ Start at 0:00. Include 5-8 chapters.
 
 Blog Summary (~800 chars):
 Structure: one-sentence intro → 3 bullet-point key insights (specific, no fluff) → one-sentence conclusion CTA
-Each bullet: bold insight in plain language, not academic.`;
+Each bullet: bold insight in plain language. Skimmable — each bullet must stand alone.
+No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'.`;
 
 // ─── Core user prompt ─────────────────────────────────────────────────────────
 // Injects the transcript, a freshly picked variation profile, and platform guidance.
@@ -94,7 +97,10 @@ Apply this angle to all 5 platforms. Don't name the angle. Don't explain it. Emb
 Platform requirements:
 
 TikTok / Reels (~300 chars):
-Opening line to use: "${tiktokOpener}"
+Opening line: "${tiktokOpener}"
+No slow setup — tension or surprise in the first 5 words.
+Short sentences only — one idea per line.
+Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.
 
 Twitter / X (~2000 chars):
@@ -146,7 +152,10 @@ Apply this angle to all platforms. Don't name the angle. Don't explain it. Embod
 Platform requirements:
 
 TikTok / Reels — primary hook (~300 chars):
-Opening line to use: "${tiktokOpener}"
+Opening line: "${tiktokOpener}"
+No slow setup — tension or surprise in the first 5 words.
+Short sentences only — one idea per line.
+Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.
 
 TikTok / Reels — alternate hook (~300 chars, key "tiktok_alt"):
@@ -180,7 +189,9 @@ This is a candidate — the stronger set will be selected automatically.
 
 Short-Form Script (~500 chars):
 Structure: HOOK → BODY (2-3 sentences) → CTA (one action).
-No hashtags. Punchy. Every word earns its place.
+Cut filler transitions: 'So', 'Basically', 'What I mean is'.
+Momentum must not break — if a line doesn't advance the idea, delete it.
+No hashtags.
 
 YouTube Timestamps (~300 chars):
 Format: "0:00 Chapter Name". 5-8 chapters. Start at 0:00.
@@ -188,7 +199,8 @@ Infer plausible timestamps from the transcript. Chapter names under 5 words.
 
 Blog Summary (~800 chars):
 Intro sentence → 3 bullet key insights (bold, specific) → conclusion CTA.
-Write like a person, not a press release.
+Skimmable — each bullet must stand alone. Write like a person, not a press release.
+No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'.
 
 Output cleanup — apply to all platforms:
 ${list(CLEANUP_RULES)}

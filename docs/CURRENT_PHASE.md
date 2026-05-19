@@ -1,4 +1,4 @@
-# Current Phase — Mock Runtime QA
+# Current Phase — Prompt Quality Polish
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,64 +7,111 @@ Status: complete and pushed
 
 ## What Was Done in This Phase
 
-No new features. Code-level review + targeted fixes only.
+No new features, no dependencies, no architecture changes.
+Targeted prompt-quality improvements across all 6 platform modules.
 
-### Browser / Mock QA Results
+### Goal
 
-Dev server started, API tested programmatically against all paths:
+Improve real AI output quality before first live API test:
+- stronger hooks and curiosity
+- sharper platform-native tone
+- less AI-generic language
+- better formatting guidance
+- tighter anti-cliché rules
 
-| Test | Result |
-|---|---|
-| `GET /` (page load) | HTTP 200 ✅ |
-| `POST /api/generate` valid YouTube URL | HTTP 200, 5 cards, provider=mock ✅ |
-| `POST /api/generate` empty URL | HTTP 400, ok=false, error=youtubeUrl is required ✅ |
-| `POST /api/generate` non-YouTube URL | HTTP 400, ok=false, error=Please provide a valid YouTube URL ✅ |
-| `POST /api/generate` missing field | HTTP 400, ok=false, error=youtubeUrl is required ✅ |
-| Cards returned | 5 (TikTok, Twitter, LinkedIn, Instagram, YouTube) ✅ |
-| Diagnostics in response | provider=mock, fallback=true, retries=0, repaired=false ✅ |
+---
 
-### Mock Content Review
+## Changes by File
 
-All 5 cards pass quality bar:
-- TikTok hook: curiosity gap (lost followers on purpose), number, counterintuitive claim — strong ✅
-- Twitter thread: 8 tweets, framework (60/30/10), data (10,000 deep fans), actionable ending ✅
-- LinkedIn: personal story arc, before/after contrast, saves-based framework ✅
-- Instagram: POV opener, line breaks, arrow list, "Save this" CTA ✅
-- YouTube titles: 5 titles, variety of formats (data, framework, counterintuitive, social proof, command) ✅
+### `app/lib/prompts/twitter/index.ts`
 
-No generic "Here are some tips" patterns. No vague wording. Platform tone distinct per card.
+**TWITTER_TONE** — added:
+- "Renew curiosity every 2–3 tweets — drop a new claim or open a new question before momentum fades"
 
-Copy button copies `card.content` directly — matches `whitespace-pre-line` rendered text exactly.
+**TWITTER_FORMAT** — tweet 1 line tightened:
+- Before: "Tweet 1: bold claim or contrarian opener — no context, no warm-up."
+- After: "Tweet 1: bold claim that withholds the proof — state the conclusion, force the read."
 
-### Fixes Applied
+**Why:** Middle-tweet drop-off was identified in the tone rules but not enforced in the format block. The new tone rule adds the renewal directive. The format update makes tweet 1's "withhold proof" function explicit.
 
-**1. `DebugPanel` moved outside `ErrorBoundary` (`app/page.tsx`)**
+---
 
-Previously both `OutputPanel` and `DebugPanel` were wrapped in the same `ErrorBoundary`. A crash inside the dev-only `DebugPanel` would have triggered the boundary and hidden the output panel too. Now `OutputPanel` has its own boundary; `DebugPanel` sits outside it.
+### `app/lib/prompts/linkedin/index.ts`
 
-**2. Tailwind v4 canonical class updates (`app/page.tsx`)**
+**LINKEDIN_TONE** — added:
+- "Founder/operator voice — earned lesson from a peer, not dispensed wisdom from a pundit"
 
-IDE diagnostics flagged deprecated gradient and duration class syntax:
-- `bg-gradient-to-b` → `bg-linear-to-b`
-- `bg-gradient-to-r` → `bg-linear-to-r` (×2)
-- `bg-gradient-to-l` → `bg-linear-to-l`
-- `duration-[2400ms]` → `duration-2400`
+**LINKEDIN_FORMAT** — added:
+- "Avoid passive observer framing: 'Hot take:', 'Something I've been thinking about', 'Friendly reminder:'."
 
-**3. `charCount` labels corrected (`app/lib/outputCards.ts`)**
+**Why:** The existing "smart colleague, not management consultant" rule didn't explicitly block the common "thought leader dispensing wisdom" pattern. Added a founder/operator directive and named the specific phrases that trigger it.
 
-Hardcoded display labels updated to match actual mock content lengths:
-- TikTok: `~280 chars` → `~240 chars` (actual: 236)
-- Twitter: `~1,800 chars` → `~1,400 chars` (actual: 1,420)
-- Instagram: `~390 chars` → `~430 chars` (actual: 430)
-- YouTube: `~295 chars` → `~280 chars` (actual: 280)
+---
 
-### What Was NOT Changed
+### `app/lib/prompts/instagram/index.ts`
 
-- Mock content quality: already strong, no rewrites needed
-- Loading steps: clear and creator-native
-- Error messages: descriptive and actionable
-- ErrorBoundary, ThemeToggle, CopyButton, DebugPanel: all correct
-- API route validation: working correctly on all paths
+**INSTAGRAM_FORMAT** — added line-break rule:
+- "New idea = new line. Never stack two ideas in one sentence."
+
+**INSTAGRAM_FORMAT** — extended never-close-with:
+- Added 'Tag a friend!' — closes the gap where the original list missed the most ad-like CTA pattern.
+
+**Why:** Instagram captions need visual spacing for mobile readability. Stacked ideas in one sentence kill the rhythm that makes captions feel native.
+
+---
+
+### `app/lib/prompts/youtube/index.ts`
+
+**YOUTUBE_TITLE_RULES** — added:
+- "Use a different formula for each of the 5 titles — no two titles with the same structure"
+
+**Why:** With 7 formulas and 5 titles, the AI was likely defaulting to its favorite 2–3 patterns. The new rule enforces structural variety across the title set.
+
+---
+
+### `app/lib/prompts/cleanup/index.ts`
+
+**CLEANUP_RULES** — added:
+- "Contrast creates tension: one short punchy sentence. Then a longer one that earns it."
+
+**Why:** `VIRAL_FORMATTING_RULES` already defined this as a core formatting technique but it was never injected into the live prompt. This pulls the most actionable rule into the active cleanup block.
+
+---
+
+### `app/lib/prompts/index.ts`
+
+**TikTok section** in `buildPrompt()` and `buildAdvancedPrompt()` — both strengthened from 2 lines to 5:
+- Before: just an opening line + ending requirement
+- After: added no-slow-setup directive, short-sentence rule, "every line makes the next feel necessary"
+
+**Short-Form Script** (ADVANCED_SYSTEM_PROMPT + buildAdvancedPrompt) — added:
+- "Cut filler transitions: 'So', 'Basically', 'What I mean is'."
+- "Momentum must not break — if a line doesn't advance the idea, delete it."
+
+**Blog Summary** (ADVANCED_SYSTEM_PROMPT + buildAdvancedPrompt) — added:
+- "Skimmable — each bullet must stand alone."
+- "No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'."
+
+**Why:** TikTok was the weakest platform section — 2 lines for a format that lives or dies on every individual sentence. Short-form and blog had thin execution guidance that would produce filler-heavy output.
+
+---
+
+## What Was NOT Changed
+
+- Output schema (CORE_OUTPUT_SCHEMA / ADVANCED_OUTPUT_SCHEMA) — unchanged
+- JSON validation and coercion logic — unchanged
+- Variation engine (emotional angles, profiles, rhythm directives) — unchanged
+- Intelligence layer (hooks.ts, retention.ts, storytelling.ts, emotions.ts, platforms.ts) — unchanged
+- IDENTITY_BLOCK — unchanged (STORYTELLING_PATTERNS + ANTI_GENERIC_RULES still strong)
+- All non-prompt code — unchanged
+
+---
+
+## Validation
+
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Real AI: ⏳ requires ANTHROPIC_API_KEY
 
 ---
 

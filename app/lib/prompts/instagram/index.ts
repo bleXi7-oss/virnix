@@ -14,7 +14,8 @@ export const INSTAGRAM_TONE = [
 // Ready-to-use format block injected into buildPrompt.
 export const INSTAGRAM_FORMAT = `Open with a relatable moment or bold claim.
 Use → for bullet points — platform-native visual shorthand.
+New idea = new line. Never stack two ideas in one sentence.
 2–3 emojis max, placed for emphasis not decoration.
 Close with 'Save this' CTA or a specific question to drive saves and comments.
 Keep under 400 chars. No hashtag blocks inside the caption body.
-Never close with: 'What do you think?' or 'Drop a comment!' — too generic.`;
+Never close with: 'What do you think?', 'Drop a comment!', or 'Tag a friend!' — these read as ads, not content.`;

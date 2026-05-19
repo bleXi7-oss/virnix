@@ -175,3 +175,43 @@ All 5 cards pass quality bar — strong hooks, platform-native tone, numbers, cu
 - Lint: ✅ clean
 - API (mock): ✅ all paths verified
 - Real AI: ⏳ requires ANTHROPIC_API_KEY
+
+---
+
+## Phase 5 — Prompt Quality Polish (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+No new features, no dependencies, no architecture changes.
+Targeted prompt quality improvements across 6 files.
+
+1. **Twitter** (`app/lib/prompts/twitter/index.ts`)
+   — Added middle-tweet renewal directive to TWITTER_TONE
+   — Tweet 1 format: "withholds the proof" made explicit
+
+2. **LinkedIn** (`app/lib/prompts/linkedin/index.ts`)
+   — Added founder/operator voice directive to LINKEDIN_TONE
+   — Added passive-observer phrase avoidance to LINKEDIN_FORMAT
+
+3. **Instagram** (`app/lib/prompts/instagram/index.ts`)
+   — Added "new idea = new line" spacing rule to INSTAGRAM_FORMAT
+   — Extended never-close-with to include 'Tag a friend!'
+
+4. **YouTube** (`app/lib/prompts/youtube/index.ts`)
+   — Added formula-diversification rule to YOUTUBE_TITLE_RULES
+
+5. **Cleanup** (`app/lib/prompts/cleanup/index.ts`)
+   — Added contrast-creates-tension rule to CLEANUP_RULES
+   — Activates the most impactful VIRAL_FORMATTING_RULES technique
+
+6. **Prompt assembler** (`app/lib/prompts/index.ts`)
+   — TikTok section (buildPrompt + buildAdvancedPrompt): 2 lines → 5 lines
+   — Short-Form: added filler-transition removal + momentum rule
+   — Blog: added skimmability + no-SEO-filler rules
+
+### Validation Status at End of Phase
+- Build: ✅ clean
+- Lint: ✅ clean
+- Real AI: ⏳ requires ANTHROPIC_API_KEY

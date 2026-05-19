@@ -4,6 +4,7 @@
 
 export const LINKEDIN_TONE = [
   "Professional but human — smart colleague, not management consultant",
+  "Founder/operator voice — earned lesson from a peer, not dispensed wisdom from a pundit",
   "Earned authority: share a specific result or lesson, not generic advice",
   "Vulnerability works: share what didn't work, not just what did",
   "Mobile-first: one blank line between every paragraph, no walls of text",
@@ -17,4 +18,5 @@ Body: numbered list or short paragraphs, max 5 points.
 End with a '↓' hook line or an open question.
 One blank line between every paragraph.
 No buzzwords or corporate speak.
-Never use: 'I'm thrilled to announce', 'Excited to share', 'This is a reminder that'.`;
+Never use: 'I'm thrilled to announce', 'Excited to share', 'This is a reminder that'.
+Avoid passive observer framing: 'Hot take:', 'Something I've been thinking about', 'Friendly reminder:'.`;
