@@ -100,6 +100,7 @@ TikTok / Reels (~300 chars):
 Opening line: "${tiktokOpener}"
 No slow setup — tension or surprise in the first 5 words.
 Name something specific from this transcript — no claim that could apply to any video.
+Make the viewer feel this is about them specifically — not generic advice for anyone.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.
@@ -156,6 +157,7 @@ TikTok / Reels — primary hook (~300 chars):
 Opening line: "${tiktokOpener}"
 No slow setup — tension or surprise in the first 5 words.
 Name something specific from this transcript — no claim that could apply to any video.
+Make the viewer feel this is about them specifically — not generic advice for anyone.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.

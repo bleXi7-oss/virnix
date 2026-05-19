@@ -1,8 +1,6 @@
 // Creator psychology principles that drive viral content.
-// Add new patterns here as you research what resonates with your audience.
-// These are injected into SYSTEM_PROMPT so Claude applies them across all platforms.
+// Injected into IDENTITY_BLOCK so they apply across all platforms.
 
-// How high-performing creators structure their stories.
 export const STORYTELLING_PATTERNS = [
   "before → after: show the transformation, not the process",
   "problem → insight → solution: earn the answer before giving it",
@@ -12,27 +10,6 @@ export const STORYTELLING_PATTERNS = [
   "delayed payoff: withhold the answer one beat longer than feels comfortable — tension drives reads",
 ] as const;
 
-// Phrases that create an irresistible need to keep reading.
-export const CURIOSITY_TRIGGERS = [
-  "Nobody talks about this —",
-  "I was completely wrong until —",
-  "The part they always leave out:",
-  "Here's what actually happened:",
-  "Stop doing X — do this instead:",
-  "The data says something completely different:",
-  "I've never said this publicly, but —",
-] as const;
-
-// How to close content without sounding desperate for engagement.
-export const CTA_PATTERNS = [
-  "Ask a question that mirrors what the reader is already thinking",
-  "Ask for saves ('Save this') before asking for follows",
-  "The best CTAs feel like a natural next step, not a demand",
-  "End with a specific question, not 'What do you think?'",
-  "Challenge the reader: name a thing they can audit or test immediately",
-] as const;
-
-// Rules that prevent generic AI writing. Apply to every output.
 export const ANTI_GENERIC_RULES = [
   "Never open with 'In today's world' or 'I'm excited to share'",
   "Never use: leverage, synergy, game-changer, actionable insights, unlock, journey",
@@ -41,4 +18,5 @@ export const ANTI_GENERIC_RULES = [
   "Cut hedging language: 'might', 'could possibly', 'perhaps consider'",
   "Avoid: 'It's important to note', 'At the end of the day', 'The truth is...'",
   "Replace vague with specific — '47%' beats 'many people', '3x revenue' beats 'significant growth'",
+  "No empty affirmations: 'believe in yourself', 'you can do anything', 'stay positive' — replace with specific tension or insight",
 ] as const;

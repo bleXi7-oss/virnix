@@ -1,17 +1,5 @@
-// Virnix Intelligence Layer — Storytelling Frameworks
-//
-// This module provides story arc structures and scene-building mechanics.
-// It goes deeper than the STORYTELLING_PATTERNS in prompts/psychology/,
-// which lists high-level patterns for injection into system prompts.
-// This module captures the structural blueprints — the WHAT before the HOW.
-//
-// Future prompt use:
-//   - Pick a framework matching the variation angle and use it to shape the
-//     narrative arc in buildPrompt() tone directives
-//   - Use SCENE_BUILDING_TECHNIQUES to improve TikTok scripts and shortform content
-//   - Use TRANSFORMATION_ARCS to inform the vulnerability and storytelling angles
-
-// ─── Story arc frameworks ─────────────────────────────────────────────────────
+// Story arc frameworks — injected as storyArcHint in the GENERATION PROFILE.
+// Each angle maps deterministically to a framework in prompt-context.ts.
 
 export const STORY_ARC_FRAMEWORKS = [
   {
@@ -55,73 +43,5 @@ export const STORY_ARC_FRAMEWORKS = [
     bestFor: ["TikTok scripts", "LinkedIn storytelling posts", "YouTube titles"],
     promptApplication: "The stakes reveal is the retention mechanic — it's what keeps readers past the first paragraph.",
     warning: "The stakes must be plausible. Manufactured drama reads as fake immediately.",
-  },
-] as const;
-
-// ─── Scene-building techniques ────────────────────────────────────────────────
-// How to place the reader in a moment rather than just describing it.
-// The difference between "I had a bad day" and "It was 11pm. I had 3 hours left."
-
-export const SCENE_BUILDING_TECHNIQUES = [
-  {
-    name: "time-and-place anchor",
-    description: "Specific time and location grounds the scene instantly",
-    weak: "I was struggling with my business.",
-    strong: "It was a Thursday in March. I had $200 in the account.",
-  },
-  {
-    name: "sensory detail",
-    description: "One specific physical detail makes abstract moments feel real",
-    weak: "I was stressed checking my metrics.",
-    strong: "I refreshed the dashboard. Same number. Again.",
-  },
-  {
-    name: "internal monologue",
-    description: "Naming what you were thinking creates immediate intimacy",
-    weak: "I didn't know what to do.",
-    strong: "I kept thinking: this can't be how it works for everyone.",
-  },
-  {
-    name: "before-state contrast",
-    description: "Establish who you were before to make the after feel earned",
-    weak: "Things were different back then.",
-    strong: "I used to post every day and check my phone every 10 minutes.",
-  },
-] as const;
-
-// ─── Transformation arc patterns ──────────────────────────────────────────────
-// Every viral creator story is fundamentally a transformation story.
-// These are the transformation types that resonate most.
-
-export const TRANSFORMATION_ARCS = [
-  {
-    type: "belief-flip",
-    description: "I was certain about X. I was wrong. Here's what actually changed my mind.",
-    emotionalCore: "intellectual humility + earned wisdom",
-    bestAngle: "vulnerability or controversy",
-  },
-  {
-    type: "identity-shift",
-    description: "I used to be the kind of person who did X. Now I do Y. The gap is the insight.",
-    emotionalCore: "aspiration + relatability",
-    bestAngle: "storytelling or vulnerability",
-  },
-  {
-    type: "system-discovery",
-    description: "I did it the hard way for years. Then I found the system. Here's the system.",
-    emotionalCore: "authority + relief",
-    bestAngle: "authority or curiosity",
-  },
-  {
-    type: "failure-to-framework",
-    description: "I failed at this many times. The pattern in my failures became the framework.",
-    emotionalCore: "trust + specificity",
-    bestAngle: "vulnerability or authority",
-  },
-  {
-    type: "outsider-advantage",
-    description: "Because I didn't come from this field, I didn't inherit its assumptions. That's why it worked.",
-    emotionalCore: "contrarian + permission",
-    bestAngle: "controversy or storytelling",
   },
 ] as const;

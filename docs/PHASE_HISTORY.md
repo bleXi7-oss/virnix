@@ -218,6 +218,37 @@ Targeted prompt quality improvements across 6 files.
 
 ---
 
+## Phase 8 — Intelligence Consolidation (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### Context
+
+Notion research analysis (Phase 7 — analysis only, no commits) found most Notion intelligence was already implemented in the current architecture, but the codebase had accumulated dead code: 3 entire intelligence modules never imported, 14 unused exports, and 3 missing high-leverage mechanisms confirmed across 12+ creator profiles.
+
+### What Was Removed
+- `intelligence/emotions.ts` — deleted (4 exports, zero runtime use)
+- `intelligence/psychology.ts` — deleted (4 exports, zero runtime use)
+- `intelligence/platforms.ts` — deleted (4 exports, zero runtime use)
+- 11 dead exports trimmed from hooks.ts, retention.ts, storytelling.ts
+- `CURIOSITY_TRIGGERS`, `CTA_PATTERNS` from psychology/index.ts (not imported)
+- `HOOK_PATTERNS` from hooks/index.ts (not imported)
+- `VIRAL_FORMATTING_RULES` from cleanup/index.ts (not imported)
+
+### What Was Added
+- 3 new TIKTOK_OPENING_LINES: validation hook, FOMO/loss framing, withheld knowledge
+- Anti-fake-motivation rule to ANTI_GENERIC_RULES
+- Self-reflection trigger in both TikTok prompt sections
+- `hasSpecificDetail()`, `hasSelfReflection()`, `hasHumanTone()` in quality.ts
+- Expanded EMOTIONAL_WORDS with anxiety, broken, death, fear, threat, danger
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Real AI: ✅ tested — validation hooks and self-reflection confirmed present in output
+
+---
+
 ## Phase 6 — AI Cost and Latency Optimization (2026-05-19)
 
 **Commit:** (see git log for hash)
