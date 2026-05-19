@@ -5,53 +5,53 @@ import type { TimelineMoment, MomentType, PlatformFit } from "../../lib/timeline
 const TYPE_META: Record<MomentType, { label: string; accent: string; badgeColor: string }> = {
   validation_hook: {
     label: "Validation Hook",
-    accent: "border-amber-400 dark:border-amber-500",
-    badgeColor: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+    accent: "border-amber-300/60 dark:border-amber-600/40",
+    badgeColor: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-500",
   },
   mechanism_reframe: {
     label: "Reframe",
-    accent: "border-violet-400 dark:border-violet-500",
-    badgeColor: "bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400",
+    accent: "border-violet-300/60 dark:border-violet-600/40",
+    badgeColor: "bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400",
   },
   emotional_confession: {
     label: "Confession",
-    accent: "border-rose-400 dark:border-rose-500",
-    badgeColor: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400",
+    accent: "border-rose-300/60 dark:border-rose-600/40",
+    badgeColor: "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-400",
   },
   contrarian_insight: {
     label: "Contrarian Take",
-    accent: "border-sky-400 dark:border-sky-500",
-    badgeColor: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400",
+    accent: "border-sky-300/60 dark:border-sky-600/40",
+    badgeColor: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-400",
   },
   transformation_moment: {
     label: "Transformation",
-    accent: "border-emerald-400 dark:border-emerald-500",
-    badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+    accent: "border-emerald-300/60 dark:border-emerald-600/40",
+    badgeColor: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
   },
   educational_gem: {
     label: "Key Insight",
-    accent: "border-cyan-400 dark:border-cyan-500",
-    badgeColor: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400",
+    accent: "border-cyan-300/60 dark:border-cyan-600/40",
+    badgeColor: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-400",
   },
   story_turning_point: {
     label: "Story Turn",
-    accent: "border-zinc-400 dark:border-zinc-500",
-    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+    accent: "border-zinc-300 dark:border-zinc-700/60",
+    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-400",
   },
   quote_moment: {
     label: "Quotable",
-    accent: "border-zinc-400 dark:border-zinc-500",
-    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+    accent: "border-zinc-300 dark:border-zinc-700/60",
+    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-400",
   },
   fomo_loss_frame: {
     label: "Loss Frame",
-    accent: "border-orange-400 dark:border-orange-500",
-    badgeColor: "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400",
+    accent: "border-orange-300/60 dark:border-orange-600/40",
+    badgeColor: "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400",
   },
   authority_proof: {
     label: "Social Proof",
-    accent: "border-zinc-400 dark:border-zinc-500",
-    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+    accent: "border-zinc-300 dark:border-zinc-700/60",
+    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-400",
   },
 };
 
@@ -96,12 +96,12 @@ export default function ClipMomentCard({ moment, rank }: Props) {
 
   return (
     <div
-      className={`border-l-2 pl-4 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] ${meta.accent}`}
+      className={`border-l-2 pl-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] ${meta.accent}`}
       style={{ animationDelay: `${rank * 120}ms` }}
     >
       {/* Meta row */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[11px] font-semibold text-zinc-500 dark:text-zinc-400">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="font-mono text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
           {moment.startTime}–{moment.endTime}
         </span>
         <span
@@ -112,17 +112,17 @@ export default function ClipMomentCard({ moment, rank }: Props) {
         <ConfidenceDot score={moment.confidenceScore} />
       </div>
 
-      {/* Hook */}
-      <p className="mb-2 text-[13px] font-semibold leading-snug text-zinc-800 dark:text-zinc-200">
+      {/* Hook — the most important line */}
+      <p className="mb-2.5 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
         &ldquo;{moment.suggestedHook}&rdquo;
       </p>
 
       {/* Why it works */}
-      <p className="mb-3 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-500">
+      <p className="mb-3.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-500">
         {moment.whyItWorks}
       </p>
 
-      {/* Platform tags + preview */}
+      {/* Platform tags */}
       <div className="flex flex-wrap items-center gap-1.5">
         {moment.platformFit.slice(0, 3).map((p) => (
           <span
@@ -135,7 +135,7 @@ export default function ClipMomentCard({ moment, rank }: Props) {
       </div>
 
       {moment.sourceTextPreview && (
-        <p className="mt-2.5 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2">
+        <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-700 line-clamp-2">
           &ldquo;{moment.sourceTextPreview}&rdquo;
         </p>
       )}

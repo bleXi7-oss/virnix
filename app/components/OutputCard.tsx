@@ -52,7 +52,7 @@ function OutputCard({
 }) {
   return (
     <div
-      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:border-zinc-800 dark:bg-[#0a0a0a] dark:hover:border-zinc-700 dark:hover:shadow-none${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
+      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02),inset_0_1px_0_rgba(255,255,255,0.02)] dark:hover:border-zinc-700/80 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_8px_32px_rgba(0,0,0,0.5)]${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="mb-4 flex items-start justify-between gap-2">
@@ -64,7 +64,7 @@ function OutputCard({
             {card.type}
           </span>
         </div>
-        <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+        <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
           {card.badge}
         </span>
       </div>
@@ -73,7 +73,7 @@ function OutputCard({
         {card.content}
       </p>
 
-      <div className="mt-5 flex items-center gap-2 border-t border-zinc-200 pt-4 dark:border-zinc-800/50">
+      <div className="mt-5 flex items-center gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800/40">
         <PlatformIcon type={card.iconType} />
         <span className="text-[10px] text-zinc-400 dark:text-zinc-700">
           {card.charCount}
