@@ -158,10 +158,13 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white text-zinc-900 dark:bg-black dark:text-white">
+    <div className="relative min-h-screen overflow-hidden bg-[#f8f8f6] text-zinc-900 dark:bg-black dark:text-white">
 
-      {/* Cinematic atmospheric layer — banner chrome waves, dark mode only */}
+      {/* Cinematic atmospheric layer */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[540px] overflow-hidden" aria-hidden="true">
+        {/* Pearl bloom — light mode atmospheric depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(160,160,175,0.07),transparent)] dark:hidden" />
+        {/* Chrome wave — dark mode */}
         <Image
           src="/banner.png"
           alt=""
@@ -171,9 +174,9 @@ export default function Home() {
           className="object-cover object-[center_25%] opacity-0 dark:opacity-[0.10] transition-opacity duration-1000"
         />
         {/* Bottom fade to page background */}
-        <div className="absolute inset-x-0 bottom-0 h-72 bg-linear-to-t from-white dark:from-black to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-72 bg-linear-to-t from-[#f8f8f6] dark:from-black to-transparent" />
         {/* Subtle top vignette */}
-        <div className="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-white/50 dark:from-black/50 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-20 bg-linear-to-b from-[#f8f8f6]/60 dark:from-black/50 to-transparent" />
       </div>
 
       <div className="relative z-10 flex flex-col items-center px-4 pt-12 pb-28 sm:pt-16">
@@ -186,9 +189,9 @@ export default function Home() {
               alt="Virnix"
               width={20}
               height={20}
-              className="rounded-full opacity-80 dark:opacity-70"
+              className="rounded-full opacity-100 dark:opacity-70"
             />
-            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-zinc-400 dark:text-zinc-600">
+            <p className="text-[11px] font-bold uppercase tracking-[0.4em] text-zinc-500 dark:text-zinc-600">
               VIRNIX
             </p>
           </div>
@@ -290,11 +293,11 @@ function HeroCard({
         className="pointer-events-none absolute -inset-px rounded-2xl bg-linear-to-b from-zinc-300/40 via-zinc-200/10 to-transparent dark:from-zinc-600/20 dark:via-zinc-800/5"
         aria-hidden="true"
       />
-      <div className="relative rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_8px_40px_rgba(0,0,0,0.06)] transition-colors duration-300 dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-8 shadow-[0_2px_4px_rgba(0,0,0,0.04),0_12px_40px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] transition-colors duration-300 dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_40px_100px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-12">
 
         <h1 className="mb-5 text-[2.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[3.6rem]">
           Turn 1 podcast into{" "}
-          <span className="text-zinc-400 dark:text-zinc-600">30 viral posts</span>{" "}
+          <span className="text-zinc-500 dark:text-zinc-600">30 viral posts</span>{" "}
           in 60 seconds.
         </h1>
 
@@ -308,7 +311,7 @@ function HeroCard({
             className={`group flex flex-1 items-center gap-3 rounded-xl border px-4 py-3.5 transition-all duration-200 ${
               isValidUrl
                 ? "border-emerald-300 bg-emerald-50/40 dark:border-emerald-800/60 dark:bg-emerald-950/15"
-                : "border-zinc-200 bg-zinc-100 focus-within:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600"
+                : "border-zinc-200 bg-white focus-within:border-zinc-400 focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.04)] dark:border-zinc-800 dark:bg-zinc-900 dark:focus-within:border-zinc-600 dark:focus-within:shadow-none"
             }`}
           >
             {isValidUrl ? (
@@ -550,7 +553,7 @@ const PlatformList = memo(function PlatformList() {
       {["TikTok", "Twitter / X", "LinkedIn", "Instagram", "YouTube"].map((name) => (
         <span
           key={name}
-          className="rounded-full border border-zinc-200 px-3 py-1 text-[11px] text-zinc-400 dark:border-zinc-800 dark:text-zinc-700"
+          className="rounded-full border border-zinc-300 px-3 py-1 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-700"
         >
           {name}
         </span>
@@ -583,7 +586,7 @@ const GenerateButton = memo(function GenerateButton({
     <button
       onClick={onClick}
       disabled={phase === "loading"}
-      className="cursor-pointer whitespace-nowrap rounded-xl bg-zinc-900 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.1),0_4px_20px_rgba(0,0,0,0.07)] transition-all hover:bg-zinc-800 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.18),0_4px_32px_rgba(0,0,0,0.12)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70 dark:bg-white dark:text-black dark:shadow-[0_0_0_1px_rgba(255,255,255,0.10),0_4px_24px_rgba(255,255,255,0.08)] dark:hover:bg-zinc-50 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.20),0_8px_40px_rgba(255,255,255,0.14)]"
+      className="cursor-pointer whitespace-nowrap rounded-xl bg-zinc-900 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.14),0_4px_24px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.07)] transition-all hover:bg-zinc-800 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.20)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70 dark:bg-white dark:text-black dark:shadow-[0_0_0_1px_rgba(255,255,255,0.10),0_4px_24px_rgba(255,255,255,0.08)] dark:hover:bg-zinc-50 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.20),0_8px_40px_rgba(255,255,255,0.14)]"
     >
       {phase === "loading" ? (
         <span className="flex items-center gap-2">

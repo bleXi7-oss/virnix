@@ -564,6 +564,51 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 
 ---
 
+## Phase 18 — Premium Light Theme Polish
+
+**Date:** 2026-05-20
+**Commit:** (pending)
+
+### Context
+
+Dark theme reached premium black chrome standard in Phase 17 redesign. Light theme still presented as plain white SaaS dashboard — pure white background, flat plastic-looking cards, low contrast platform pills, generic button shadow. This phase brings light theme to the same premium tier: pearl white, soft depth, chrome glass card surfaces, intentional hierarchy.
+
+### What Changed
+
+**`app/globals.css`**
+- `--background`: `#ffffff` → `#f8f8f6` (warm pearl off-white — base surface for all light-mode UI)
+
+**`app/page.tsx`**
+- Root div: `bg-white` → `bg-[#f8f8f6]` (matches new CSS var)
+- Banner atmospheric: added light-mode pearl radial bloom (`radial-gradient ellipse 80% 60%, rgba(160,160,175,0.07)`) — analog of dark chrome banner; very restrained
+- Banner fade divs: `from-white` → `from-[#f8f8f6]` (correct fade-to-background in both fades)
+- Hero card: light-mode shadow upgraded from flat `shadow-[0_8px_40px_rgba(0,0,0,0.06)]` → `shadow-[0_2px_4px_rgba(0,0,0,0.04),0_12px_40px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.9)]` (adds inset top-edge chrome highlight — same system as dark mode, inverted)
+- Headline emphasis span: `text-zinc-400` → `text-zinc-500` (intentional accent, not disabled-looking)
+- Input field: `bg-zinc-100` → `bg-white` (white input on pearl background = natural layering depth), added soft `focus-within:shadow-[0_0_0_3px_rgba(0,0,0,0.04)]` focus ring
+- Generate button: shadow upgraded from `0_4px_20px_rgba(0,0,0,0.07)` → `0_4px_24px_rgba(0,0,0,0.14)` + inset highlight `inset_0_1px_0_rgba(255,255,255,0.07)` (premium chrome black, not flat plastic)
+- Logo mark: `opacity-80` → `opacity-100` in light mode (V logo fully visible on pearl background)
+- VIRNIX label: `text-zinc-400` → `text-zinc-500` (slightly more legible)
+- Platform pills: `border-zinc-200 text-zinc-400` → `border-zinc-300 text-zinc-500` (contrast rescued from near-invisible)
+- Dark mode: all `dark:` classes left unchanged — zero dark mode regression
+
+### Visual Delta
+
+| Element | Before | After |
+|---------|--------|-------|
+| Page background | Pure `#ffffff` | Pearl `#f8f8f6` |
+| Hero card depth | Flat white card | White card elevated on pearl with chrome inset |
+| Generate button | Flat dark plastic | Deep chrome black with subtle highlight |
+| Platform pills | Near-invisible on white | Legible zinc-500 text on zinc-300 border |
+| Headline accent | `zinc-400` (looked disabled) | `zinc-500` (intentional, premium) |
+| Input surface | zinc-100 (same as background) | Pure white (naturally elevated) |
+
+### Validation Status
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Dark mode: ✅ no regressions — all dark: classes preserved
+
+---
+
 ## Phase 17 — TikTok Opener Quality Patch
 
 **Date:** 2026-05-20

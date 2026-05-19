@@ -1,11 +1,11 @@
-# Current Phase — TikTok Opener Quality Patch
+# Current Phase — Premium Light Theme Polish
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Transcript Quality Intelligence (2026-05-19) — complete
+## Previous phase: TikTok Opener Quality Patch (2026-05-20) — complete
 
 ---
 
