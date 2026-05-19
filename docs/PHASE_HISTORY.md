@@ -564,6 +564,53 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 
 ---
 
+## Phase 19 — Visible Chrome Atmosphere (UI-FIX-C)
+
+**Date:** 2026-05-20
+
+### Context
+
+Phase 18 improved light mode technically but the pearl atmosphere was barely visible in real screenshots (7% radial opacity). Light theme still read as plain off-white SaaS. This phase makes the atmosphere clearly visible and adds consistent depth hierarchy across hero card, atmospheric layer, and output cards.
+
+### What Changed
+
+**`next.config.ts`**
+- `devIndicators: { position: "bottom-right" }` — moves the Next.js dev overlay button away from the bottom-left corner where it appeared as an unexplained stray UI element in screenshots. (Next.js 16 only accepts `position` in this config; it does not appear in production builds.)
+
+**`app/page.tsx` — atmospheric layer**
+- Replaced single weak pearl bloom (`rgba(160,160,175,0.07)`) with three-layer light-mode atmosphere wrapped in `dark:hidden`:
+  - Primary silver radial bloom: `rgba(170,170,200,0.22)` — 3× more visible than previous 7%
+  - Secondary crown bloom: `rgba(200,200,225,0.14)` — focused depth at the very top
+  - Chrome edge line: `rgba(155,155,195,0.55)` 1px horizontal gradient at page top
+  - `banner.png` shown in light mode with `[filter:grayscale(1)_brightness(1.8)] opacity-[0.22] mix-blend-multiply` — renders as silver/pearl chrome wave texture on pearl background
+- Separated dark-mode banner into its own `hidden dark:block` div — clean light/dark split with no `opacity-0/dark:opacity` hack
+
+**`app/page.tsx` — hero card shadow**
+- Light-mode shadow deepened: `0_2px_4px/.04, 0_12px_40px/.08` → `0_2px_8px/.06, 0_16px_56px/.13` — card lifts more clearly from atmospheric background
+- Dark-mode shadow unchanged
+
+**`app/components/OutputCard.tsx`**
+- Added resting light-mode shadow: `shadow-[0_1px_6px_rgba(0,0,0,0.05)]` — output cards now have visible depth on pearl background, not just on hover
+- Hover shadow bumped from `.06` → `.08` intensity to maintain the lift contrast
+- Dark-mode shadows unchanged
+
+### Visual Delta
+
+| Element | Before | After |
+|---------|--------|-------|
+| Light atmosphere | 7% radial bloom (invisible in screenshots) | 22% multi-layer bloom + silver banner texture |
+| Banner in light | Hidden (`opacity-0`) | Visible: grayscale + brightness(1.8) + multiply blend |
+| Hero card shadow | `0_12px_40px/.08` | `0_16px_56px/.13` — lifts more clearly |
+| Output cards | No resting shadow | `0_1px_6px/.05` resting depth |
+| Dev icon position | Bottom-left (stray appearance) | Bottom-right (clear, or hidden in prod) |
+
+### Validation Status
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Dark mode: ✅ no regressions — all `dark:` classes preserved, dark banner in separate `hidden dark:block` wrapper
+
+---
+
 ## Phase 18 — Premium Light Theme Polish
 
 **Date:** 2026-05-20

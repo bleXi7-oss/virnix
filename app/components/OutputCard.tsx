@@ -52,7 +52,7 @@ function OutputCard({
 }) {
   return (
     <div
-      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 opacity-0 animate-[fade-in-up_0.45s_ease_forwards] transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02),inset_0_1px_0_rgba(255,255,255,0.02)] dark:hover:border-zinc-700/80 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_8px_32px_rgba(0,0,0,0.5)]${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
+      className={`flex flex-col rounded-xl border border-zinc-200 bg-white p-5 shadow-[0_1px_6px_rgba(0,0,0,0.05)] opacity-0 animate-[fade-in-up_0.45s_ease_forwards] transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02),inset_0_1px_0_rgba(255,255,255,0.02)] dark:hover:border-zinc-700/80 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_8px_32px_rgba(0,0,0,0.5)]${card.wide ? " sm:col-span-2 lg:col-span-2" : ""}`}
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <div className="mb-4 flex items-start justify-between gap-2">

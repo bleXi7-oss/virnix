@@ -1,11 +1,11 @@
-# Current Phase — Premium Light Theme Polish
+# Current Phase — Visible Chrome Atmosphere (UI-FIX-C)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: TikTok Opener Quality Patch (2026-05-20) — complete
+## Previous phase: Premium Light Theme Polish (2026-05-20) — complete
 
 ---
 
