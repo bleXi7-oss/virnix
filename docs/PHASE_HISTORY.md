@@ -215,3 +215,58 @@ Targeted prompt quality improvements across 6 files.
 - Build: ✅ clean
 - Lint: ✅ clean
 - Real AI: ⏳ requires ANTHROPIC_API_KEY
+
+---
+
+## Phase 6 — AI Cost and Latency Optimization (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### Context
+
+First real AI generation (Phase 5 test) succeeded:
+- provider=anthropic, elapsed=26158ms, ~4944 estimated input tokens
+- Estimated ~$0.3814 (Opus pricing), score=70, retries=0
+- Twitter/LinkedIn quality strong; TikTok hook slightly generic
+
+### What Was Changed
+
+1. **Model** (`app/lib/ai/provider.ts`)
+   — `claude-opus-4-7` → `claude-sonnet-4-6` (~5x cheaper, ~2x faster)
+
+2. **Timeout** (`app/lib/ai/provider.ts`)
+   — 45s → 30s (Sonnet responds faster)
+
+3. **maxTokens** (`app/lib/ai/generate.ts`)
+   — Core: 4096 → 2048 (actual output ~900-1200 tokens)
+   — Advanced: 6144 → 3500 (actual output ~2000-2500 tokens)
+
+4. **Pricing constants** (`app/lib/ai/chunker.ts`)
+   — Input: $15/M → $3/M; Output: $75/M → $15/M (Sonnet rates)
+
+5. **TikTok opener** (`app/lib/prompts/hooks/index.ts`)
+   — Replaced "Stop scrolling. This one's different." (ad-language)
+   — With "Everyone's doing this backwards." (tension + knowledge gap)
+
+6. **Deduplication** (`app/lib/prompts/cleanup/index.ts`)
+   — Removed "Replace vague with specific" — duplicate of ANTI_GENERIC_RULES
+
+7. **TikTok specificity** (`app/lib/prompts/index.ts`)
+   — Added "Name something specific from this transcript — no claim that could apply to any video."
+   — Applied to both buildPrompt and buildAdvancedPrompt
+
+8. **Blog SEO filler** (`app/lib/prompts/index.ts`)
+   — Removed 'In today's world' from advanced blog filler list (duplicate of ANTI_GENERIC_RULES)
+
+### Expected Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Estimated cost (core) | ~$0.38 | ~$0.05 |
+| Expected latency | ~26s | ~8–12s |
+| TikTok hook | generic risk | transcript-specific |
+
+### Validation Status at End of Phase
+- Build: ✅ clean
+- Lint: ✅ clean
+- Real AI: ⏳ requires re-run to verify with ANTHROPIC_API_KEY

@@ -9,7 +9,6 @@ export const CLEANUP_RULES = [
   "Active voice: 'Creators use this' not 'This is used by creators'",
   "Cut the last sentence — first drafts always end one beat too late",
   "Remove throat-clearing: 'So basically', 'What I mean is', 'The thing is'",
-  "Replace vague with specific: 'grew' → 'grew 3x in 90 days', 'many' → '47 out of 50'",
   "Contrast creates tension: one short punchy sentence. Then a longer one that earns it.",
 ] as const;
 

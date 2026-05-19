@@ -30,9 +30,10 @@ export interface AIProvider {
 
 // ─── Anthropic provider ───────────────────────────────────────────────────────
 
-const ANTHROPIC_DEFAULT_MODEL = "claude-opus-4-7";
-const ANTHROPIC_DEFAULT_MAX_TOKENS = 4096;
-const TIMEOUT_MS = 45_000;
+// Sonnet 4.6: best quality/cost ratio for creator content generation (~5x cheaper than Opus, ~2x faster)
+const ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6";
+const ANTHROPIC_DEFAULT_MAX_TOKENS = 2048;
+const TIMEOUT_MS = 30_000;
 const MAX_RETRIES = 2;
 
 // Response shape from https://api.anthropic.com/v1/messages

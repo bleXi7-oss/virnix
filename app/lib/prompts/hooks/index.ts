@@ -18,7 +18,7 @@ export const HOOK_PATTERNS = [
 export const TIKTOK_OPENING_LINES = [
   "Nobody talks about this —",
   "I only found this out by accident.",
-  "Stop scrolling. This one's different.",
+  "Everyone's doing this backwards.",
   "Here's the part they always skip:",
   "I wish someone had told me this earlier:",
   "I was wrong about this for years.",

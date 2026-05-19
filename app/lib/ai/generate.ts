@@ -55,7 +55,9 @@ async function realGenerate(transcript: string, startMs: number): Promise<Genera
   const provider = getProvider();
 
   const estimatedInput = estimateTokens(systemPrompt + userPrompt);
-  const maxTokens = useAdvanced ? 6144 : 4096;
+  // Core: 5 outputs ~900-1200 tokens actual; 2048 gives generous headroom.
+  // Advanced: 8 outputs + 2 alts ~2000-2500 tokens actual; 3500 gives safe headroom.
+  const maxTokens = useAdvanced ? 3500 : 2048;
   const { estimatedUSD } = estimateCost(estimatedInput, maxTokens);
 
   // Log cost estimate before calling — visible in Vercel Functions logs

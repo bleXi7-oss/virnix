@@ -71,7 +71,7 @@ Start at 0:00. Include 5-8 chapters.
 Blog Summary (~800 chars):
 Structure: one-sentence intro → 3 bullet-point key insights (specific, no fluff) → one-sentence conclusion CTA
 Each bullet: bold insight in plain language. Skimmable — each bullet must stand alone.
-No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'.`;
+No SEO filler: 'In conclusion', 'It goes without saying'.`;
 
 // ─── Core user prompt ─────────────────────────────────────────────────────────
 // Injects the transcript, a freshly picked variation profile, and platform guidance.
@@ -99,6 +99,7 @@ Platform requirements:
 TikTok / Reels (~300 chars):
 Opening line: "${tiktokOpener}"
 No slow setup — tension or surprise in the first 5 words.
+Name something specific from this transcript — no claim that could apply to any video.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.
@@ -154,6 +155,7 @@ Platform requirements:
 TikTok / Reels — primary hook (~300 chars):
 Opening line: "${tiktokOpener}"
 No slow setup — tension or surprise in the first 5 words.
+Name something specific from this transcript — no claim that could apply to any video.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
 End with "Here's the exact system...". No hashtags.
@@ -200,7 +202,7 @@ Infer plausible timestamps from the transcript. Chapter names under 5 words.
 Blog Summary (~800 chars):
 Intro sentence → 3 bullet key insights (bold, specific) → conclusion CTA.
 Skimmable — each bullet must stand alone. Write like a person, not a press release.
-No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'.
+No SEO filler: 'In conclusion', 'It goes without saying'.
 
 Output cleanup — apply to all platforms:
 ${list(CLEANUP_RULES)}

@@ -1,109 +1,84 @@
-# Current Phase — Prompt Quality Polish
+# Current Phase — AI Cost and Latency Optimization
 
 Phase started: 2026-05-19
 Status: complete and pushed
 
 ---
 
-## What Was Done in This Phase
+## Context
 
-No new features, no dependencies, no architecture changes.
-Targeted prompt-quality improvements across all 6 platform modules.
+First real Anthropic generation succeeded in Phase 5. Results:
+- provider=anthropic, elapsed=26158ms, ~4944 estimated input tokens
+- ~$0.3814 estimated cost, score=70, retries=0, fallback=false
+- Output quality strong — Twitter thread strong, pacing strong
+- TikTok hook slightly generic
 
-### Goal
-
-Improve real AI output quality before first live API test:
-- stronger hooks and curiosity
-- sharper platform-native tone
-- less AI-generic language
-- better formatting guidance
-- tighter anti-cliché rules
+Goal: reduce cost and latency while preserving output quality.
 
 ---
 
 ## Changes by File
 
-### `app/lib/prompts/twitter/index.ts`
+### `app/lib/ai/provider.ts`
 
-**TWITTER_TONE** — added:
-- "Renew curiosity every 2–3 tweets — drop a new claim or open a new question before momentum fades"
+**Model** — changed from `claude-opus-4-7` to `claude-sonnet-4-6`
+- Why: ~5x cheaper per token, ~2x faster, sufficient quality for creator content generation
 
-**TWITTER_FORMAT** — tweet 1 line tightened:
-- Before: "Tweet 1: bold claim or contrarian opener — no context, no warm-up."
-- After: "Tweet 1: bold claim that withholds the proof — state the conclusion, force the read."
-
-**Why:** Middle-tweet drop-off was identified in the tone rules but not enforced in the format block. The new tone rule adds the renewal directive. The format update makes tweet 1's "withhold proof" function explicit.
+**Timeout** — reduced from 45s to 30s
+- Why: Sonnet responds faster; 30s still leaves ample room for slow networks
 
 ---
 
-### `app/lib/prompts/linkedin/index.ts`
+### `app/lib/ai/generate.ts`
 
-**LINKEDIN_TONE** — added:
-- "Founder/operator voice — earned lesson from a peer, not dispensed wisdom from a pundit"
-
-**LINKEDIN_FORMAT** — added:
-- "Avoid passive observer framing: 'Hot take:', 'Something I've been thinking about', 'Friendly reminder:'."
-
-**Why:** The existing "smart colleague, not management consultant" rule didn't explicitly block the common "thought leader dispensing wisdom" pattern. Added a founder/operator directive and named the specific phrases that trigger it.
+**maxTokens** — core: 4096 → 2048, advanced: 6144 → 3500
+- Why: Actual core output ~900-1200 tokens; previous ceiling wasted headroom and inflated cost estimates
 
 ---
 
-### `app/lib/prompts/instagram/index.ts`
+### `app/lib/ai/chunker.ts`
 
-**INSTAGRAM_FORMAT** — added line-break rule:
-- "New idea = new line. Never stack two ideas in one sentence."
-
-**INSTAGRAM_FORMAT** — extended never-close-with:
-- Added 'Tag a friend!' — closes the gap where the original list missed the most ad-like CTA pattern.
-
-**Why:** Instagram captions need visual spacing for mobile readability. Stacked ideas in one sentence kill the rhythm that makes captions feel native.
+**Pricing constants** — INPUT_COST_PER_MILLION: 15 → 3, OUTPUT_COST_PER_MILLION: 75 → 15
+- Why: Updated to Sonnet 4.6 pricing; Opus pricing was producing inflated log estimates
 
 ---
 
-### `app/lib/prompts/youtube/index.ts`
+### `app/lib/prompts/hooks/index.ts`
 
-**YOUTUBE_TITLE_RULES** — added:
-- "Use a different formula for each of the 5 titles — no two titles with the same structure"
-
-**Why:** With 7 formulas and 5 titles, the AI was likely defaulting to its favorite 2–3 patterns. The new rule enforces structural variety across the title set.
+**TIKTOK_OPENING_LINES** — replaced `"Stop scrolling. This one's different."` with `"Everyone's doing this backwards."`
+- Why: Original was ad-language; replacement creates tension and a knowledge gap without sounding like a paid ad
 
 ---
 
 ### `app/lib/prompts/cleanup/index.ts`
 
-**CLEANUP_RULES** — added:
-- "Contrast creates tension: one short punchy sentence. Then a longer one that earns it."
-
-**Why:** `VIRAL_FORMATTING_RULES` already defined this as a core formatting technique but it was never injected into the live prompt. This pulls the most actionable rule into the active cleanup block.
+**CLEANUP_RULES** — removed `"Replace vague with specific: 'grew' → 'grew 3x in 90 days'..."`
+- Why: Exact duplicate of the rule in `ANTI_GENERIC_RULES` in the system prompt; injecting it twice wastes tokens
 
 ---
 
 ### `app/lib/prompts/index.ts`
 
-**TikTok section** in `buildPrompt()` and `buildAdvancedPrompt()` — both strengthened from 2 lines to 5:
-- Before: just an opening line + ending requirement
-- After: added no-slow-setup directive, short-sentence rule, "every line makes the next feel necessary"
+**TikTok section** (both `buildPrompt` and `buildAdvancedPrompt`) — added one line:
+- `"Name something specific from this transcript — no claim that could apply to any video."`
+- Why: Observed TikTok hooks were occasionally generic; this forces transcript-specific content
 
-**Short-Form Script** (ADVANCED_SYSTEM_PROMPT + buildAdvancedPrompt) — added:
-- "Cut filler transitions: 'So', 'Basically', 'What I mean is'."
-- "Momentum must not break — if a line doesn't advance the idea, delete it."
-
-**Blog Summary** (ADVANCED_SYSTEM_PROMPT + buildAdvancedPrompt) — added:
-- "Skimmable — each bullet must stand alone."
-- "No SEO filler: 'In today's world', 'In conclusion', 'It goes without saying'."
-
-**Why:** TikTok was the weakest platform section — 2 lines for a format that lives or dies on every individual sentence. Short-form and blog had thin execution guidance that would produce filler-heavy output.
+**ADVANCED_SYSTEM_PROMPT blog** + `buildAdvancedPrompt` blog section — removed `'In today's world'` from SEO filler list
+- Why: Already covered by ANTI_GENERIC_RULES in the system prompt; duplicate wasted tokens
 
 ---
 
-## What Was NOT Changed
+## Token / Cost Impact
 
-- Output schema (CORE_OUTPUT_SCHEMA / ADVANCED_OUTPUT_SCHEMA) — unchanged
-- JSON validation and coercion logic — unchanged
-- Variation engine (emotional angles, profiles, rhythm directives) — unchanged
-- Intelligence layer (hooks.ts, retention.ts, storytelling.ts, emotions.ts, platforms.ts) — unchanged
-- IDENTITY_BLOCK — unchanged (STORYTELLING_PATTERNS + ANTI_GENERIC_RULES still strong)
-- All non-prompt code — unchanged
+| Metric | Before | After |
+|--------|--------|-------|
+| Model | claude-opus-4-7 | claude-sonnet-4-6 |
+| Input cost / million | $15 | $3 |
+| Output cost / million | $75 | $15 |
+| maxTokens (core) | 4096 | 2048 |
+| maxTokens (advanced) | 6144 | 3500 |
+| Estimated cost (core, ~5k input) | ~$0.38 | ~$0.05 |
+| Expected latency | ~26s | ~8–12s |
 
 ---
 
@@ -111,19 +86,16 @@ Improve real AI output quality before first live API test:
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Real AI: ⏳ requires ANTHROPIC_API_KEY
+- Real AI: ⏳ requires ANTHROPIC_API_KEY in .env.local
 
 ---
 
-## Next Recommended Phase
+## Next Recommended Step
 
-**Real AI First Run**
-
-Follow `docs/FIRST_REAL_AI_TEST_PLAN.md`:
-1. Add `ANTHROPIC_API_KEY` to `.env.local`
-2. Set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true`
-3. Keep `NEXT_PUBLIC_FLAG_DEV_DEBUG=true`
-4. `npm.cmd run dev`
-5. Test a short YouTube video (< 5 min)
-6. Score output with `docs/OUTPUT_QUALITY_CHECKLIST.md`
-7. Check `[VIRNIX_AI]` log line for diagnostics
+Run another real AI generation and compare diagnostics:
+1. Set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` in `.env.local`
+2. Keep `NEXT_PUBLIC_FLAG_DEV_DEBUG=true`
+3. `npm.cmd run dev`
+4. Test same YouTube URL as Phase 5 test
+5. Compare: elapsed, estimatedTokens, estimated cost, viralityScore
+6. Check TikTok hook for specificity improvement
