@@ -6,11 +6,11 @@
 //   ADVANCED_SYSTEM_PROMPT / buildAdvancedPrompt → all 8 outputs (advanced_outputs flag)
 
 import { STORYTELLING_PATTERNS, ANTI_GENERIC_RULES } from "./psychology";
-import { TIKTOK_OPENING_LINES } from "./hooks";
-import { TWITTER_TONE, TWITTER_FORMAT } from "./twitter";
-import { LINKEDIN_TONE, LINKEDIN_FORMAT } from "./linkedin";
-import { INSTAGRAM_TONE, INSTAGRAM_FORMAT } from "./instagram";
-import { YOUTUBE_TITLE_FORMULAS, YOUTUBE_TITLE_RULES } from "./youtube";
+import { TIKTOK_OPENING_LINES } from "./platforms/tiktok";
+import { TWITTER_TONE, TWITTER_FORMAT } from "./platforms/twitter";
+import { LINKEDIN_TONE, LINKEDIN_FORMAT } from "./platforms/linkedin";
+import { INSTAGRAM_TONE, INSTAGRAM_FORMAT } from "./platforms/instagram";
+import { YOUTUBE_TITLE_FORMULAS, YOUTUBE_TITLE_RULES } from "./platforms/youtube";
 import { CLEANUP_RULES } from "./cleanup";
 import { pickVariation, pickRandom, formatVariationBlock } from "./variation";
 import { CORE_OUTPUT_SCHEMA, ADVANCED_OUTPUT_SCHEMA } from "../ai/schemas";

@@ -66,10 +66,12 @@ Browser (page.tsx)
 | Diagnostics | `app/lib/ai/diagnostics.ts` | Structured logging, no side effects |
 | Mock | `app/lib/ai/mock.ts` | Hardcoded demo cards (default mode) |
 | Prompts | `app/lib/prompts/index.ts` | Prompt assembly from modular pieces |
+| Platforms | `app/lib/prompts/platforms/` | Per-platform tone, format, opener rules (5 files) |
 | Variation | `app/lib/prompts/variation/` | 6 emotional angles, random picks |
 | Intelligence | `app/lib/intelligence/` | Hook mechanics, story arcs, retention |
 | Prompt Context | `app/lib/intelligence/prompt-context.ts` | Angle → story arc + hook injection |
 | Quality | `app/lib/intelligence/quality.ts` | 0–100 heuristic virality scoring |
+| Timeline | `app/lib/timeline/` | Timestamp-aware moment detection (isolated, not active in generation) |
 | Flags | `app/lib/flags.ts` | Feature flag system (NEXT_PUBLIC_FLAG_*) |
 | Analytics | `app/lib/analytics.ts` | Event tracking stub (no provider yet) |
 
@@ -167,6 +169,24 @@ Advanced (when `advanced_outputs=true`, additional fields):
 
 `tiktok_alt` and `youtube_alt` are scored vs primary and the winner is used in the UI.
 `shortform`, `timestamps`, `blog` are appended as additional output cards.
+
+---
+
+## Folder Structure
+
+```
+app/lib/
+  ai/                    Core AI pipeline (generate, provider, parser, chunker, diagnostics, mock)
+  prompts/
+    platforms/           Per-platform modules: tiktok, twitter, linkedin, instagram, youtube
+    psychology/          STORYTELLING_PATTERNS, ANTI_GENERIC_RULES
+    variation/           6 emotional angle profiles + picker
+    cleanup/             CLEANUP_RULES
+    index.ts             Prompt assembler
+  intelligence/          Hook formulas, retention rules, story arcs, quality scorer, prompt-context
+  timeline/              Timestamp-aware moment detection (isolated — not active in generation)
+  types/                 Shared TypeScript interfaces
+```
 
 ---
 

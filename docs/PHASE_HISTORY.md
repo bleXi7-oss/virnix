@@ -332,3 +332,36 @@ No code changes. Documentation and evaluation framework only.
 - Build: ✅ clean
 - Lint: ✅ clean
 - Gold dataset: ⏳ 0 entries — framework ready, transcripts not yet added
+
+---
+
+## Phase 10 — Timeline Architecture & Module Cleanup (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+**Prompts folder consolidation:**
+- 5 scattered platform prompt folders (`hooks/`, `twitter/`, `linkedin/`, `instagram/`, `youtube/`) → single `platforms/` subfolder
+- Resolved name collision between `prompts/hooks/` (TikTok openers) and `intelligence/hooks.ts` (curiosity gap formulas)
+- `prompts/index.ts` imports updated — only consumer, 5 paths changed, zero behavior change
+
+**New isolated timeline module (`app/lib/timeline/`):**
+- `types.ts` — TimelineMoment, MomentType (9 types), PlatformFit (7 platforms)
+- `transcript-timestamps.ts` — timestamp parsing (MM:SS, HH:MM:SS, brackets, parens), segment grouping
+- `moment-scoring.ts` — deterministic heuristic scoring with 9 signal word lists, specificity bonus, platform fit lookup
+- `moment-detector.ts` — `detectTimelineMoments()`: never throws, returns [] if no timestamps, top 8 moments
+- `formatter.ts` — `formatTimelineMomentsForPrompt()`, `formatMomentReport()`
+- `index.ts` — public API barrel
+
+**Timeline NOT active in generation** — module exists as isolated infrastructure. No prompts injected yet.
+
+**New doc:** `docs/TIMELINE_MOMENT_DETECTION.md` — full feature spec, how it works, known limitations, future roadmap.
+
+**Updated:** `docs/ARCHITECTURE.md` — added Platforms and Timeline modules, added Folder Structure section.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Behavioral regression: ✅ none — existing generation unchanged
+- Timeline module: ✅ compiles, isolated, never throws

@@ -1,4 +1,4 @@
-# Current Phase — Gold Testing & Taste Framework
+# Current Phase — Timeline Architecture & Module Cleanup
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,89 +7,106 @@ Status: complete and pushed
 
 ## Context
 
-Phase 8 (Intelligence Consolidation) validated real AI output quality with confirmation of validation hooks and self-reflection in generated outputs. Architecture is now lightweight and strong.
+Phase 9 (Gold Testing Framework) completed the taste evaluation infrastructure.
+Phase 10 prepares Virnix for timeline intelligence — the ability to detect the strongest content moments from a timestamped transcript.
 
-Phase 9 goal: build the scaffolding to teach Virnix taste — what outputs are genuinely "holy shit" quality vs. mediocre. No new architecture. Documentation, templates, and evaluation systems only.
-
----
-
-## What Was Created
-
-### `docs/gold-tests/` folder structure
-- `EVALUATION_TEMPLATE.md` — reusable per-generation evaluation template. Tracks source metadata, per-output scores, signal analysis, emotional resonance map, platform winner, creator reaction prediction, and "Would I actually post this?" judgments.
-- `COMPARISON_FRAMEWORK.md` — markdown-only before/after comparison system for measuring prompt changes across phases.
-- `transcripts/` — folder for curated test transcripts (empty, ready to populate)
-- `results/` — folder for filled evaluation files per test run
-- `analysis/` — folder for cross-test analysis and comparison files
-
-### `docs/GOLD_PATTERNS.md`
-9 recurring winning patterns with evidence from Notion research + real generation results:
-1. Validation Hook — "you're not X, Y is the reason"
-2. Identity Tension — two people, same mechanism, different target
-3. Emotional Specificity — name the exact emotion
-4. Withheld Knowledge — "nobody teaches you this until it's cost you"
-5. Loss Framing — "you're already behind"
-6. Mechanism Reframe — "it's not a flaw, it's a mechanism"
-7. Confession + Lesson — personal failure → transferable principle
-8. Paradox as Hook — cognitive dissonance forces continued reading
-9. Social Proof Inversion — most people vs. the few
-
-Includes signal hierarchy and "holy shit" threshold definition.
-
-### `docs/FAILURE_PATTERNS.md`
-10 failure patterns with detection methods, severity ratings, and fix status:
-1. Fake Motivation / Empty Affirmation (Critical — fix in place)
-2. Corporate Sludge (Critical — fix in place)
-3. Generic Hook That Applies to Any Video (High — fix in place)
-4. Pacing Collapse / Thread Fatigue (High — partial)
-5. Too-Polished AI Language (High — partial)
-6. Vague Educational Language (High — partial)
-7. LinkedIn Corporate Sludge (Medium — fix in place)
-8. No Stakes / Low-Tension Opening (Medium — partial)
-9. Fake Authority Tone (Low-Medium — not addressed)
-10. Repetitive Pacing (Low — fix in place)
-
-Includes quick detection checklist (7 yes/no checks before marking output strong).
-
-### `docs/CREATOR_SEGMENTS.md`
-Creator type → output quality mapping in 3 tiers:
-- **Tier 1 (natural habitat):** Philosophy/identity, Founder/operator, Self-improvement/psychology, Contrarian business
-- **Tier 2 (conditional):** Educational explainers, Interview podcasts, Transformation story
-- **Tier 3 (weak):** News/current events, Academic without translation, Comedy/entertainment, Motivational hype
-
-Includes quick segment selector decision tree and targeting implications.
-
-### `docs/TEST_TRANSCRIPT_IDEAS.md`
-Curated test list organized by priority:
-- Priority 1: Confirmed strong performers (Dan Koe, Alex Hormozi, Codie Sanchez, Naval, Manson)
-- Priority 2: High-diversity stress tests (Huberman, Fridman, Bartlett, Abdaal)
-- Priority 3: "Danger" transcripts for failure documentation
-- Priority 4: One-per-niche coverage (finance, relationships, health, career, etc.)
-- 5 "Dream Tests" for marketing collateral quality outputs
-- Transcript length guidance
-- 6-factor prioritization scoring matrix
-
-### `docs/STRATEGIC_REPORT.md`
-Brutally honest strategic analysis:
-- What Virnix excels at (identity resonance, anti-generic depth, variation, cost, platform-native grammar)
-- Where the moat lives (encoded taste, quality flywheel, specificity advantage)
-- Where outputs still fail (low-density transcripts, abstract philosophical scoring, YouTube titles, short-form script pacing, Instagram CTAs)
-- What creators would love vs. ignore
-- What to optimize next (YouTube titles, Instagram CTAs, short-form pacing, abstract quality scoring, gold dataset)
-- What NOT to optimize yet (auth, Stripe, more platforms, A/B infrastructure)
-- Notion research gaps
+Two goals:
+1. Clean up the `app/lib/prompts/` structure (consolidate scattered platform modules)
+2. Build the isolated `app/lib/timeline/` module — deterministic, no AI calls, no persistence
 
 ---
 
-## No Code Changes
+## Structural Change: Prompts Platforms Consolidation
 
-This phase is documentation only. Build and lint pass cleanly — no architecture changes.
+### What Moved
+
+Five scattered platform modules consolidated into `app/lib/prompts/platforms/`:
+
+| Old path | New path |
+|----------|----------|
+| `app/lib/prompts/hooks/index.ts` | `app/lib/prompts/platforms/tiktok.ts` |
+| `app/lib/prompts/twitter/index.ts` | `app/lib/prompts/platforms/twitter.ts` |
+| `app/lib/prompts/linkedin/index.ts` | `app/lib/prompts/platforms/linkedin.ts` |
+| `app/lib/prompts/instagram/index.ts` | `app/lib/prompts/platforms/instagram.ts` |
+| `app/lib/prompts/youtube/index.ts` | `app/lib/prompts/platforms/youtube.ts` |
+
+**Why:**
+- The old `prompts/hooks/` folder name collided conceptually with `intelligence/hooks.ts` (both named "hooks" but completely different things — TikTok openers vs. curiosity gap formulas)
+- 5 scattered one-file-per-folder modules → 1 flat `platforms/` folder: cleaner, easier to scan
+- The only consumer is `prompts/index.ts` — 5 import paths updated, nothing else changed
+
+### What Did NOT Move
+
+- `app/lib/ai/` — 8 files flat, already clean, restructuring would add import churn with no readability benefit
+- `app/lib/outputCards.ts` — shared between AI layer and UI, moving it creates dependency awkwardness
+- `app/components/` — 5 files, no subfolder needed
+
+---
+
+## New Module: `app/lib/timeline/`
+
+6 files. Completely isolated. Zero imports from core generation, prompts, or UI.
+
+### `types.ts`
+- `MomentType`: 9 types (validation_hook, contrarian_insight, emotional_confession, story_turning_point, educational_gem, quote_moment, fomo_loss_frame, authority_proof, transformation_moment)
+- `PlatformFit`: 7 platforms (tiktok, reels, shorts, twitter, linkedin, instagram, youtube)
+- `TimelineMoment`: full moment descriptor (id, startTime, endTime, title, momentType, platformFit, suggestedHook, whyItWorks, emotionalTrigger, contentUse, confidenceScore, sourceTextPreview)
+
+### `transcript-timestamps.ts`
+- `parseTimestamp(ts)` — "MM:SS" or "HH:MM:SS" → seconds
+- `formatTimestamp(seconds)` — seconds → "MM:SS" or "HH:MM:SS"
+- `detectTimestampedLines(transcript)` — scan transcript for `00:42`, `[1:23]`, `(01:02:15)` etc.
+- `groupLinesIntoSegments(lines)` — convert to `TranscriptSegment[]` with start/end times and text
+
+### `moment-scoring.ts`
+- `scoreMoment(text)` — deterministic heuristic scoring per segment
+- Signal word lists per moment type (validation, contrarian, confession, story, educational, quote, FOMO, authority, transformation)
+- Specificity bonus (+15) for numbers, percentages, multipliers, timeframes
+- Returns: score (0–100), momentType, emotionalTrigger, platformFit[], reason
+
+### `moment-detector.ts`
+- `detectTimelineMoments(transcript)` — main entry point
+- Parses timestamps, scores segments, returns top 8 moments above score threshold 10
+- **Never throws** — returns `[]` gracefully on any failure or missing timestamps
+- **Zero AI calls** — entirely deterministic
+
+### `formatter.ts`
+- `formatTimelineMomentsForPrompt(moments)` — compact block for optional future prompt injection
+- `formatMomentReport(moment)` — human-readable single-moment report
+
+### `index.ts`
+- Public API barrel — all types and functions exported
+
+---
+
+## Integration Status
+
+**Timeline detection is NOT active in generation by default.**
+
+The module exists as ready-to-use infrastructure. Connecting it to generation requires one decision:
+- Add `detectTimelineMoments(transcript)` call in `generate.ts`
+- Optionally inject `formatTimelineMomentsForPrompt(moments)` into the prompt
+
+This is deferred until the module is validated against real timestamped transcripts (see known limitations in `docs/TIMELINE_MOMENT_DETECTION.md`).
+
+---
+
+## Removal Guarantee
+
+Deleting `app/lib/timeline/` entirely has **zero impact** on:
+- Core generation pipeline
+- Prompts or intelligence layer
+- UI components or output cards
+- Provider, parser, or diagnostics
+- Any other existing module
+
+No other file imports from `app/lib/timeline/`.
 
 ---
 
 ## Validation Status
 
-- Build: ✅ clean
+- Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Framework: ✅ evaluation template, comparison framework, pattern libraries created
-- Gold dataset: ⏳ 0 entries — ready to populate with Priority 1 transcripts
+- Behavioral regression: ✅ none — mock mode and real AI generation unchanged
+- Timeline module: ✅ TypeScript compiles, isolated, never throws
