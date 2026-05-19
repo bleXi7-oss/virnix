@@ -926,3 +926,24 @@ Input, button, chrome glow, inner highlight unchanged.
 - Lint: ✅ clean
 - Light mode: pearl-chrome wave visible through card
 - Dark mode: chrome wave visible through card
+
+---
+
+## Phase 25 — Hero Card True Glass Surface (UI-POLISH-I, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Decisive transparency jump to make the banner visibly readable through the card.
+
+- `app/page.tsx` light card: `bg-white/30` → `bg-white/20` (80% transparent)
+- `app/page.tsx` dark card: `dark:bg-[#0a0a0a]/40` → `dark:bg-[#0a0a0a]/25` (75% transparent)
+- `app/page.tsx` blur: `backdrop-blur-lg` → `backdrop-blur-md` (12px, both modes)
+
+Border, shadow, chrome glow, inner highlight, dark banner opacity (0.14) unchanged.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Light + dark: banner wave visible through card surface
