@@ -11,6 +11,7 @@ import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import DebugPanel from "./components/DebugPanel";
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
+import type { TimelineMoment } from "./lib/timeline/types";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -36,6 +37,7 @@ export default function Home() {
   const [cards, setCards] = useState<OutputCardData[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<AIDiagnostics | null>(null);
+  const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -83,6 +85,7 @@ export default function Home() {
 
       apiResultRef.current = json.data.cards;
       setDiagnostics(json.data.diagnostics ?? null);
+      setTimelineMoments(json.data.timelineMoments ?? null);
       track("generation_completed", {
         duration_ms: Date.now() - genStartRef.current,
         card_count: json.data.cards.length,
@@ -139,6 +142,7 @@ export default function Home() {
     setCards([]);
     setStepIndex(-1);
     setDiagnostics(null);
+    setTimelineMoments(null);
   }, []);
 
   function handleUrlChange(val: string) {
@@ -188,7 +192,7 @@ export default function Home() {
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />
             </ErrorBoundary>
-            <DebugPanel diagnostics={diagnostics} />
+            <DebugPanel diagnostics={diagnostics} timelineMoments={timelineMoments} />
           </>
         )}
 

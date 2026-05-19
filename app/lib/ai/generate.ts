@@ -1,7 +1,7 @@
 import type { GenerateRequest, GenerateResult } from "../types/generation";
 import type { AIDiagnostics } from "./diagnostics";
 import { SYSTEM_PROMPT, ADVANCED_SYSTEM_PROMPT, buildPrompt, buildAdvancedPrompt } from "../prompts";
-import { getTranscript } from "./transcript";
+import { getTranscriptFull } from "./transcript";
 import { getMockResult } from "./mock";
 import { parseAnthropicResponse } from "./parser";
 import { isEnabled } from "../flags";
@@ -9,6 +9,7 @@ import { getProvider } from "./provider";
 import { estimateTokens, estimateCost, selectBestSegment } from "./chunker";
 import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
+import { detectTimelineMoments } from "../timeline";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
 // Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
@@ -27,8 +28,9 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
   const startMs = Date.now();
 
   let transcript: string;
+  let timestampedTranscript: string;
   try {
-    transcript = await getTranscript(req.youtubeUrl);
+    ({ transcript, timestampedTranscript } = await getTranscriptFull(req.youtubeUrl));
   } catch (err) {
     console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
     // Fall back to mock cards — user sees output rather than an error screen
@@ -43,10 +45,20 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
     `[virnix] transcript: ${words} words${wasTruncated ? ` → best ${MAX_WORDS}-word segment selected` : ""}`
   );
 
-  return realGenerate(truncated, startMs);
+  // Timeline detection runs on the full timestamped transcript — never throws, never blocks generation
+  const timelineMoments = detectTimelineMoments(timestampedTranscript);
+  if (timelineMoments.length > 0) {
+    console.log(`[virnix] timeline: ${timelineMoments.length} moments detected`);
+  }
+
+  return realGenerate(truncated, startMs, timelineMoments);
 }
 
-async function realGenerate(transcript: string, startMs: number): Promise<GenerateResult> {
+async function realGenerate(
+  transcript: string,
+  startMs: number,
+  timelineMoments: GenerateResult["timelineMoments"] = []
+): Promise<GenerateResult> {
   const useAdvanced = isEnabled("advanced_outputs");
   const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
   const systemPrompt = useAdvanced ? ADVANCED_SYSTEM_PROMPT : SYSTEM_PROMPT;
@@ -96,11 +108,17 @@ async function realGenerate(transcript: string, startMs: number): Promise<Genera
     parseRepaired,
     coercionUsed,
     viralityScore,
+    timelineMomentsDetected: timelineMoments?.length ?? 0,
   };
 
   logDiagnostics(diagnostics);
 
-  return { cards: finalCards, generatedAt: result.generatedAt, diagnostics };
+  return {
+    cards: finalCards,
+    generatedAt: result.generatedAt,
+    diagnostics,
+    timelineMoments: timelineMoments?.length ? timelineMoments : undefined,
+  };
 }
 
 // ─── Best-output selection ────────────────────────────────────────────────────

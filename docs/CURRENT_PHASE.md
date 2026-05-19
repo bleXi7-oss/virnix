@@ -1,4 +1,4 @@
-# Current Phase — Timeline Architecture & Module Cleanup
+# Current Phase — Timeline Intelligence Activation
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,100 +7,134 @@ Status: complete and pushed
 
 ## Context
 
-Phase 9 (Gold Testing Framework) completed the taste evaluation infrastructure.
-Phase 10 prepares Virnix for timeline intelligence — the ability to detect the strongest content moments from a timestamped transcript.
+Phase 11 (Creator Gold Dataset) established the taste evaluation dataset across 12 real creators.
+Phase 12 activates the timeline intelligence that was built-but-dormant since Phase 10.
 
-Two goals:
-1. Clean up the `app/lib/prompts/` structure (consolidate scattered platform modules)
-2. Build the isolated `app/lib/timeline/` module — deterministic, no AI calls, no persistence
+The key insight from Phase 11: YouTube's transcript API returns segments with `offset` and `duration` metadata that was being discarded. Preserving it enables real timestamp-aware moment detection.
 
 ---
 
-## Structural Change: Prompts Platforms Consolidation
+## What Changed
 
-### What Moved
+### New: `app/lib/timeline/build-timestamped-transcript.ts`
 
-Five scattered platform modules consolidated into `app/lib/prompts/platforms/`:
+Converts raw `TranscriptResponse[]` from `youtube-transcript` into a timestamped string:
 
-| Old path | New path |
-|----------|----------|
-| `app/lib/prompts/hooks/index.ts` | `app/lib/prompts/platforms/tiktok.ts` |
-| `app/lib/prompts/twitter/index.ts` | `app/lib/prompts/platforms/twitter.ts` |
-| `app/lib/prompts/linkedin/index.ts` | `app/lib/prompts/platforms/linkedin.ts` |
-| `app/lib/prompts/instagram/index.ts` | `app/lib/prompts/platforms/instagram.ts` |
-| `app/lib/prompts/youtube/index.ts` | `app/lib/prompts/platforms/youtube.ts` |
+```
+00:42 Your brain isn't resisting change.
+00:48 It's protecting your identity.
+01:14 Most creators think consistency is discipline.
+```
 
-**Why:**
-- The old `prompts/hooks/` folder name collided conceptually with `intelligence/hooks.ts` (both named "hooks" but completely different things — TikTok openers vs. curiosity gap formulas)
-- 5 scattered one-file-per-folder modules → 1 flat `platforms/` folder: cleaner, easier to scan
-- The only consumer is `prompts/index.ts` — 5 import paths updated, nothing else changed
+Handles both offset formats automatically:
+- **srv3 / InnerTube API** (primary): `offset` in milliseconds (integers)
+- **Classic XML** (fallback): `offset` in seconds (floats)
 
-### What Did NOT Move
-
-- `app/lib/ai/` — 8 files flat, already clean, restructuring would add import churn with no readability benefit
-- `app/lib/outputCards.ts` — shared between AI layer and UI, moving it creates dependency awkwardness
-- `app/components/` — 5 files, no subfolder needed
+Detection logic: checks for decimal parts first, then average duration magnitude.
 
 ---
 
-## New Module: `app/lib/timeline/`
+### Updated: `app/lib/ai/transcript.ts`
 
-6 files. Completely isolated. Zero imports from core generation, prompts, or UI.
+Added `getTranscriptFull()` returning `{ transcript, timestampedTranscript }`.  
+`getTranscript()` kept as a thin wrapper — no callers were broken.
 
-### `types.ts`
-- `MomentType`: 9 types (validation_hook, contrarian_insight, emotional_confession, story_turning_point, educational_gem, quote_moment, fomo_loss_frame, authority_proof, transformation_moment)
-- `PlatformFit`: 7 platforms (tiktok, reels, shorts, twitter, linkedin, instagram, youtube)
-- `TimelineMoment`: full moment descriptor (id, startTime, endTime, title, momentType, platformFit, suggestedHook, whyItWorks, emotionalTrigger, contentUse, confidenceScore, sourceTextPreview)
+---
 
-### `transcript-timestamps.ts`
-- `parseTimestamp(ts)` — "MM:SS" or "HH:MM:SS" → seconds
-- `formatTimestamp(seconds)` — seconds → "MM:SS" or "HH:MM:SS"
-- `detectTimestampedLines(transcript)` — scan transcript for `00:42`, `[1:23]`, `(01:02:15)` etc.
-- `groupLinesIntoSegments(lines)` — convert to `TranscriptSegment[]` with start/end times and text
+### Updated: `app/lib/timeline/moment-scoring.ts`
 
-### `moment-scoring.ts`
-- `scoreMoment(text)` — deterministic heuristic scoring per segment
-- Signal word lists per moment type (validation, contrarian, confession, story, educational, quote, FOMO, authority, transformation)
-- Specificity bonus (+15) for numbers, percentages, multipliers, timeframes
-- Returns: score (0–100), momentType, emotionalTrigger, platformFit[], reason
+Scoring improvements informed by gold dataset findings:
 
-### `moment-detector.ts`
-- `detectTimelineMoments(transcript)` — main entry point
-- Parses timestamps, scores segments, returns top 8 moments above score threshold 10
-- **Never throws** — returns `[]` gracefully on any failure or missing timestamps
-- **Zero AI calls** — entirely deterministic
+| Change | Effect |
+|--------|--------|
+| New `mechanism_reframe` type (16 pts) | Captures #1 viral pattern: Naval, Huberman, Peterson, Dan Koe |
+| Expanded mechanism reframe signals | "it's not", "actually", "not about", "not just", "what you think is" |
+| Specificity bonus raised to +20 (was +15) | Rewards "70 rejections", "$2,000/month", "40 years" |
+| Motivation penalty −15 | Penalizes Gary Vee pattern: "hustle", "grind", "work harder" |
+| Confession weight raised to 18 (was 15) | Strengthens detection of Bartlett/MFM-style failure stories |
+| Validation weight raised to 22 (was 20) | Stronger identity-relief detection |
 
-### `formatter.ts`
-- `formatTimelineMomentsForPrompt(moments)` — compact block for optional future prompt injection
-- `formatMomentReport(moment)` — human-readable single-moment report
+---
 
-### `index.ts`
-- Public API barrel — all types and functions exported
+### Updated: `app/lib/timeline/moment-detector.ts`
+
+**30-second window grouping** — the critical architectural change:
+
+- YouTube API returns segments every 2–3 seconds
+- Scoring 3-second slices produces noise (too little text)
+- New `groupIntoWindows(segments, 30)` merges short segments into 30-second windows
+- Scorers now see full thoughts and connected sentences
+- Result: dramatically better detection quality on real transcripts
+
+---
+
+### Updated: `app/lib/timeline/formatter.ts`
+
+- New `formatMomentsReport()` — full report for all moments
+- Improved `formatMomentReport()` — score bar, source preview, platform tags
+- `formatTimelineMomentsForPrompt()` — unchanged (ready for future prompt injection)
+
+---
+
+### Updated: `app/lib/types/generation.ts`
+
+`GenerateResult` now includes `timelineMoments?: TimelineMoment[]`.
+
+---
+
+### Updated: `app/lib/ai/diagnostics.ts`
+
+`AIDiagnostics` now includes `timelineMomentsDetected?: number`.  
+`[VIRNIX_AI]` log line includes `moments=N` when detection runs.
+
+---
+
+### Updated: `app/lib/ai/generate.ts`
+
+Timeline detection runs on every real AI generation:
+
+```typescript
+const timelineMoments = detectTimelineMoments(timestampedTranscript);
+```
+
+- Runs after transcript fetch, before AI call
+- Zero AI tokens — purely deterministic
+- Never throws — generation continues even if detection fails
+- Moments included in `GenerateResult` and diagnostics count
+
+---
+
+### Updated: `app/components/DebugPanel.tsx` + `app/page.tsx`
+
+When `NEXT_PUBLIC_FLAG_DEV_DEBUG=true`, the dev panel now shows:
+
+- "AI Diagnostics" section (unchanged)
+- "Best Clip Opportunities — N detected" section (new, collapsible)
+  - Each moment: timestamp range, type badge, confidence score
+  - Source text preview (first 120 chars)
+  - Suggested hook quote
+  - Platform tags (TikTok / Twitter / LinkedIn etc.)
 
 ---
 
 ## Integration Status
 
-**Timeline detection is NOT active in generation by default.**
-
-The module exists as ready-to-use infrastructure. Connecting it to generation requires one decision:
-- Add `detectTimelineMoments(transcript)` call in `generate.ts`
-- Optionally inject `formatTimelineMomentsForPrompt(moments)` into the prompt
-
-This is deferred until the module is validated against real timestamped transcripts (see known limitations in `docs/TIMELINE_MOMENT_DETECTION.md`).
+**Active:** timestamp reconstruction → window detection → moments in result + debug panel  
+**Not yet active:** prompt injection (infrastructure ready via `formatTimelineMomentsForPrompt`)  
+**Not yet active:** public UI display of clip opportunities
 
 ---
 
 ## Removal Guarantee
 
-Deleting `app/lib/timeline/` entirely has **zero impact** on:
-- Core generation pipeline
-- Prompts or intelligence layer
-- UI components or output cards
-- Provider, parser, or diagnostics
-- Any other existing module
+If `app/lib/timeline/` is deleted, only 5 files need minor edits:
+- `generate.ts` — remove import + 3 lines
+- `transcript.ts` — revert `getTranscriptFull` → `getTranscript`
+- `types/generation.ts` — remove `timelineMoments` field
+- `diagnostics.ts` — remove `timelineMomentsDetected`
+- `DebugPanel.tsx` + `page.tsx` — remove moments prop and panel section
 
-No other file imports from `app/lib/timeline/`.
+Core generation, prompts, UI cards, provider, parser — all unaffected.
 
 ---
 
@@ -108,5 +142,6 @@ No other file imports from `app/lib/timeline/`.
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Behavioral regression: ✅ none — mock mode and real AI generation unchanged
-- Timeline module: ✅ TypeScript compiles, isolated, never throws
+- Behavioral regression: ✅ none — existing generation flow unchanged
+- Mock mode: ✅ unaffected (mock result returned before transcript fetch)
+- Timeline: ✅ activates on real AI generations, graceful fallback to []

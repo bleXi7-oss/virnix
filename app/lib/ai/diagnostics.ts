@@ -19,6 +19,7 @@ export interface AIDiagnostics {
   parseRepaired: boolean;
   coercionUsed: boolean;
   viralityScore?: number;
+  timelineMomentsDetected?: number;
 }
 
 // Emits a single structured log line prefixed with [VIRNIX_AI].
@@ -37,5 +38,6 @@ export function logDiagnostics(d: AIDiagnostics): void {
   ];
   if (d.stopReason) parts.push(`stopReason=${d.stopReason}`);
   if (d.viralityScore != null) parts.push(`score=${d.viralityScore}`);
+  if (d.timelineMomentsDetected != null) parts.push(`moments=${d.timelineMomentsDetected}`);
   console.log(parts.join(" "));
 }

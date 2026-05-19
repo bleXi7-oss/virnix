@@ -1,15 +1,14 @@
 // Formatting utilities for timeline moments.
 //
-// formatTimelineMomentsForPrompt: returns a compact block for optional future
-// injection into AI prompts. NOT active by default — caller must decide to use it.
-// Returns "" when there are no moments, so safe to concatenate unconditionally.
+// formatTimelineMomentsForPrompt: compact block for optional AI prompt injection.
+//   Returns "" when empty — safe to concatenate unconditionally.
+//   Capped at 5 moments (~60 tokens).
 //
-// formatMomentReport: human-readable single-moment report for UI or logging.
+// formatMomentReport: beautiful creator-readable block for a single moment.
+// formatMomentsReport: full report for all detected moments (UI / debug display).
 
 import type { TimelineMoment } from "./types";
 
-// Returns a prompt-injectable section listing the top clip moments.
-// Capped at 5 moments to keep token cost minimal (~60 tokens at most).
 export function formatTimelineMomentsForPrompt(moments: TimelineMoment[]): string {
   if (moments.length === 0) return "";
 
@@ -22,16 +21,39 @@ export function formatTimelineMomentsForPrompt(moments: TimelineMoment[]): strin
   return `POTENTIAL CLIP MOMENTS:\n${lines.join("\n")}`;
 }
 
-// Formats a single moment as a human-readable block (for UI display or logs).
 export function formatMomentReport(m: TimelineMoment): string {
-  const platforms = m.platformFit.join(" / ");
+  const platforms = m.platformFit.slice(0, 3).join(" / ");
+  const score = m.confidenceScore;
+  const bar = scoreBar(score);
+
   return [
-    `${m.startTime}–${m.endTime}`,
-    `Moment type: ${m.title}`,
-    `Why it works: ${m.whyItWorks}`,
-    `Best platform: ${platforms}`,
-    `Suggested hook: "${m.suggestedHook}"`,
-    `Suggested use: ${m.contentUse}`,
-    `Confidence: ${m.confidenceScore}/100`,
+    `${m.startTime}–${m.endTime}  ${bar}`,
+    `▸ ${m.title}`,
+    `  ${m.sourceTextPreview}${m.sourceTextPreview.length >= 120 ? "…" : ""}`,
+    ``,
+    `  Why it works:`,
+    `  ${m.whyItWorks}`,
+    ``,
+    `  Suggested hook:`,
+    `  "${m.suggestedHook}"`,
+    ``,
+    `  Best for: ${platforms}`,
+    `  Use as:   ${m.contentUse}`,
   ].join("\n");
+}
+
+export function formatMomentsReport(moments: TimelineMoment[]): string {
+  if (moments.length === 0) return "";
+
+  const header = `BEST CLIP OPPORTUNITIES — ${moments.length} moment${moments.length === 1 ? "" : "s"} found`;
+  const divider = "─".repeat(50);
+
+  const blocks = moments.map((m) => formatMomentReport(m));
+
+  return [header, divider, ...blocks.join(`\n\n${divider}\n\n`).split("\n")].join("\n");
+}
+
+function scoreBar(score: number): string {
+  const filled = Math.round(score / 20);
+  return "█".repeat(filled) + "░".repeat(5 - filled) + `  ${score}/100`;
 }

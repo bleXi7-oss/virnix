@@ -1,6 +1,6 @@
 // Deterministic heuristic scoring for transcript segments.
 // No AI calls, no embeddings, no external dependencies.
-// Identifies the most likely moment type and platform fit for a given text block.
+// Signal word lists informed by Virnix gold dataset findings (2026-05-19).
 
 import type { MomentType, PlatformFit } from "./types";
 
@@ -17,54 +17,76 @@ export interface MomentScore {
 const VALIDATION_SIGNALS = [
   "you're not", "you were never", "you didn't fail", "it's not your fault",
   "not because you're", "stop blaming yourself", "you're not broken",
-  "it's not you", "you're not lazy", "not weakness",
+  "it's not you", "you're not lazy", "not weakness", "stop beating yourself",
+  "not your problem", "you're not alone", "nothing wrong with you",
+] as const;
+
+// Gold dataset finding: mechanism reframe is the #1 viral pattern.
+// Examples: "Meditation isn't clearing your mind", "You can't erase a fear — extinguish it",
+// "Your inbox never empties. Not email. Your mind."
+const MECHANISM_REFRAME_SIGNALS = [
+  "it's not", "isn't about", "not about", "actually", "the real reason",
+  "not just", "it's never been about", "what you think is",
+  "most people think", "everyone thinks", "misunderstood", "hidden",
+  "what's really", "what's actually", "not X but", "instead of",
+  "the opposite of", "not clearing", "not erasing", "not fixing",
+  "not willpower", "not discipline", "not motivation", "not talent",
+  "not luck", "not money", "not time",
 ] as const;
 
 const CONTRARIAN_SIGNALS = [
-  "actually", "the truth is", "wrong about", "most people", "everyone thinks",
-  "the opposite", "counterintuitive", "nobody tells you", "they don't want you",
-  "the real reason", "what they don't", "backwards",
+  "backwards", "wrong about", "the truth is", "nobody tells you",
+  "they don't want you", "what they don't", "counterintuitive",
+  "the opposite", "stop doing", "stop trying", "stop thinking",
+  "conventional wisdom", "what you've been told is wrong",
 ] as const;
 
 const CONFESSION_SIGNALS = [
   "i was wrong", "i made a mistake", "i used to", "i failed", "i quit",
   "i lost", "looking back", "i regret", "i didn't know", "i was completely",
-  "i almost", "i spent years", "i wasted",
+  "i almost", "i spent years", "i wasted", "i embarrassed", "i had no idea",
+  "i was terrible", "i believed", "i thought", "my biggest mistake",
+  "my worst", "i got it wrong",
 ] as const;
 
 const STORY_SIGNALS = [
   "that's when", "everything changed", "turning point", "and then",
   "suddenly", "until one day", "that moment", "i realized", "it hit me",
-  "i couldn't believe", "that's the moment",
+  "i couldn't believe", "that's the moment", "walked in", "walked out",
+  "they said no", "said no", "every single", "nobody wanted",
 ] as const;
 
 const EDUCATIONAL_SIGNALS = [
-  "here's why", "the reason", "the mechanism", "studies show", "research shows",
-  "data shows", "this is how", "here's how", "the science", "what this means",
-  "the key is", "what most people miss",
+  "the mechanism", "studies show", "research shows",
+  "data shows", "the science", "what this means",
+  "what most people miss", "40 years", "decades of research",
+  "professor", "university study", "peer-reviewed",
 ] as const;
 
 const QUOTE_SIGNALS = [
   '"', "as someone said", "they told me", "the quote", "i once read",
-  "i heard someone say", "one of my mentors",
+  "i heard someone say", "one of my mentors", "someone once told me",
 ] as const;
 
 const FOMO_SIGNALS = [
   "if you don't", "you're already behind", "most people are", "by the time",
   "it's already", "you'll regret", "missing out", "don't wait",
   "every day you", "while you're waiting", "compound",
+  "the window is closing", "already too late", "you're leaving",
 ] as const;
 
 const AUTHORITY_SIGNALS = [
   "in my experience", "after working with", "over the years", "i've seen",
   "in every case", "without exception", "consistently", "hundreds of",
-  "across dozens", "pattern i noticed",
+  "across dozens", "pattern i noticed", "every client", "every founder",
+  "every creator i've worked with",
 ] as const;
 
 const TRANSFORMATION_SIGNALS = [
   "changed everything", "transformed", "never the same", "before that",
   "after that", "it broke me", "rebuilt myself", "came out the other side",
-  "who i was before", "i became",
+  "who i was before", "i became", "completely different person",
+  "nothing was the same", "it rewired",
 ] as const;
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -80,28 +102,40 @@ export function scoreMoment(text: string): MomentScore {
   }
 
   const raw: Record<MomentType, number> = {
-    validation_hook:       countSignals(text, VALIDATION_SIGNALS) * 20,
-    contrarian_insight:    countSignals(text, CONTRARIAN_SIGNALS) * 10,
-    emotional_confession:  countSignals(text, CONFESSION_SIGNALS) * 15,
-    story_turning_point:   countSignals(text, STORY_SIGNALS) * 12,
+    validation_hook:       countSignals(text, VALIDATION_SIGNALS) * 22,
+    mechanism_reframe:     countSignals(text, MECHANISM_REFRAME_SIGNALS) * 16,
+    contrarian_insight:    countSignals(text, CONTRARIAN_SIGNALS) * 12,
+    emotional_confession:  countSignals(text, CONFESSION_SIGNALS) * 18,
+    story_turning_point:   countSignals(text, STORY_SIGNALS) * 14,
     educational_gem:       countSignals(text, EDUCATIONAL_SIGNALS) * 10,
     quote_moment:          countSignals(text, QUOTE_SIGNALS) * 15,
     fomo_loss_frame:       countSignals(text, FOMO_SIGNALS) * 15,
     authority_proof:       countSignals(text, AUTHORITY_SIGNALS) * 10,
-    transformation_moment: countSignals(text, TRANSFORMATION_SIGNALS) * 12,
+    transformation_moment: countSignals(text, TRANSFORMATION_SIGNALS) * 14,
   };
 
-  // Specificity bonus: numbers, percentages, multipliers, timeframes
+  // Specificity bonus: numbers, dollar amounts, percentages, timeframes.
+  // Gold dataset finding: specific detail (70 rejections, $2000/month, 40 years)
+  // dramatically improves content quality.
   const specificityBonus =
-    /\$\d+|\d+[%x]|\d+\s*(days?|weeks?|months?|years?|clients?|creators?|followers?)/.test(text)
-      ? 15
+    /\$[\d,]+|\d+[%x]|\d+\s*(days?|weeks?|months?|years?|clients?|creators?|followers?|meetings?|hours?|rejections?|people|times?|years?\s+of)/.test(text)
+      ? 20
+      : 0;
+
+  // Anti-motivation penalty: pure hustle/motivational content (Gary Vee pattern)
+  // produces weak outputs — gold dataset confirmed.
+  const motivationPenalty =
+    /hustle|work harder|believe in yourself|grind|mindset|you can do it|stay consistent|just show up|take action|just do it/.test(
+      text.toLowerCase()
+    )
+      ? -15
       : 0;
 
   // Find dominant moment type by highest raw score
   const entries = (Object.entries(raw) as [MomentType, number][]).sort(([, a], [, b]) => b - a);
   const [momentType, typeScore] = entries[0];
 
-  const score = Math.max(0, Math.min(typeScore + specificityBonus, 100));
+  const score = Math.max(0, Math.min(typeScore + specificityBonus + motivationPenalty, 100));
 
   return {
     score,
@@ -116,6 +150,7 @@ export function scoreMoment(text: string): MomentScore {
 
 const EMOTIONAL_TRIGGERS: Record<MomentType, string> = {
   validation_hook:       "identity relief + curiosity",
+  mechanism_reframe:     "cognitive reframe + paradigm shift",
   contrarian_insight:    "cognitive dissonance + pattern interrupt",
   emotional_confession:  "vulnerability + trust",
   story_turning_point:   "narrative tension + resolution",
@@ -128,6 +163,7 @@ const EMOTIONAL_TRIGGERS: Record<MomentType, string> = {
 
 const PLATFORM_FIT: Record<MomentType, PlatformFit[]> = {
   validation_hook:       ["tiktok", "reels", "instagram"],
+  mechanism_reframe:     ["tiktok", "twitter", "linkedin"],
   contrarian_insight:    ["twitter", "linkedin", "youtube"],
   emotional_confession:  ["tiktok", "reels", "instagram", "youtube"],
   story_turning_point:   ["youtube", "tiktok", "instagram"],
@@ -141,6 +177,8 @@ const PLATFORM_FIT: Record<MomentType, PlatformFit[]> = {
 const REASONS: Record<MomentType, string> = {
   validation_hook:
     "Removes self-blame before delivering insight — validation hook formula",
+  mechanism_reframe:
+    "Reframes a concept the reader thinks they understand — gold dataset #1 viral pattern",
   contrarian_insight:
     "Challenges assumed truth — forces viewer to re-evaluate their position",
   emotional_confession:

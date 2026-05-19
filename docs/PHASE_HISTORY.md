@@ -365,3 +365,57 @@ No code changes. Documentation and evaluation framework only.
 - Lint: ✅ clean
 - Behavioral regression: ✅ none — existing generation unchanged
 - Timeline module: ✅ compiles, isolated, never throws
+
+---
+
+## Phase 12 — Timeline Intelligence Activation
+
+**Date:** 2026-05-19
+**Commit:** (pending)
+
+### Context
+
+Phase 10 built the timeline module but left it dormant — YouTube transcript segments with `offset`/`duration` metadata were being discarded. Phase 12 activates real timestamp-aware moment detection using that metadata.
+
+### What Was Built
+
+**New file: `app/lib/timeline/build-timestamped-transcript.ts`**
+- `buildTimestampedTranscript(RawSegment[])` — converts raw YouTube segments to `"MM:SS text\n..."` format
+- Auto-detects offset unit (milliseconds vs seconds) by checking float decimals + average duration magnitude
+- Handles both srv3 (InnerTube/ms) and classic XML (seconds) formats from youtube-transcript library
+
+**Updated: `app/lib/ai/transcript.ts`**
+- Added `getTranscriptFull()` returning `{ transcript, timestampedTranscript }`
+- `getTranscript()` kept as thin wrapper — no callers broken
+
+**Updated: `app/lib/timeline/moment-scoring.ts`** (gold dataset improvements)
+- New `mechanism_reframe` moment type — the #1 viral pattern from Phase 11 gold dataset
+- Mechanism reframe signals: "it's not", "actually", "not about", "not just", "what you think is"
+- Specificity bonus raised: +20 (was +15)
+- Motivation penalty: −15 for hustle/mindset content (Gary Vee pattern)
+- Confession weight: 18 (was 15), Validation weight: 22 (was 20)
+
+**Updated: `app/lib/timeline/moment-detector.ts`**
+- Added `groupIntoWindows(segments, 30s)` — merges 3-second YouTube segments into 30-second scoring windows
+- Scoring now operates on full thoughts instead of 3-second slices
+- Dramatically improved detection quality on real transcripts
+
+**Updated: `app/lib/timeline/formatter.ts`**
+- New `formatMomentsReport()` — full multi-moment report
+- Improved `formatMomentReport()` — score bar, source preview, platform tags
+
+**Updated: types, diagnostics, generate.ts**
+- `GenerateResult.timelineMoments?: TimelineMoment[]`
+- `AIDiagnostics.timelineMomentsDetected?: number`
+- `generate.ts` calls `detectTimelineMoments(timestampedTranscript)` after transcript fetch
+- Detection runs on every real AI generation — zero extra tokens, zero extra latency
+
+**Updated: DebugPanel + page.tsx**
+- Dev panel (NEXT_PUBLIC_FLAG_DEV_DEBUG=true) now shows "Best Clip Opportunities" section
+- Each moment: timestamp, type badge, confidence, source preview, suggested hook, platform tags
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Behavioral regression: ✅ none — generation, prompts, UI cards all unchanged
+- Timeline: ✅ active on real AI generations, graceful [] fallback

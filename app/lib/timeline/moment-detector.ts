@@ -1,7 +1,13 @@
 // Detects the strongest content moments in a timestamped transcript.
 //
+// Pipeline:
+//   1. detectTimestampedLines()   — find all lines with timestamps
+//   2. groupLinesIntoSegments()   — pair each timestamp with the next
+//   3. groupIntoWindows()         — merge 3s segments into 30s scoring windows
+//   4. scoreMoment()              — heuristic score per window
+//   5. top MAX_MOMENTS returned, sorted by confidence
+//
 // Deterministic heuristic — no AI calls, no ML, no external dependencies.
-// Returns top moments sorted by confidence score.
 // Never throws — returns [] on any failure or missing timestamps.
 
 import type { TimelineMoment } from "./types";
@@ -9,40 +15,40 @@ import {
   detectTimestampedLines,
   groupLinesIntoSegments,
   formatTimestamp,
+  type TranscriptSegment,
 } from "./transcript-timestamps";
 import { scoreMoment } from "./moment-scoring";
 
 const MAX_MOMENTS = 8;
 const MIN_SCORE_THRESHOLD = 10;
+const WINDOW_SECONDS = 30;
 
 export function detectTimelineMoments(transcript: string): TimelineMoment[] {
   try {
     const lines = detectTimestampedLines(transcript);
-    // No timestamps found — return empty, don't break existing generation
     if (lines.length === 0) return [];
 
     const segments = groupLinesIntoSegments(lines);
     if (segments.length === 0) return [];
 
-    const moments: TimelineMoment[] = segments
-      .map((seg, i) => {
-        const scored = scoreMoment(seg.text);
-        // Estimate 30s window for the last segment (no next timestamp)
-        const endTime = seg.endTime || formatTimestamp(seg.startSeconds + 30);
+    const windows = groupIntoWindows(segments, WINDOW_SECONDS);
 
+    const moments: TimelineMoment[] = windows
+      .map((win, i) => {
+        const scored = scoreMoment(win.text);
         return {
           id: `moment-${i}`,
-          startTime: seg.startTime,
-          endTime,
+          startTime: win.startTime,
+          endTime: win.endTime,
           title: MOMENT_TITLES[scored.momentType] ?? "Strong Moment",
           momentType: scored.momentType,
           platformFit: scored.platformFit,
-          suggestedHook: buildSuggestedHook(seg.text, scored.momentType),
+          suggestedHook: buildSuggestedHook(win.text, scored.momentType),
           whyItWorks: scored.reason,
           emotionalTrigger: scored.emotionalTrigger,
           contentUse: CONTENT_USES[scored.momentType] ?? "repurposable content moment",
           confidenceScore: scored.score,
-          sourceTextPreview: seg.text.slice(0, 100),
+          sourceTextPreview: win.text.slice(0, 120),
         } satisfies TimelineMoment;
       })
       .filter((m) => m.confidenceScore >= MIN_SCORE_THRESHOLD);
@@ -55,10 +61,58 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
   }
 }
 
+// Merges consecutive segments into fixed-duration windows.
+// YouTube API returns segments every 2–3 seconds. Scoring individual lines
+// misses context; 30-second windows contain full thoughts and score better.
+function groupIntoWindows(
+  segments: TranscriptSegment[],
+  windowDuration: number
+): TranscriptSegment[] {
+  if (segments.length === 0) return [];
+
+  const windows: TranscriptSegment[] = [];
+  let windowStart = segments[0];
+  const windowTexts: string[] = [segments[0].text];
+
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+    const elapsed = seg.startSeconds - windowStart.startSeconds;
+
+    if (elapsed >= windowDuration) {
+      windows.push({
+        startTime: windowStart.startTime,
+        endTime: seg.startTime,
+        startSeconds: windowStart.startSeconds,
+        endSeconds: seg.startSeconds,
+        text: windowTexts.join(" "),
+      });
+      windowStart = seg;
+      windowTexts.length = 0;
+      windowTexts.push(seg.text);
+    } else {
+      windowTexts.push(seg.text);
+    }
+  }
+
+  if (windowTexts.length > 0) {
+    const last = segments[segments.length - 1];
+    windows.push({
+      startTime: windowStart.startTime,
+      endTime: last.endTime || formatTimestamp(last.startSeconds + windowDuration),
+      startSeconds: windowStart.startSeconds,
+      endSeconds: last.endSeconds || last.startSeconds + windowDuration,
+      text: windowTexts.join(" "),
+    });
+  }
+
+  return windows;
+}
+
 function buildSuggestedHook(text: string, type: string): string {
   const firstSentence = text.match(/[^.!?]+[.!?]/)?.[0]?.trim() ?? text.slice(0, 80).trim();
   const prefixes: Record<string, string> = {
     validation_hook:       "You're not failing — ",
+    mechanism_reframe:     "This isn't what you think. ",
     contrarian_insight:    "Everyone gets this wrong. ",
     emotional_confession:  "I used to believe ",
     story_turning_point:   "That's when everything changed: ",
@@ -74,6 +128,7 @@ function buildSuggestedHook(text: string, type: string): string {
 
 const MOMENT_TITLES: Record<string, string> = {
   validation_hook:       "Validation Hook",
+  mechanism_reframe:     "Mechanism Reframe",
   contrarian_insight:    "Contrarian Insight",
   emotional_confession:  "Emotional Confession",
   story_turning_point:   "Story Turning Point",
@@ -86,6 +141,7 @@ const MOMENT_TITLES: Record<string, string> = {
 
 const CONTENT_USES: Record<string, string> = {
   validation_hook:       "short-form clip opener",
+  mechanism_reframe:     "TikTok / Reels opener · Twitter thread starter",
   contrarian_insight:    "Twitter thread starter / LinkedIn hook",
   emotional_confession:  "TikTok / Reels opener",
   story_turning_point:   "YouTube long-form anchor moment",

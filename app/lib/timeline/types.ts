@@ -2,6 +2,7 @@
 
 export type MomentType =
   | "validation_hook"
+  | "mechanism_reframe"
   | "contrarian_insight"
   | "emotional_confession"
   | "story_turning_point"

@@ -1,7 +1,13 @@
 import { YoutubeTranscript } from "youtube-transcript";
 import { getYouTubeVideoId } from "../youtube";
+import { buildTimestampedTranscript } from "../timeline/build-timestamped-transcript";
 
-export async function getTranscript(youtubeUrl: string): Promise<string> {
+export interface TranscriptResult {
+  transcript: string;
+  timestampedTranscript: string;
+}
+
+export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptResult> {
   const videoId = getYouTubeVideoId(youtubeUrl);
   if (!videoId) {
     throw new Error("Could not extract video ID from the URL.");
@@ -19,7 +25,15 @@ export async function getTranscript(youtubeUrl: string): Promise<string> {
     throw new Error("No transcript found for this video.");
   }
 
-  return cleanText(segments.map((s) => s.text).join(" "));
+  const transcript = cleanText(segments.map((s) => s.text).join(" "));
+  const timestampedTranscript = buildTimestampedTranscript(segments);
+
+  return { transcript, timestampedTranscript };
+}
+
+export async function getTranscript(youtubeUrl: string): Promise<string> {
+  const result = await getTranscriptFull(youtubeUrl);
+  return result.transcript;
 }
 
 function cleanText(raw: string): string {

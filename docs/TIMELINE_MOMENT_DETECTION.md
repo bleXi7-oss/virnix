@@ -2,28 +2,26 @@
 
 ## What This Is
 
-Transcript intelligence that identifies the strongest content moments within a timestamped transcript — without any AI calls, video processing, or external dependencies.
+Transcript intelligence that identifies the strongest content moments in a YouTube transcript — without any AI calls, video processing, or external dependencies.
 
-Given a transcript with timestamps, Virnix detects:
+Given a YouTube URL, Virnix now:
+1. Fetches the transcript with raw timestamp metadata (offset in ms/s)
+2. Reconstructs a timestamped transcript string (`"00:42 text here"`)
+3. Groups segments into 30-second scoring windows
+4. Scores each window for psychological moment type
+5. Returns the top 8 moments, ranked by confidence
 
-- Best short-form clip opportunities
-- Best hook moments (validation hooks, contrarian insights, confessions)
-- Best emotional moments
-- Best educational / save-worthy moments
-- Best quote moments
-- Best Twitter/X thread starting points
-- Best LinkedIn post angles
-
-**Example output:**
+**Example output (in dev debug panel):**
 
 ```
-00:42–01:14
-Moment type: Validation Hook
-Why it works: Removes self-blame before delivering insight — validation hook formula
-Best platform: TikTok / Reels / Instagram
-Suggested hook: "You're not failing — Your brain isn't resisting change. It's surviving it."
-Suggested use: short-form clip opener
-Confidence: 80/100
+00:42–01:14  ▸ Mechanism Reframe  [85/100]
+  You can't just erase a fear. You have to extinguish it — then replace it.
+  Why: Reframes a concept the reader thinks they understand
+  Suggested hook: "This isn't what you think. You can't just erase a fear."
+  Best for: TikTok / Twitter / LinkedIn
+
+12:03–12:44  ▸ Contrarian Insight  [60/100]
+  Most people think consistency is discipline...
 ```
 
 ---
@@ -33,129 +31,129 @@ Confidence: 80/100
 - Not video editing
 - Not clip rendering
 - Not ffmpeg or video processing
-- Not AI-generated clip suggestions (all deterministic, zero API cost)
+- Not AI-generated suggestions (all deterministic, zero extra API cost)
 - Not automatic posting or scheduling
-- Not a replacement for human judgment about what to clip
 
 ---
 
-## Why Timestamp Intelligence Matters for Creators
+## Architecture
 
-Most creators repurpose content in one of two ways:
-1. Manually scrubbing through video to find moments (slow, inconsistent)
-2. Using AI to summarize the whole video (loses the specific moments)
+### Full Pipeline
 
-Neither approach surfaces the psychologically strongest moments — the validation hooks, the emotional confessions, the story turning points that generate saves and shares.
+```
+YouTube URL
+  → getTranscriptFull()
+      ├── YoutubeTranscript.fetchTranscript()  [raw segments with offset/duration]
+      ├── cleanText(segments.map(s => s.text).join(' '))  → transcript (for AI)
+      └── buildTimestampedTranscript(segments)            → timestampedTranscript
 
-Virnix's timeline detection finds those moments deterministically by scanning the transcript for known high-signal language patterns. No AI cost, no latency — pure text analysis.
+  → detectTimelineMoments(timestampedTranscript)
+      ├── detectTimestampedLines()    [parse "MM:SS text" lines]
+      ├── groupLinesIntoSegments()    [pair each timestamp with next]
+      ├── groupIntoWindows(30s)       [merge 3s segments → 30s windows]
+      ├── scoreMoment(window.text)    [heuristic scoring per window]
+      └── top 8 by confidence score
 
----
+  → GenerateResult { cards, diagnostics, timelineMoments }
+```
 
-## How It Works
-
-### Step 1: Timestamp Detection
-
-`detectTimestampedLines()` scans the transcript for timestamp patterns:
-- `00:42` / `1:23` / `01:02:15`
-- `[00:42]` / `(00:42)`
-
-If no timestamps are found, the function returns an empty array and **does not affect generation**. Existing generation continues normally.
-
-### Step 2: Segment Grouping
-
-`groupLinesIntoSegments()` converts timestamped lines into segments — each segment spans from one timestamp to the next.
-
-### Step 3: Moment Scoring
-
-`scoreMoment()` applies deterministic heuristics to each segment:
-
-| Moment Type | Signal Words | Platform Fit |
-|-------------|-------------|--------------|
-| validation_hook | "you're not", "not your fault", "not weakness" | TikTok, Reels, Instagram |
-| contrarian_insight | "actually", "most people", "the truth is" | Twitter, LinkedIn, YouTube |
-| emotional_confession | "i was wrong", "i failed", "looking back" | TikTok, Reels, YouTube |
-| story_turning_point | "that's when", "everything changed", "i realized" | YouTube, TikTok |
-| educational_gem | "here's why", "the mechanism", "data shows" | LinkedIn, YouTube, Twitter |
-| quote_moment | `"`, "they told me", "i once read" | Instagram, Twitter |
-| fomo_loss_frame | "you're already behind", "every day you", "compound" | TikTok, Twitter |
-| authority_proof | "after working with", "over the years", "i've seen" | LinkedIn, YouTube |
-| transformation_moment | "changed everything", "rebuilt myself", "never the same" | YouTube, TikTok |
-
-Specificity bonus (+15) for concrete data: `$123`, `47%`, `3x`, `30 days`.
-
-### Step 4: Selection
-
-Top 8 moments by confidence score are returned. Moments below score 10 are filtered out.
-
----
-
-## Module Location
+### Module Location
 
 ```
 app/lib/timeline/
-  types.ts                  TimelineMoment, MomentType, PlatformFit
-  transcript-timestamps.ts  parseTimestamp, formatTimestamp, detectTimestampedLines, groupLinesIntoSegments
-  moment-scoring.ts         scoreMoment, MomentScore
-  moment-detector.ts        detectTimelineMoments (main entry point)
-  formatter.ts              formatTimelineMomentsForPrompt, formatMomentReport
-  index.ts                  public API barrel
+  types.ts                       TimelineMoment, MomentType, PlatformFit
+  build-timestamped-transcript.ts  buildTimestampedTranscript(RawSegment[])
+  transcript-timestamps.ts       detectTimestampedLines, groupLinesIntoSegments
+  moment-scoring.ts              scoreMoment, MomentScore
+  moment-detector.ts             detectTimelineMoments (main entry point)
+  formatter.ts                   formatTimelineMomentsForPrompt, formatMomentReport, formatMomentsReport
+  index.ts                       public API barrel
 ```
+
+### Key Design Decisions
+
+**`buildTimestampedTranscript`** — handles both youtube-transcript output formats:
+- `srv3` (InnerTube API, primary): `offset` in milliseconds (integers)
+- `classic XML` (fallback): `offset` in seconds (floats with decimal parts)
+- Auto-detection: checks for float decimals first, then average duration magnitude
+
+**30-second window grouping** — YouTube API returns segments every 2–3 seconds. Scoring 3-second slices produces noise. Grouping into 30-second windows gives the scorer full thoughts and sentences to analyze, dramatically improving detection quality.
+
+**Never throws** — `detectTimelineMoments` wraps all work in `try/catch` and returns `[]` on any failure. The existing generation pipeline is unaffected if timeline detection fails.
 
 ---
 
-## Current Integration Status
+## Moment Types (10 types)
 
-**Timeline detection is NOT injected into generation prompts by default.**
+| Type | Signal | Platform Fit | Gold Dataset Source |
+|------|--------|-------------|---------------------|
+| `mechanism_reframe` | "it's not", "actually", "not about", "what you think is" | TikTok, Twitter, LinkedIn | #1 viral pattern (Naval, Huberman, Peterson) |
+| `validation_hook` | "you're not", "not your fault", "you're not lazy" | TikTok, Reels, Instagram | Validation hook formula |
+| `contrarian_insight` | "backwards", "the truth is", "stop doing" | Twitter, LinkedIn, YouTube | Pattern interrupt |
+| `emotional_confession` | "i was wrong", "i failed", "i spent years" | TikTok, Reels, YouTube | Vulnerability + trust |
+| `story_turning_point` | "that's when", "everything changed", "i realized" | YouTube, TikTok | Narrative arc |
+| `educational_gem` | "the mechanism", "40 years", "research shows" | LinkedIn, YouTube | Save-worthy insight |
+| `quote_moment` | `"`, "they told me", "i once read" | Instagram, Twitter | Borrowed authority |
+| `fomo_loss_frame` | "if you don't", "you're already behind", "compound" | TikTok, Twitter | Loss aversion |
+| `authority_proof` | "after working with", "i've seen", "hundreds of" | LinkedIn, YouTube | Social proof |
+| `transformation_moment` | "changed everything", "rebuilt myself", "never the same" | YouTube, TikTok | Identity aspiration |
 
-`formatter.ts` provides `formatTimelineMomentsForPrompt()` which formats moments into a compact block:
+### Scoring Improvements (Phase 12)
 
-```
-POTENTIAL CLIP MOMENTS:
-- 00:42–01:14: validation hook, identity relief + curiosity, tiktok/reels fit
-- 12:03–12:31: contrarian insight, cognitive dissonance, twitter/linkedin fit
-```
+Added from gold dataset findings:
+- **Mechanism reframe signals** (16 pts each) — "not about", "actually", "not just", "what you think is"
+- **Specificity bonus** (+20) — "70 sales meetings", "$2,000/month", "40 years of research"
+- **Motivation penalty** (−15) — "hustle", "grind", "work harder", "believe in yourself" (Gary Vee pattern)
+- Increased validation weight (22 pts vs previous 20)
+- Increased confession weight (18 pts vs previous 15)
 
-This block can be injected into `buildPrompt()` / `buildAdvancedPrompt()` in a future phase when:
-- The token cost is acceptable (~60 tokens for 5 moments)
-- The segment scoring is validated against real transcripts
-- The quality improvement is confirmed
+---
 
-Until then, the module is live code but not connected to generation.
+## Integration Status
+
+**Active as of Phase 12.** Timeline moments are:
+1. **Detected** on every real AI generation (zero-cost, runs in parallel with transcript fetch)
+2. **Returned** in `GenerateResult.timelineMoments`
+3. **Shown** in dev debug panel (collapsible "Best Clip Opportunities" section)
+4. **Logged** in diagnostics (`moments=N` in `[VIRNIX_AI]` log line)
+
+**NOT yet active:**
+- Prompt injection (`formatTimelineMomentsForPrompt` exists but not wired to generation)
+- Public UI display (debug panel only)
+- Clip export hints to users
 
 ---
 
 ## Removal Guarantee
 
-If timeline detection is removed entirely (delete `app/lib/timeline/`), **zero other modules are affected**:
+If `app/lib/timeline/` is deleted:
+- `app/lib/ai/generate.ts` — remove the `detectTimelineMoments` import and the two lines that call it
+- `app/lib/ai/transcript.ts` — revert `getTranscriptFull` to `getTranscript` (plain string return)
+- `app/lib/types/generation.ts` — remove `timelineMoments?: TimelineMoment[]`
+- `app/lib/ai/diagnostics.ts` — remove `timelineMomentsDetected`
+- `app/components/DebugPanel.tsx` — remove moments prop and section
+- `app/page.tsx` — remove `timelineMoments` state
 
-- `app/lib/ai/generate.ts` — not affected
-- `app/lib/prompts/` — not affected
-- `app/lib/intelligence/` — not affected
-- `app/components/` — not affected
-- `app/api/generate/` — not affected
-
-No other file imports from `app/lib/timeline/`. It is a pure addition.
+No other modules are affected.
 
 ---
 
 ## Known Limitations
 
-1. **Requires timestamps in the transcript.** YouTube transcripts fetched via `youtube-transcript` do NOT include timestamps in the text — they are in separate metadata fields. This means timeline detection returns `[]` for most Virnix inputs today. Future work: use the segment metadata to reconstruct the timestamped transcript.
+1. **Heuristic only.** Signal word matching is fast and deterministic but misses context. A sentence containing "i was wrong" could be mundane. A sentence with zero signals could be a Bartlett-level gold moment. The scorer filters, it doesn't judge.
 
-2. **Single-line segments.** Currently, each timestamped line is treated as a single segment. Multi-line segments (where one timestamp covers several lines of dialogue) require pre-aggregation that is not yet implemented.
+2. **No calibration against video.** The confidence score is relative within a generation — it does not predict real-world virality. Use it to rank moments within a transcript, not compare across creators.
 
-3. **Heuristic scoring.** Signal word matching is fast and deterministic but misses context. A sentence containing "i was wrong" could be mundane; a sentence without any signals could be exceptional. The scorer is a filter, not a judge.
+3. **Window boundaries.** The 30-second window grouping may split a key moment across two windows. The dominant moment usually still scores well; edge cases may miss the peak.
 
-4. **No validation against real outputs.** The signal word lists and weights are derived from the creator psychology research (Notion analysis), not from scored real transcripts. Calibration against the gold dataset will improve accuracy.
+4. **Language English-only.** Signal word lists are English. Non-English transcripts will produce empty or low-quality results.
 
 ---
 
 ## Future Roadmap
 
-1. **Timestamp injection from YouTube metadata** — reconstruct timestamped transcript from `youtube-transcript` segment objects (timestamps are in the API response, just not in the joined text)
-2. **Multi-line segment aggregation** — group lines between timestamps into richer text blocks for better scoring
-3. **Clip script suggestions** — given a detected moment, generate a short-form script for that specific timestamp range
-4. **Manual clip export hint** — surface `startTime–endTime` in the UI so creators know exactly which part to clip
-5. **Gold dataset calibration** — score signal word lists against 50+ evaluated moments to improve detection accuracy
-6. **UI integration** — display detected moments in the output panel as an optional "clip guide" section
-7. **Video editing integration** — much later, optional, only after the text layer is validated
+1. **Prompt injection** — connect `formatTimelineMomentsForPrompt()` to `buildPrompt()` when token cost is validated
+2. **Public clip guide UI** — show detected moments in the output panel as a "Best moments to clip" section
+3. **Gold dataset calibration** — score signal word lists against 50+ manually evaluated moments
+4. **Confession arc detection** — multi-window scoring to detect the full "setup → confession → resolution" arc
+5. **Video editing integration** — much later, optional, only after text layer is validated
