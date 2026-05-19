@@ -564,6 +564,58 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 
 ---
 
+## Phase 20 — Hero Glass Surface (UI-FIX-D)
+
+**Date:** 2026-05-20
+
+### Context
+
+Phase 19 made the banner atmosphere clearly visible around the hero card. The card itself was still fully opaque (solid white / solid `#0a0a0a`), covering the atmosphere completely. This phase makes the hero card a premium frosted-glass surface so the banner is subtly visible both around AND through the card.
+
+### What Changed
+
+**`app/page.tsx` — hero card surface only**
+
+| Property | Before | After |
+|----------|--------|-------|
+| Light fill | `bg-white` (opaque) | `bg-white/75` (75% opacity) |
+| Light border | `border-zinc-200` | `border-zinc-200/70` (softened) |
+| Dark fill | `dark:bg-[#0a0a0a]` (opaque) | `dark:bg-[#0a0a0a]/80` (80% opacity) |
+| Dark border | `dark:border-zinc-800/60` | `dark:border-zinc-700/40` (softened) |
+| Blur | none | `backdrop-blur-xl` (both modes, 24px) |
+
+Shadow, inset highlight, and all other classes unchanged.
+
+Surface hierarchy (light):
+- Page: pearl `#f8f8f6`
+- Banner: silver chrome at 22% opacity
+- Hero card: frosted `bg-white/75 backdrop-blur-xl` — banner shows at ~25% through card
+- Input: `bg-white` fully opaque — readable surface within frosted card
+- Button: `bg-zinc-900` — strong chrome black, full contrast
+
+### Visual Result
+
+**Light mode**: banner silver-chrome atmosphere is now visible through the hero card, not just around it. The card reads as a pearl frosted glass panel sitting on the cinematic background. Text remains highly readable — 75% fill is above the threshold for legible contrast.
+
+**Dark mode**: card has 20% see-through with blur. On a near-black background with 10% banner, the visual contribution is subtle but the `backdrop-blur-xl` creates the correct frosted material feel. Borders softened from `zinc-800/60` to `zinc-700/40` for a lighter chrome edge.
+
+### Why This Is Premium, Not Cheap Glassmorphism
+
+Cheap glassmorphism: low opacity, excessive blur, colorful gradient background, low readability.
+
+This implementation: high opacity (75%/80%), controlled blur (24px), neutral pearl/chrome background, text contrast maintained, no colorful gradients, preserves all shadow and inset chrome highlights.
+
+### Bottom-Left Icon Status
+
+Moved to bottom-right in Phase 19 via `devIndicators: { position: "bottom-right" }`. Bottom-left is clear.
+
+### Validation Status
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Dark mode: ✅ no regressions — dark shadow, inset highlight, input/button all unchanged
+
+---
+
 ## Phase 19 — Visible Chrome Atmosphere (UI-FIX-C)
 
 **Date:** 2026-05-20

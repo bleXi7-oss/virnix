@@ -1,11 +1,11 @@
-# Current Phase — Visible Chrome Atmosphere (UI-FIX-C)
+# Current Phase — Hero Glass Surface (UI-FIX-D)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Premium Light Theme Polish (2026-05-20) — complete
+## Previous phase: Visible Chrome Atmosphere (UI-FIX-C, 2026-05-20) — complete
 
 ---
 
