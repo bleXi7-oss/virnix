@@ -248,7 +248,7 @@ Calibrated against Phase 15 gold dataset (12 creators). **Never describe as vira
 
 ## Known Weaknesses / Technical Debt
 
-1. **Opener repetition**: `TIKTOK_OPENING_LINES` has 10 entries; 42% of outputs use "Everyone's doing this backwards." Needs expansion to 18+ openers.
+1. **Opener repetition**: ✅ Fixed in Phase 17. `TIKTOK_OPENING_LINES` expanded from 10 → 26 entries across 8 archetypes. "Everyone's doing this backwards." exposure drops from ~42% to ~3.8%.
 2. **Non-English transcripts**: Signal detection is English-only. Non-English → scores Low.
 3. **Contracted forms**: "isn't" ≠ "is not" in signal matching. Heuristic limitation.
 4. **Short transcripts**: < 3 moments → conservative quality scores.
@@ -267,7 +267,7 @@ Calibrated against Phase 15 gold dataset (12 creators). **Never describe as vira
 | 15 | Timeline grounding: inject detected moments into prompts |
 | 16 | Transcript quality evaluation: clipability classification + UI card |
 
-Current phase: **16 — complete and pushed**
+Current phase: **17 — TikTok opener quality patch, complete and pushed**
 
 ---
 

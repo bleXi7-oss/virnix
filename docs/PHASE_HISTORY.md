@@ -564,6 +564,35 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 
 ---
 
+## Phase 17 — TikTok Opener Quality Patch
+
+**Date:** 2026-05-20
+**Commit:** (pending)
+
+### Context
+
+Phase 15 validation identified "Everyone's doing this backwards." appearing in 5/12 outputs (42%). The `TIKTOK_OPENING_LINES` pool had only 10 entries with 5 never selected due to clustering. Opener repetition is the most visible quality defect and the fastest fix — no architecture changes, no API impact.
+
+### What Changed
+
+**Updated: `app/lib/prompts/platforms/tiktok.ts`**
+- `TIKTOK_OPENING_LINES` expanded from 10 → 26 entries
+- Added variety across 8 opener archetypes: curiosity gap, contrarian, identity shift, FOMO/loss framing, confession, mechanism reframe, harsh truth, practical/business insight
+- No opener duplicates prior types; all remain creator-native, abrupt, algorithm-fast
+- No prompt architecture changes, no scoring logic changes, no schema changes
+
+### Expected Impact
+
+- Opener variety: 10 → 26 entries, ~5× lower repetition probability per archetype
+- "Everyone's doing this backwards." drops from ~42% exposure to ~3.8%
+- Zero added latency, zero added tokens, zero API changes
+
+### Validation Status
+- Build: ✅ clean
+- Lint: ✅ clean
+
+---
+
 ## Phase 16 — Transcript Quality Intelligence
 
 **Date:** 2026-05-19
