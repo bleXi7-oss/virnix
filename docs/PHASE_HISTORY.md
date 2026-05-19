@@ -507,3 +507,57 @@ Empty moments → `timelineContext = ""` → prompt builders receive default `""
 - Lint: ✅ clean
 - Fallback: ✅ no moments = identical prompt
 - Behavioral regression: ✅ none — mock mode unaffected
+
+---
+
+## Phase 15 — Timeline Grounding Validation
+
+**Date:** 2026-05-19
+**Commit:** (pending)
+
+### Context
+
+Phase 14 activated prompt grounding. Phase 15 measures whether it actually improves outputs.
+This is an analysis-only phase — no production code changes.
+
+### Method
+
+12 real AI generations analyzed from `.gen_tests/` (generated with live Anthropic Sonnet 4.6 API, pre-Phase-14 outputs).
+
+**Critical note**: all 12 outputs were generated before Phase 14 was pushed — no `timelineInjected` field in any diagnostics. Direct A/B comparison is not possible. Validation is structural and pattern-based.
+
+### Creators Analyzed
+
+Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MFM/Sam Parr, GaryVee, Peterson.
+
+### Virality Score Distribution
+
+| Score | Creator examples |
+|-------|-----------------|
+| 80–90 | Bartlett (90), Naval (80) |
+| 40–55 | Gadzhi (55), Hormozi (50), Huberman/Sinek/Ali Abdaal (45) |
+| 20–35 | Ali Abdaal passive (30), Dan Koe (30), MFM (30), GaryVee (25), Peterson (20) |
+
+### Key Findings
+
+1. **Base system is already strong for confessional transcripts.** Bartlett (90) and Naval (80) were produced without grounding — the model correctly identified the strongest psychological moments.
+
+2. **Grounding's clearest benefit**: mid-tier transcripts (30–55) with one buried strong moment the model might otherwise average away (Huberman, MFM).
+
+3. **Grounding paradox**: high-score transcripts (80+) don't need it; low-score transcripts (<25) lack qualifying moments to inject.
+
+4. **Overfitting risks confirmed**: phrase echo (suggestedHook format creates verbatim anchor), type concentration (no diversity enforcement), no moment variety guarantee.
+
+5. **Critical independent finding**: "Everyone's doing this backwards." appeared in 5/12 outputs (42%). TikTok opener pool (10 lines, 5 never used) needs expansion before user-visible repetition becomes a quality issue.
+
+6. **Most important insight**: the quality ceiling is the transcript's psychological richness, not prompt sophistication. Grounding is insurance, not transformation.
+
+### Created
+
+`docs/TIMELINE_GROUNDING_VALIDATION.md` — full analysis with before/after hypotheses, risk inventory, format analysis, strategic conclusions.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (no code changes)
+- Lint: ✅ clean (no code changes)
+- Runtime: ✅ no regressions
+- Grounding A/B: ⏳ requires live API test on same transcript with grounding ON vs OFF

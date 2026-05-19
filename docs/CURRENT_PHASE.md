@@ -1,4 +1,4 @@
-# Current Phase — Prompt Grounding via Timeline Intelligence
+# Current Phase — Timeline Grounding Validation
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,115 +7,83 @@ Status: complete and pushed
 
 ## Context
 
-Phase 13 surfaced timeline moments in the public UI as a "Best moments to clip" section.
-Phase 14 connects those same moments into the AI prompt as lightweight creative scaffolding —
-so the AI generation is grounded in the transcript's actual psychological peak moments.
+Phase 14 injected timeline intelligence into AI prompts as lightweight creative scaffolding.
+Phase 15 validates whether that grounding actually improves outputs — and where it doesn't.
+
+This is a measurement and analysis phase, not a coding phase. No production code was changed.
 
 ---
 
-## What Changed
+## What Was Done
 
-### Updated: `app/lib/timeline/formatter.ts`
+### Created: `docs/TIMELINE_GROUNDING_VALIDATION.md`
 
-**New `selectMomentsForPrompt(moments)`** — exported filter that selects up to 3 moments most effective as prompt anchors:
-- High-priority types qualify at confidence ≥25: `validation_hook`, `mechanism_reframe`, `emotional_confession`, `contrarian_insight`, `transformation_moment`, `story_turning_point`, `fomo_loss_frame`
-- Low-priority types (`educational_gem`, `authority_proof`, `quote_moment`) only qualify at confidence ≥40 as fallback
-
-**Rewritten `formatTimelineMomentsForPrompt()`** — new hook-text format:
-```
-TRANSCRIPT HIGHLIGHTS — draw from these moments as creative anchors, don't copy verbatim:
-- "You're not failing — Your identity is protecting itself." [validation hook · TikTok/Reels]
-- "This isn't what you think. Discipline isn't the answer." [mechanism reframe · Twitter/LinkedIn]
-- "I used to believe hard work was enough." [confession · TikTok/Reels]
-```
-Cap: 3 moments. ~80 tokens total. Returns `""` when no moments qualify.
+Full structural validation of timeline grounding effectiveness across 12 real AI generations
+(.gen_tests/ dataset, all pre-Phase-14 outputs generated with live Anthropic Sonnet 4.6).
 
 ---
 
-### Updated: `app/lib/timeline/index.ts`
+## Key Findings Summary
 
-Exports `selectMomentsForPrompt` alongside existing public API.
+### Virality Score Patterns
 
----
+| Score | Creator archetype | Root cause |
+|-------|------------------|-----------|
+| 80–90 | Confession arc + specific story | Bartlett, Naval |
+| 40–55 | Mechanism reframe + evidence | Huberman, Gadzhi, Hormozi |
+| 20–35 | Didactic / philosophical | Peterson, GaryVee, Sinek |
 
-### Updated: `app/lib/prompts/index.ts`
+### What Works Without Grounding
 
-Both `buildPrompt(transcript, timelineContext = "")` and `buildAdvancedPrompt(transcript, timelineContext = "")` now accept an optional pre-formatted context string.
+High-quality outputs (Bartlett 90, Naval 80) were produced **without grounding active**.
+The base prompt system correctly extracts the strongest psychological moments for confessional,
+story-rich transcripts.
 
-Injection point: appended to the `GENERATION PROFILE` block, **before** "Apply this angle..." line.
+### Grounding's Clearest Benefit Case
 
-```
-━━━ GENERATION PROFILE ━━━
-[variation]
-[context]
+Mid-tier transcripts (score 30–55) where one standout moment exists but the model might
+average across the full transcript instead. Huberman's fear extinction two-step is the
+clearest example — grounding would anchor the model to that framework vs surveying 6+ interventions.
 
-TRANSCRIPT HIGHLIGHTS — draw from these moments...   ← NEW (absent if empty string)
+### Grounding Paradox
 
-Apply this angle to all 5 platforms.
-```
+- High-score transcripts (80+): already extracting best moments → grounding adds echo risk, not uplift
+- Low-score transcripts (<25): lack qualifying psychological moments → grounding has nothing to inject
+- Clearest benefit: 30–55 range transcripts with one buried strong moment
 
-When `timelineContext` is `""`: **prompts are byte-for-byte identical to before.**
+### Overfitting Risks Confirmed
 
----
+1. **Phrase echo**: format injects pre-formulated hook text; model may reproduce rather than derive
+2. **Type concentration**: no diversity enforcement in 3 selected moments → angle convergence risk
+3. **Format improvement**: inject `sourceTextPreview` (raw transcript text) instead of `suggestedHook`
+   to reduce verbatim reproduction while preserving anchoring benefit
 
-### Updated: `app/lib/ai/generate.ts`
+### Independent Quality Finding: Opener Repetition
 
-In `realGenerate()`, before the AI call:
-```typescript
-const timelineContext = formatTimelineMomentsForPrompt(timelineMoments ?? []);
-const injectedMoments = timelineContext ? selectMomentsForPrompt(timelineMoments ?? []) : [];
-const timelineInjected = injectedMoments.length > 0;
-```
+"Everyone's doing this backwards." appeared 5/12 times (42%) across test outputs.
+The opener pool (10 lines) is too small for the generation volume.
+5 openers appeared 0 times. Target: expand to 18+ openers, <20% rate for any single opener.
 
-`timelineContext` is passed to prompt builders. `timelineInjected` and `injectedMomentCount` are added to diagnostics.
+### Strategic Conclusion
 
----
+> **The system's quality ceiling is the transcript's psychological richness, not prompt sophistication.**
 
-### Updated: `app/lib/ai/diagnostics.ts`
-
-Two new optional fields:
-- `timelineInjected?: boolean`
-- `injectedMomentCount?: number`
-
-`[VIRNIX_AI]` log line now includes `timelineInjected=true(N)` when grounding is active.
-
----
-
-### Updated: `app/components/DebugPanel.tsx`
-
-New `grounded` row in AI Diagnostics:
-- `yes · 3 moments` when injected
-- `no` when timeline had no qualifying moments
-
----
-
-## This is NOT RAG
-
-| RAG | Virnix prompt grounding |
-|-----|------------------------|
-| Vector retrieval from external store | Deterministic heuristic from same transcript |
-| Retrieves relevant chunks | Selects top psychological moments |
-| Primary context replacement | Small supplemental block after generation profile |
-| New API calls | Zero new calls |
-| Adds hundreds of tokens | ~80 tokens |
-| Fails if retrieval fails | Falls back to identical prompt |
-
----
-
-## Fallback Guarantee
-
-If timeline detection returns `[]` or `selectMomentsForPrompt` returns `[]`:
-- `timelineContext` = `""`
-- Prompt builders receive empty string as default
-- Prompts are **identical** to pre-Phase 14 behavior
-- `timelineInjected` = `false` in diagnostics
+Grounding is insurance (prevents drift to generic summary) not transformation (cannot create
+psychological richness where the transcript has none). The highest-leverage next addition is
+transcript quality scoring — telling creators which section of their video has strong clipable
+moments before generation runs.
 
 ---
 
 ## Validation Status
 
-- Build: ✅ clean (TypeScript, Turbopack)
-- Lint: ✅ clean
-- Mock mode: ✅ unaffected (returns before transcript fetch)
-- Fallback: ✅ empty moments → identical prompt
-- Integration: timeline detection → filter → format → prompt → AI → output
+- Build: ✅ clean (no code changes, previous build still valid)
+- Lint: ✅ clean (no code changes)
+- Runtime: ✅ no regressions (docs only)
+- Grounding A/B: ⏳ requires live API test — recommended: Huberman fear extinction transcript
+
+---
+
+## No Code Changed
+
+This phase is analysis and documentation only. All production code is identical to end-of-Phase-14 state.
