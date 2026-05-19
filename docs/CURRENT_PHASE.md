@@ -1,19 +1,19 @@
-# Current Phase — Hero Card Transparency Polish (UI-POLISH-E)
+# Current Phase — Hero Card Transparency Polish (UI-POLISH-F)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Content System QA-A (Full Audit, 2026-05-20) — complete
+## Previous phase: Hero Card Transparency Polish (UI-POLISH-E, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-Hero card was at `bg-white/75` after UI-FIX-D. The 25% transparency let some banner
-atmosphere through but was slightly opaque. Dropped to `bg-white/65` so the pearl-chrome
-atmosphere is more visible through the card surface.
+Hero card was at `bg-white/65` after UI-POLISH-E. Still too opaque — banner visible
+but not enough through the card. Dropped to `bg-white/55` for noticeably more atmosphere
+bleed-through while keeping headline and paragraph clearly readable.
 
 ---
 
@@ -22,8 +22,8 @@ atmosphere is more visible through the card surface.
 ### Updated: `app/page.tsx`
 
 Hero card inner div light-mode fill:
-- Before: `bg-white/75`
-- After: `bg-white/65`
+- Before: `bg-white/65`
+- After: `bg-white/55`
 
 Dark mode (`dark:bg-[#0a0a0a]/80`), `backdrop-blur-xl`, input (`bg-white`),
 and button (`bg-zinc-900`) all unchanged.
@@ -34,7 +34,7 @@ and button (`bg-zinc-900`) all unchanged.
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Light mode: banner atmosphere more visible through 35% card transparency
+- Light mode: 45% transparency — banner atmosphere clearly visible through card
 - Dark mode: unchanged — no regression
-- Text readability: preserved (65% white is well above readability threshold)
+- Text readability: preserved (55% white is above readability threshold)
 - Input/button opacity hierarchy: maintained (fully opaque)
