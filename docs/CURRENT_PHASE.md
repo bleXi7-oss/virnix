@@ -1,11 +1,11 @@
-# Current Phase — Hero Glass Surface (UI-FIX-D)
+# Current Phase — Content System QA-A (Full Audit)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Visible Chrome Atmosphere (UI-FIX-C, 2026-05-20) — complete
+## Previous phase: Hero Glass Surface (UI-FIX-D, 2026-05-20) — complete
 
 ---
 

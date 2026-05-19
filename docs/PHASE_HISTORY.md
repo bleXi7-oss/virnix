@@ -564,6 +564,61 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 
 ---
 
+## Phase QA-A — Content System Full Audit
+
+**Date:** 2026-05-20
+
+### Context
+
+After completing the UI surface polish phases (18–20), this phase audits the entire Virnix content generation system before Creator Energy Selection is added. The audit covers TikTok opener rotation, hook archetype coverage, all platform outputs, timeline/clip guide consistency, content intelligence honesty, grounding/hallucination risk, tonal mismatch risk, and architecture cleanliness.
+
+### What Was Analyzed
+
+Complete static review of all prompt engine, intelligence layer, timeline detection, AI generation, parser, and schema files. Existing smoke test run. New QA audit script created.
+
+### Key Findings
+
+**P0 (must fix before Creator Energy Selection):**
+1. 9/26 (35%) of TikTok openers are creator-growth-specific — will cause severe tonal mismatch on medical, historical, educational, and non-creator content
+2. Forced TikTok ending "Here's the exact system..." presupposes every transcript has a system — wrong for confessional, philosophical, or narrative content
+
+**P1 (should fix soon):**
+3. YouTube title formula vs. rules contradiction: "Nobody Talks About" appears as both a recommended formula AND a phrase to avoid
+4. YouTube Timestamps (advanced): AI fabricates chapter positions — potential trust issue if users copy to YouTube
+5. `selectBestOutputs()` in `generate.ts` uses `lastIndexOf("}")` approach — less robust than `extractJSON` from parser.ts
+
+**P2 (polish):**
+6. `viralityScore` naming inconsistent with "never describe as virality prediction" stance
+7. "Stakes Escalation" story arc (STORY_ARC_FRAMEWORKS index 5) never mapped to any angle — dead code
+8. False-positive detection signals in timeline: "i thought", "and then", "actually" too generic
+9. Creator-specific hook prefix in `buildSuggestedHook`: "After working with hundreds of creators:"
+10. Near-duplicate openers (after deduplication check — actually 0 true duplicates after stopword filtering)
+
+**Architecture:** Clean. Modular. No coupling violations. No file overload. All changes achievable without architecture redesign.
+
+### What Was Created
+
+- `docs/qa/CONTENT_SYSTEM_QA_A.md` — comprehensive audit report with priority table and fix recommendations
+- `scripts/qa/opener-audit.ts` — isolated QA script; checks opener pool size, creator-domain risk ratio, near-duplicates, YouTube contradiction, story arc dead code, and anti-generic rule coverage
+
+### Test Results
+
+- Existing `scripts/test-real-ai.ts`: ✅ PASS (parser, chunker, quality scorer, diagnostics)
+- New `scripts/qa/opener-audit.ts`: ✅ Runs correctly — exits with failure when real issues present (P0 creator-domain ratio, P1 YouTube contradiction), clean passes on all other checks
+
+### Safe to Proceed Verdict
+
+**NO — fix P0 opener issues first, then proceed with Creator Energy Selection.**
+
+Reasoning: Adding Creator Energy Selection on top of the current creator-domain-locked openers would create a three-layer mismatch (opener + ending + energy) on any non-creator transcript. P0 fixes are a half-day of focused work in `tiktok.ts`.
+
+### Validation
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- No production code changed
+
+---
+
 ## Phase 20 — Hero Glass Surface (UI-FIX-D)
 
 **Date:** 2026-05-20
