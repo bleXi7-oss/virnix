@@ -4,6 +4,62 @@ Step-by-step guide for enabling and safely testing real Anthropic AI generation 
 
 ---
 
+## Windows Local Setup (npm.cmd)
+
+This project runs on Windows with user-scoped Node.js. Always use `npm.cmd` instead of `npm`:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+npm.cmd run build
+npm.cmd run lint
+```
+
+Never use bare `npm` — it may not resolve on Windows without the `.cmd` extension.
+
+---
+
+## Local .env.local Example
+
+Copy `.env.example` to `.env.local` and fill in values. Do NOT commit `.env.local`.
+
+```env
+# Required for real AI generation (leave blank to stay in mock mode).
+ANTHROPIC_API_KEY=sk-ant-...
+
+# Feature flags — set to true to enable. Default is false (mock mode).
+NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=false
+NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=false
+
+# Local app URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+> **Important:** `ANTHROPIC_API_KEY` must never be prefixed with `NEXT_PUBLIC_`.
+> A `NEXT_PUBLIC_` variable is baked into the client-side bundle and visible to anyone
+> who inspects the page source. The key is only read in `app/lib/ai/provider.ts`,
+> which runs exclusively server-side (inside `app/api/generate/route.ts`).
+
+---
+
+## Local Mock Test Steps (no API key needed)
+
+Run these before any real AI testing to confirm the mock flow works.
+
+1. Copy `.env.example` → `.env.local`. Leave `ANTHROPIC_API_KEY` blank and both flags `false`.
+2. Start dev server: `npm.cmd run dev`
+3. Open `http://localhost:3000` in a browser.
+4. Paste any YouTube URL and click Generate.
+5. Confirm mock output cards appear (TikTok, Twitter, LinkedIn, Instagram, YouTube titles).
+6. Confirm copy buttons work on each card.
+7. Confirm dark/light mode toggle works.
+8. Confirm no ErrorBoundary fallback appears.
+9. Check browser console — no fatal errors should appear.
+
+This validates the full UI/UX flow without spending any API credits.
+
+---
+
 ## Required Vercel Environment Variables
 
 | Variable | Value | Notes |
@@ -11,10 +67,6 @@ Step-by-step guide for enabling and safely testing real Anthropic AI generation 
 | `ANTHROPIC_API_KEY` | `sk-ant-...` | **Server-side only. Never add `NEXT_PUBLIC_` prefix.** |
 | `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION` | `true` | Enables real AI. Default is `false` (mock). |
 | `NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS` | `true` | Optional. Enables blog, timestamps, short-form script. Leave off for first test. |
-
-> **Important:** `ANTHROPIC_API_KEY` must never be prefixed with `NEXT_PUBLIC_`.
-> A `NEXT_PUBLIC_` variable is baked into the client-side bundle and visible to anyone who inspects the page source.
-> The key is only read in `app/lib/ai/provider.ts`, which runs exclusively server-side (inside `app/api/generate/route.ts`).
 
 ---
 
@@ -53,6 +105,26 @@ Work through these steps in order. Do not skip ahead.
 
 ---
 
+## Local Real AI Test Steps (requires ANTHROPIC_API_KEY)
+
+Only run this if you have a key available locally.
+
+1. Set `ANTHROPIC_API_KEY=sk-ant-...` in `.env.local`.
+2. Set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` in `.env.local`.
+3. Leave `NEXT_PUBLIC_FLAG_ADVANCED_OUTPUTS=false` for the first run.
+4. Start dev server: `npm.cmd run dev`
+5. Open `http://localhost:3000`.
+6. Use a short YouTube video (under 5 minutes — lower cost and faster to debug).
+7. Click Generate.
+8. Check terminal logs for:
+   - `[virnix] transcript: N words`
+   - `[virnix] AI call — provider: anthropic, ~N input tokens, ~$X.XXXX estimated`
+   - No `[virnix] Anthropic stop_reason=max_tokens` warning
+9. Verify all 5 core output cards render with real content.
+10. Do NOT run repeated tests — each call costs real money.
+
+---
+
 ## Rollback Plan
 
 If anything breaks or costs run unexpectedly high:
@@ -61,14 +133,15 @@ If anything breaks or costs run unexpectedly high:
 2. Trigger a redeploy.
 3. The app returns to the mock flow immediately — no code changes required.
 
+For local rollback: set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=false` in `.env.local` and restart the dev server.
+
 The mock flow (`app/lib/ai/mock.ts`) is always present and is the default when the flag is off.
 
 ---
 
-## Known Limitations (as of first ship)
+## Known Limitations
 
-- **No runtime testing on development machine.** All AI-path code was written and reviewed but has not been executed against a live Anthropic key. The first deployment is also the first integration test.
 - **Token and cost estimates are approximate.** The `estimateTokens` function uses a 1 word ≈ 1.3 tokens heuristic. Actual token counts and costs will differ. Do not use log estimates for billing or financial reporting — use the Anthropic usage dashboard.
 - **`maxTokens` may need tuning.** Current values are 4096 (core) and 6144 (advanced). Dense or long transcripts may hit this limit, causing truncated JSON and blank/partial output cards. If `stop_reason=max_tokens` appears in logs, raise the limit in `app/lib/ai/generate.ts` and redeploy.
-- **Output quality needs human review.** Prompt engineering was done without a live API. Hook quality, platform-native tone, and variation engine behavior all need real-world review and iteration.
-- **`npm run lint` must be run before merging any AI-path changes.** Node.js was unavailable on the development machine during initial setup — lint was not run. Run it on any machine with Node before shipping further changes to the AI layer.
+- **Output quality needs human review.** Hook quality, platform-native tone, and variation engine behavior all need real-world review and iteration after first live run.
+- **`npm.cmd run lint` must be run before merging any AI-path changes.** Confirmed working on this Windows machine.
