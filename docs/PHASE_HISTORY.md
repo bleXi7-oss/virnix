@@ -881,3 +881,25 @@ show through clearly while keeping text readable.
 - Lint: ✅ clean
 - Light mode: banner atmosphere clearly visible through card
 - Dark mode: no regression
+
+---
+
+## Phase 23 — Hero Card Transparency Polish (UI-POLISH-G, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Increased transparency in both light and dark mode.
+
+- `app/page.tsx` light: `bg-white/55` → `bg-white/45` (55% transparency)
+- `app/page.tsx` dark: `dark:bg-[#0a0a0a]/80` → `dark:bg-[#0a0a0a]/65` (35% transparency)
+- `backdrop-blur-xl`, chrome glow, input, button all unchanged
+
+Banner chrome wave now shows clearly through the card surface in both modes.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Light mode: banner clearly visible through card
+- Dark mode: banner clearly visible through card, premium feel maintained
