@@ -419,3 +419,40 @@ Phase 10 built the timeline module but left it dormant — YouTube transcript se
 - Lint: ✅ clean
 - Behavioral regression: ✅ none — generation, prompts, UI cards all unchanged
 - Timeline: ✅ active on real AI generations, graceful [] fallback
+
+---
+
+## Phase 13 — Clip Guide UI
+
+**Date:** 2026-05-19
+**Commit:** (pending)
+
+### Context
+
+Phase 12 built the detection pipeline and exposed moments in the dev debug panel. Phase 13 surfaces that intelligence as the first public-facing creator feature — psychological moment discovery visible to all users.
+
+### What Was Built
+
+**New: `app/components/generation/ClipMomentCard.tsx`**
+- Renders a single detected moment with timestamp, type badge, confidence indicator, hook, why-it-works, platform tags, source preview
+- Left border accent per moment type (amber/violet/rose/sky/emerald/cyan/zinc)
+- Badge background tint per type for visual distinction without dashboard chaos
+- Confidence dot: emerald (≥70) / amber (40–69) / zinc (<40) + text label
+- `opacity-0 + animate-[fade-in-up]` with staggered `animationDelay` per rank
+
+**New: `app/components/generation/ClipGuide.tsx`**
+- Section container: divider-header ("Best moments to clip") matching OutputPanel style
+- Shows top 3 moments in a single `rounded-xl border` card with thin `h-px` dividers between moments
+- Footer: "{N} moments detected · ranked by psychological impact"
+- Returns `null` when no moments — no layout shift
+
+**Updated: `app/page.tsx`**
+- `ClipGuide` imported and rendered above `OutputPanel` in `phase === "done"` block
+- Guard: `timelineMoments && timelineMoments.length > 0`
+- No new state, no new props
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Behavioral regression: ✅ none — mock mode unaffected, no moments = no section
+- Mobile: ✅ flex-wrap meta row, line-clamp preview

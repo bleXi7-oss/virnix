@@ -10,6 +10,7 @@ import { isValidYouTubeUrl } from "./lib/youtube";
 import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import DebugPanel from "./components/DebugPanel";
+import ClipGuide from "./components/generation/ClipGuide";
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
 
@@ -189,6 +190,9 @@ export default function Home() {
 
         {phase === "done" && (
           <>
+            {timelineMoments && timelineMoments.length > 0 && (
+              <ClipGuide moments={timelineMoments} />
+            )}
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />
             </ErrorBoundary>
