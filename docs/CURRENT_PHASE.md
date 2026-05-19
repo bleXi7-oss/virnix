@@ -1,4 +1,4 @@
-# Current Phase — Intelligence Consolidation
+# Current Phase — Gold Testing & Taste Framework
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,114 +7,89 @@ Status: complete and pushed
 
 ## Context
 
-Phase 7 (Notion Research Analysis) identified that the current architecture was already strong but had:
-- 3 entire intelligence modules (`emotions.ts`, `psychology.ts`, `platforms.ts`) with "future use" comments and zero runtime injection
-- 14 unused exports across the remaining intelligence and prompt modules
-- 3 specific high-leverage mechanisms missing from prompts: validation hooks, FOMO/loss framing, self-reflection triggers
-- 1 missing anti-generic rule: fake motivational language
-- Quality scorer missing: specificity, self-reflection, and human-tone signals
+Phase 8 (Intelligence Consolidation) validated real AI output quality with confirmation of validation hooks and self-reflection in generated outputs. Architecture is now lightweight and strong.
 
-Goal: remove dead weight, add missing high-leverage mechanisms, keep everything simple.
+Phase 9 goal: build the scaffolding to teach Virnix taste — what outputs are genuinely "holy shit" quality vs. mediocre. No new architecture. Documentation, templates, and evaluation systems only.
 
 ---
 
-## What Was Removed
+## What Was Created
 
-### `app/lib/intelligence/emotions.ts` — DELETED
-- 3 exports: `EMOTIONAL_TRIGGERS`, `EMOTION_TO_ACTION`, `EMOTIONAL_INTENSITY`, `ANGLE_TO_EMOTION`
-- Never imported by any prompt-building code. Variation system in `prompts/variation/` covers the same territory more directly.
+### `docs/gold-tests/` folder structure
+- `EVALUATION_TEMPLATE.md` — reusable per-generation evaluation template. Tracks source metadata, per-output scores, signal analysis, emotional resonance map, platform winner, creator reaction prediction, and "Would I actually post this?" judgments.
+- `COMPARISON_FRAMEWORK.md` — markdown-only before/after comparison system for measuring prompt changes across phases.
+- `transcripts/` — folder for curated test transcripts (empty, ready to populate)
+- `results/` — folder for filled evaluation files per test run
+- `analysis/` — folder for cross-test analysis and comparison files
 
-### `app/lib/intelligence/psychology.ts` — DELETED
-- 4 exports: `COGNITIVE_BIASES`, `IDENTITY_APPEALS`, `SOCIAL_DYNAMICS`, `TRUST_PATTERNS`
-- Never imported by any prompt-building code. Already handled by `ANGLE_PROFILES` and `STORYTELLING_PATTERNS`.
+### `docs/GOLD_PATTERNS.md`
+9 recurring winning patterns with evidence from Notion research + real generation results:
+1. Validation Hook — "you're not X, Y is the reason"
+2. Identity Tension — two people, same mechanism, different target
+3. Emotional Specificity — name the exact emotion
+4. Withheld Knowledge — "nobody teaches you this until it's cost you"
+5. Loss Framing — "you're already behind"
+6. Mechanism Reframe — "it's not a flaw, it's a mechanism"
+7. Confession + Lesson — personal failure → transferable principle
+8. Paradox as Hook — cognitive dissonance forces continued reading
+9. Social Proof Inversion — most people vs. the few
 
-### `app/lib/intelligence/platforms.ts` — DELETED
-- 4 exports: `PLATFORM_ALGORITHM_SIGNALS`, `AUDIENCE_PSYCHOLOGY`, `CROSS_PLATFORM_REPURPOSING`, `CONTENT_LENGTH_BENCHMARKS`
-- Never imported by any prompt-building code. Per-platform modules (`twitter/`, `linkedin/`, etc.) already cover platform specifics.
+Includes signal hierarchy and "holy shit" threshold definition.
 
-### Trimmed from `hooks.ts` (kept `CURIOSITY_GAP_FORMULAS`)
-- Removed `OPEN_LOOP_STRUCTURES`, `HOOK_STRENGTH_SIGNALS`, `PLATFORM_HOOK_WINDOWS`
+### `docs/FAILURE_PATTERNS.md`
+10 failure patterns with detection methods, severity ratings, and fix status:
+1. Fake Motivation / Empty Affirmation (Critical — fix in place)
+2. Corporate Sludge (Critical — fix in place)
+3. Generic Hook That Applies to Any Video (High — fix in place)
+4. Pacing Collapse / Thread Fatigue (High — partial)
+5. Too-Polished AI Language (High — partial)
+6. Vague Educational Language (High — partial)
+7. LinkedIn Corporate Sludge (Medium — fix in place)
+8. No Stakes / Low-Tension Opening (Medium — partial)
+9. Fake Authority Tone (Low-Medium — not addressed)
+10. Repetitive Pacing (Low — fix in place)
 
-### Trimmed from `retention.ts` (kept `MIDDLE_CONTENT_RULES`)
-- Removed `RETENTION_FAILURE_MODES`, `SCROLL_STOPPING_PATTERNS`, `OPEN_LOOP_MAINTENANCE`, `COMPLETION_SIGNALS`
+Includes quick detection checklist (7 yes/no checks before marking output strong).
 
-### Trimmed from `storytelling.ts` (kept `STORY_ARC_FRAMEWORKS`)
-- Removed `SCENE_BUILDING_TECHNIQUES`, `TRANSFORMATION_ARCS`
+### `docs/CREATOR_SEGMENTS.md`
+Creator type → output quality mapping in 3 tiers:
+- **Tier 1 (natural habitat):** Philosophy/identity, Founder/operator, Self-improvement/psychology, Contrarian business
+- **Tier 2 (conditional):** Educational explainers, Interview podcasts, Transformation story
+- **Tier 3 (weak):** News/current events, Academic without translation, Comedy/entertainment, Motivational hype
 
-### Removed from `prompts/psychology/index.ts`
-- `CURIOSITY_TRIGGERS` — redundant with `TIKTOK_OPENING_LINES` in hooks module; not imported in prompts/index.ts
-- `CTA_PATTERNS` — fully covered by per-angle `ctaStyles` in `ANGLE_PROFILES`
+Includes quick segment selector decision tree and targeting implications.
 
-### Removed from `prompts/hooks/index.ts`
-- `HOOK_PATTERNS` — not imported anywhere; structural archetypes already embedded in `ANGLE_PROFILES`
+### `docs/TEST_TRANSCRIPT_IDEAS.md`
+Curated test list organized by priority:
+- Priority 1: Confirmed strong performers (Dan Koe, Alex Hormozi, Codie Sanchez, Naval, Manson)
+- Priority 2: High-diversity stress tests (Huberman, Fridman, Bartlett, Abdaal)
+- Priority 3: "Danger" transcripts for failure documentation
+- Priority 4: One-per-niche coverage (finance, relationships, health, career, etc.)
+- 5 "Dream Tests" for marketing collateral quality outputs
+- Transcript length guidance
+- 6-factor prioritization scoring matrix
 
-### Removed from `prompts/cleanup/index.ts`
-- `VIRAL_FORMATTING_RULES` — not imported anywhere; best technique already merged into `CLEANUP_RULES` in Phase 5
-
----
-
-## What Was Added
-
-### `prompts/hooks/index.ts` — 3 new `TIKTOK_OPENING_LINES`
-```
-"You're not bad at this — you just weren't shown the system."
-"Most people are already behind on this. Here's why:"
-"Nobody teaches you this part until it's already cost you."
-```
-- Validation hook: confirmed high-performer across 12+ creator profiles in Notion research
-- FOMO/loss framing: loss framing outperforms gain framing ~2x (psychology.COGNITIVE_BIASES.lossAversion)
-- Withheld knowledge: "nobody teaches you this" pattern confirmed by Ramit Sethi, Lex Fridman, Codie Sanchez research
-
-### `prompts/psychology/index.ts` — 1 new `ANTI_GENERIC_RULES` entry
-```
-"No empty affirmations: 'believe in yourself', 'you can do anything', 'stay positive' — replace with specific tension or insight"
-```
-- Identified as distinct failure mode in Notion "AI Output Failure Patterns" → Fake Motivation category
-
-### `prompts/index.ts` — self-reflection trigger in TikTok sections
-```
-"Make the viewer feel this is about them specifically — not generic advice for anyone."
-```
-- Added to both `buildPrompt` and `buildAdvancedPrompt` TikTok sections
-- Confirmed as universal virality mechanism across 12+ creator profiles
-
-### `intelligence/quality.ts` — 3 new scoring signals
-- `hasSpecificDetail()` — checks for percentages, multipliers, dollar amounts, timeframes
-- `hasSelfReflection()` — checks for second-person identity language (expanded signal list)
-- `hasHumanTone()` — penalty for corporate/fake-motivation phrases
-- Updated `estimateViralityScore()` to incorporate all three (specificity +15, self-reflection +10, corporate language -10)
-- Also added `anxiety`, `broken`, `death`, `fear`, `threat`, `danger` to `EMOTIONAL_WORDS` for better emotional detection
-
----
-
-## Token / Complexity Impact
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Intelligence files | 8 (3 entirely unused) | 5 (all active) |
-| Exported intelligence symbols | ~40 | ~11 |
-| Unused exported constants | ~14 | 0 |
-| TIKTOK_OPENING_LINES | 8 | 11 (3 new validated patterns) |
-| ANTI_GENERIC_RULES | 7 | 8 (+fake motivation) |
-| Quality scorer signals | 4 | 7 |
-| Prompt token delta | +1 line per TikTok section | negligible |
+### `docs/STRATEGIC_REPORT.md`
+Brutally honest strategic analysis:
+- What Virnix excels at (identity resonance, anti-generic depth, variation, cost, platform-native grammar)
+- Where the moat lives (encoded taste, quality flywheel, specificity advantage)
+- Where outputs still fail (low-density transcripts, abstract philosophical scoring, YouTube titles, short-form script pacing, Instagram CTAs)
+- What creators would love vs. ignore
+- What to optimize next (YouTube titles, Instagram CTAs, short-form pacing, abstract quality scoring, gold dataset)
+- What NOT to optimize yet (auth, Stripe, more platforms, A/B infrastructure)
+- Notion research gaps
 
 ---
 
-## Validation
+## No Code Changes
 
-- Build: ✅ clean (TypeScript, Turbopack)
+This phase is documentation only. Build and lint pass cleanly — no architecture changes.
+
+---
+
+## Validation Status
+
+- Build: ✅ clean
 - Lint: ✅ clean
-- Real AI generation: ✅ tested (Dan Koe / creator economy)
-  - viralityScore: 35 (up from what would have been ~10 pre-improvements)
-  - TikTok hook: validation pattern activated — "Your brain isn't resisting change. It's surviving it."
-  - Self-reflection: confirmed present — "The fit person panics at McDonald's. The broke person panics at a sales call."
-  - No generic motivation language detected
-  - elapsed: ~25s, provider: anthropic, stopReason: end_turn
-
----
-
-## Known Limitations
-
-- Quality scorer gives low scores (~30-35) to philosophical content that avoids numbers — by design, it's a relative ranking signal between two candidate outputs (tiktok vs tiktok_alt), not an absolute quality judge
-- Self-reflection signal detection misses some valid patterns (e.g. "your mind isn't broken") that aren't in the phrase list — acceptable for a heuristic tool
+- Framework: ✅ evaluation template, comparison framework, pattern libraries created
+- Gold dataset: ⏳ 0 entries — ready to populate with Priority 1 transcripts

@@ -301,3 +301,34 @@ First real AI generation (Phase 5 test) succeeded:
 - Build: ✅ clean
 - Lint: ✅ clean
 - Real AI: ⏳ requires re-run to verify with ANTHROPIC_API_KEY
+
+---
+
+## Phase 9 — Gold Testing & Taste Framework (2026-05-19)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+No code changes. Documentation and evaluation framework only.
+
+**Created `docs/gold-tests/` folder structure:**
+- `EVALUATION_TEMPLATE.md` — per-generation quality evaluation template (transcript metadata, per-output scoring, emotional resonance map, platform winner, "Would I post this?" judgment)
+- `COMPARISON_FRAMEWORK.md` — markdown-only before/after comparison system with delta scoring guide and phase-to-phase tracking table
+- `transcripts/`, `results/`, `analysis/` — empty folders ready for gold dataset population
+
+**Created pattern libraries:**
+- `docs/GOLD_PATTERNS.md` — 9 recurring winning patterns with evidence and signal hierarchy ("Virnix taste manual")
+- `docs/FAILURE_PATTERNS.md` — 10 failure patterns with severity ratings, fix status, and detection checklist
+
+**Created targeting and test planning docs:**
+- `docs/CREATOR_SEGMENTS.md` — 3-tier creator type → output quality map with quick selector and targeting implications
+- `docs/TEST_TRANSCRIPT_IDEAS.md` — curated test list (Priority 1–4 creators, danger transcripts, dream tests, scoring matrix)
+
+**Created strategic analysis:**
+- `docs/STRATEGIC_REPORT.md` — brutally honest assessment of strengths, moat, failures, what to optimize, what not to touch, taste moat summary
+
+### Validation Status at End of Phase
+- Build: ✅ clean
+- Lint: ✅ clean
+- Gold dataset: ⏳ 0 entries — framework ready, transcripts not yet added
