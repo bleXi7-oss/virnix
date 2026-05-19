@@ -21,3 +21,5 @@ export type { MomentScore } from "./moment-scoring";
 export type { TimestampedLine, TranscriptSegment } from "./transcript-timestamps";
 export { buildTimestampedTranscript } from "./build-timestamped-transcript";
 export type { RawSegment } from "./build-timestamped-transcript";
+export { evaluateTranscriptQuality } from "./transcript-quality";
+export type { TranscriptQualityReport } from "./transcript-quality";

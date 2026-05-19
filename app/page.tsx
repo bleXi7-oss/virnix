@@ -11,8 +11,10 @@ import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import DebugPanel from "./components/DebugPanel";
 import ClipGuide from "./components/generation/ClipGuide";
+import TranscriptQualityCard from "./components/generation/TranscriptQualityCard";
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
+import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -39,6 +41,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<AIDiagnostics | null>(null);
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
+  const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -87,6 +90,7 @@ export default function Home() {
       apiResultRef.current = json.data.cards;
       setDiagnostics(json.data.diagnostics ?? null);
       setTimelineMoments(json.data.timelineMoments ?? null);
+      setTranscriptQuality(json.data.transcriptQuality ?? null);
       track("generation_completed", {
         duration_ms: Date.now() - genStartRef.current,
         card_count: json.data.cards.length,
@@ -144,6 +148,7 @@ export default function Home() {
     setStepIndex(-1);
     setDiagnostics(null);
     setTimelineMoments(null);
+    setTranscriptQuality(null);
   }, []);
 
   function handleUrlChange(val: string) {
@@ -160,7 +165,7 @@ export default function Home() {
     <div className="relative min-h-screen overflow-hidden bg-white text-zinc-900 dark:bg-black dark:text-white">
       {/* Ambient top glow */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(0,0,0,0.03),transparent)] dark:bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(255,255,255,0.07),transparent)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-140 bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(0,0,0,0.03),transparent)] dark:bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(255,255,255,0.07),transparent)]"
         aria-hidden="true"
       />
 
@@ -190,6 +195,9 @@ export default function Home() {
 
         {phase === "done" && (
           <>
+            {transcriptQuality && (
+              <TranscriptQualityCard report={transcriptQuality} />
+            )}
             {timelineMoments && timelineMoments.length > 0 && (
               <ClipGuide moments={timelineMoments} />
             )}

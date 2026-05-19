@@ -561,3 +561,51 @@ Bartlett, Naval, Gadzhi, Hormozi, Ali Abdaal (×2), Huberman, Sinek, Dan Koe, MF
 - Lint: ✅ clean (no code changes)
 - Runtime: ✅ no regressions
 - Grounding A/B: ⏳ requires live API test on same transcript with grounding ON vs OFF
+
+---
+
+## Phase 16 — Transcript Quality Intelligence
+
+**Date:** 2026-05-19
+**Commit:** (pending)
+
+### Context
+
+Phase 15 found: "The quality ceiling is the transcript's psychological richness."
+Phase 16 operationalizes that insight — Virnix now evaluates transcript quality itself
+and surfaces it to creators as a clipability assessment.
+
+### What Was Built
+
+**New: `app/lib/timeline/transcript-quality.ts`**
+- `evaluateTranscriptQuality(moments)` → `TranscriptQualityReport | null`
+- Zero new API calls — pure downstream computation on already-detected moments
+- Weighted scoring: validation_hook=20, confession=18, mechanism_reframe=16, etc.
+- `clipability`: "low" | "medium" | "high" — the creator-facing bucket
+- `strongestSignals`, `weaknesses`, `creatorFit`, `summary` — all derived from moment data
+- Returns `null` when empty — clean fallback, no UI rendered
+
+**New: `app/components/generation/TranscriptQualityCard.tsx`**
+- Creator-facing card rendered above ClipGuide
+- Shows clipability rating (🔥 High / ⚠️ Medium / ○ Low), strongest signals, summary, platform fit
+- Weaknesses shown only for medium/low transcripts (honest, not punishing)
+- Hidden when no quality data (mock mode)
+
+**Updated: 6 files** — `timeline/index.ts`, `types/generation.ts`, `ai/generate.ts`,
+`ai/diagnostics.ts`, `page.tsx`, `components/DebugPanel.tsx`
+
+**New doc: `docs/TRANSCRIPT_QUALITY_SYSTEM.md`**
+
+### Calibration
+
+Score ≥ 58 → High (Bartlett-type confession arc, Naval-type metaphor)
+Score ≥ 30 → Medium (Huberman mechanism-heavy, Hormozi tactical)
+Score < 30 → Low (Peterson philosophical, GaryVee motivational)
+
+Calibrated against Phase 15 gold dataset findings across 12 creator transcripts.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Mock mode: ✅ no quality card rendered (correct)
+- Fallback: ✅ null → no UI, no layout shift

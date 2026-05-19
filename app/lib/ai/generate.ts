@@ -9,7 +9,7 @@ import { getProvider } from "./provider";
 import { estimateTokens, estimateCost, selectBestSegment } from "./chunker";
 import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
-import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt } from "../timeline";
+import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt, evaluateTranscriptQuality } from "../timeline";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
 // Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
@@ -105,6 +105,11 @@ async function realGenerate(
   // Score the TikTok hook for diagnostics — first card is always TikTok
   const viralityScore = estimateViralityScore(finalCards[0]?.content ?? "", "tiktok");
 
+  // Evaluate transcript psychological density — zero cost, uses already-detected moments
+  const transcriptQuality = timelineMoments?.length
+    ? evaluateTranscriptQuality(timelineMoments)
+    : undefined;
+
   const diagnostics: AIDiagnostics = {
     provider: provider.name,
     elapsedMs: Date.now() - startMs,
@@ -120,6 +125,8 @@ async function realGenerate(
     timelineMomentsDetected: timelineMoments?.length ?? 0,
     timelineInjected,
     injectedMomentCount: injectedMoments.length,
+    transcriptQualityScore: transcriptQuality?.overallScore,
+    clipability: transcriptQuality?.clipability,
   };
 
   logDiagnostics(diagnostics);
@@ -129,6 +136,7 @@ async function realGenerate(
     generatedAt: result.generatedAt,
     diagnostics,
     timelineMoments: timelineMoments?.length ? timelineMoments : undefined,
+    transcriptQuality: transcriptQuality ?? undefined,
   };
 }
 

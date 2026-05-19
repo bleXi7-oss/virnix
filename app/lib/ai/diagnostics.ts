@@ -22,6 +22,8 @@ export interface AIDiagnostics {
   timelineMomentsDetected?: number;
   timelineInjected?: boolean;
   injectedMomentCount?: number;
+  transcriptQualityScore?: number;
+  clipability?: "low" | "medium" | "high";
 }
 
 // Emits a single structured log line prefixed with [VIRNIX_AI].
@@ -42,5 +44,7 @@ export function logDiagnostics(d: AIDiagnostics): void {
   if (d.viralityScore != null) parts.push(`score=${d.viralityScore}`);
   if (d.timelineMomentsDetected != null) parts.push(`moments=${d.timelineMomentsDetected}`);
   if (d.timelineInjected != null) parts.push(`timelineInjected=${d.timelineInjected}${d.injectedMomentCount != null ? `(${d.injectedMomentCount})` : ""}`);
+  if (d.transcriptQualityScore != null) parts.push(`qualityScore=${d.transcriptQualityScore}`);
+  if (d.clipability != null) parts.push(`clipability=${d.clipability}`);
   console.log(parts.join(" "));
 }

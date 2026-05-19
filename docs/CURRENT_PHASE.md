@@ -1,4 +1,4 @@
-# Current Phase — Timeline Grounding Validation
+# Current Phase — Transcript Quality Intelligence
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,83 +7,141 @@ Status: complete and pushed
 
 ## Context
 
-Phase 14 injected timeline intelligence into AI prompts as lightweight creative scaffolding.
-Phase 15 validates whether that grounding actually improves outputs — and where it doesn't.
-
-This is a measurement and analysis phase, not a coding phase. No production code was changed.
-
----
-
-## What Was Done
-
-### Created: `docs/TIMELINE_GROUNDING_VALIDATION.md`
-
-Full structural validation of timeline grounding effectiveness across 12 real AI generations
-(.gen_tests/ dataset, all pre-Phase-14 outputs generated with live Anthropic Sonnet 4.6).
+Phase 15 validated that output quality is bounded by transcript psychological richness.
+Phase 16 operationalizes that insight: Virnix now evaluates the transcript itself and
+tells creators whether their content has strong clipable moments — before they see the output.
 
 ---
 
-## Key Findings Summary
+## What Changed
 
-### Virality Score Patterns
+### New: `app/lib/timeline/transcript-quality.ts`
 
-| Score | Creator archetype | Root cause |
-|-------|------------------|-----------|
-| 80–90 | Confession arc + specific story | Bartlett, Naval |
-| 40–55 | Mechanism reframe + evidence | Huberman, Gadzhi, Hormozi |
-| 20–35 | Didactic / philosophical | Peterson, GaryVee, Sinek |
+`evaluateTranscriptQuality(moments: TimelineMoment[]): TranscriptQualityReport | null`
 
-### What Works Without Grounding
+Uses the already-detected timeline moments to compute:
+- `overallScore` (0–100) — composite psychological density, for diagnostics only
+- `clipability` ("low" | "medium" | "high") — the creator-facing classification
+- `strongestSignals` — top 3 moment types by weighted contribution
+- `weaknesses` — honest gaps (shown for medium/low only)
+- `creatorFit` — platform recommendations derived from present moment types
+- `emotionalDensity`, `educationalDensity`, `psychologicalRichness` — breakdown metrics
+- `summary` — creator-native 1–2 sentence honest assessment
 
-High-quality outputs (Bartlett 90, Naval 80) were produced **without grounding active**.
-The base prompt system correctly extracts the strongest psychological moments for confessional,
-story-rich transcripts.
+Zero new API calls. Zero new transcript parsing. Pure downstream computation on the
+already-detected moments. Returns `null` when no moments — no UI rendered.
 
-### Grounding's Clearest Benefit Case
+Type weights: validation_hook=20, emotional_confession=18, mechanism_reframe=16,
+transformation_moment=15, story_turning_point=14, contrarian_insight=12, fomo_loss_frame=12,
+educational_gem=8, authority_proof=8, quote_moment=6.
 
-Mid-tier transcripts (score 30–55) where one standout moment exists but the model might
-average across the full transcript instead. Huberman's fear extinction two-step is the
-clearest example — grounding would anchor the model to that framework vs surveying 6+ interventions.
+Scale factor 2.0 calibrated against Phase 15 gold dataset validation results.
 
-### Grounding Paradox
+---
 
-- High-score transcripts (80+): already extracting best moments → grounding adds echo risk, not uplift
-- Low-score transcripts (<25): lack qualifying psychological moments → grounding has nothing to inject
-- Clearest benefit: 30–55 range transcripts with one buried strong moment
+### New: `app/components/generation/TranscriptQualityCard.tsx`
 
-### Overfitting Risks Confirmed
+Creator-facing quality card rendered **above** the ClipGuide section.
 
-1. **Phrase echo**: format injects pre-formulated hook text; model may reproduce rather than derive
-2. **Type concentration**: no diversity enforcement in 3 selected moments → angle convergence risk
-3. **Format improvement**: inject `sourceTextPreview` (raw transcript text) instead of `suggestedHook`
-   to reduce verbatim reproduction while preserving anchoring benefit
+Layout:
+```
+━━━ Transcript Quality ━━━
 
-### Independent Quality Finding: Opener Repetition
+🔥 High Clipability          ← or ⚠️ Medium / ○ Low
 
-"Everyone's doing this backwards." appeared 5/12 times (42%) across test outputs.
-The opener pool (10 lines) is too small for the generation volume.
-5 openers appeared 0 times. Target: expand to 18+ openers, <20% rate for any single opener.
+Strongest signals
+  [Validation hook]  [Mechanism reframe]  [Emotional confession]
 
-### Strategic Conclusion
+"Strong emotional arc detected — confession moments and mechanism reframes ground this
+transcript in specific psychological tension. High short-form potential."
 
-> **The system's quality ceiling is the transcript's psychological richness, not prompt sophistication.**
+↳ [weakness, if medium/low]
 
-Grounding is insurance (prevents drift to generic summary) not transformation (cannot create
-psychological richness where the transcript has none). The highest-leverage next addition is
-transcript quality scoring — telling creators which section of their video has strong clipable
-moments before generation runs.
+Best fit: [TikTok] [Twitter] [LinkedIn]
+```
+
+Hidden cleanly when `transcriptQuality` is null (mock mode, no moments detected).
+Matches existing ClipGuide section header style (fading divider + uppercase label).
+
+---
+
+### Updated: `app/lib/timeline/index.ts`
+
+Exports `evaluateTranscriptQuality` and `TranscriptQualityReport`.
+
+---
+
+### Updated: `app/lib/types/generation.ts`
+
+Added `transcriptQuality?: TranscriptQualityReport` to `GenerateResult`.
+
+---
+
+### Updated: `app/lib/ai/generate.ts`
+
+Calls `evaluateTranscriptQuality(timelineMoments)` after timeline detection.
+Adds `transcriptQualityScore` and `clipability` to diagnostics.
+Adds `transcriptQuality` to `GenerateResult` return.
+
+---
+
+### Updated: `app/lib/ai/diagnostics.ts`
+
+New fields: `transcriptQualityScore?: number`, `clipability?: "low" | "medium" | "high"`.
+Log line includes `qualityScore=N clipability=X` when quality evaluation ran.
+
+---
+
+### Updated: `app/components/DebugPanel.tsx`
+
+Two new rows in AI Diagnostics: `qualityScore` and `clipability`.
+
+---
+
+### Updated: `app/page.tsx`
+
+- Added `transcriptQuality` state
+- Renders `<TranscriptQualityCard report={transcriptQuality} />` above `<ClipGuide>`
+- Resets `transcriptQuality` to null on handleReset
+- Fixed Tailwind v4 canonical class: `h-[560px]` → `h-140`
+
+---
+
+### New: `docs/TRANSCRIPT_QUALITY_SYSTEM.md`
+
+Full documentation: philosophy, signals, weights, metrics, honest limitations,
+relationship to timeline moments and creator psychology.
+
+---
+
+## Render Order (phase === "done")
+
+```
+TranscriptQualityCard  ← NEW: psychological density assessment
+ClipGuide              ← top 3 detected moments with hooks
+OutputPanel            ← generated content cards
+DebugPanel             ← developer diagnostics
+```
 
 ---
 
 ## Validation Status
 
-- Build: ✅ clean (no code changes, previous build still valid)
-- Lint: ✅ clean (no code changes)
-- Runtime: ✅ no regressions (docs only)
-- Grounding A/B: ⏳ requires live API test — recommended: Huberman fear extinction transcript
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Mock mode: ✅ unaffected — no moments → no quality card rendered
+- Fallback: ✅ empty moments → null → no UI
+- Integration: moments → evaluator → GenerateResult → page state → component
 
 ---
 
-## No Code Changed
+## Positioning
 
-This phase is analysis and documentation only. All production code is identical to end-of-Phase-14 state.
+Virnix can now honestly claim:
+- "Find out which parts of your content have psychologically strong moments"
+- "Detect psychological content density before you generate"
+- "Understand where the emotional value is hiding in your transcript"
+
+Cannot yet claim:
+- "Predict virality" — explicitly avoided
+- "Compare across creators" — score is relative within a transcript only

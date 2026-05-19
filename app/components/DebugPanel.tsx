@@ -37,6 +37,12 @@ export default function DebugPanel({ diagnostics, timelineMoments }: Props) {
           ? `yes · ${diagnostics.injectedMomentCount ?? 0} moments`
           : "no"] as [string, string]]
       : []),
+    ...(diagnostics.transcriptQualityScore != null
+      ? [["qualityScore", `${diagnostics.transcriptQualityScore}/100`] as [string, string]]
+      : []),
+    ...(diagnostics.clipability != null
+      ? [["clipability", diagnostics.clipability] as [string, string]]
+      : []),
   ];
 
   return (
