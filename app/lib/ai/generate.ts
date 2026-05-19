@@ -9,7 +9,7 @@ import { getProvider } from "./provider";
 import { estimateTokens, estimateCost, selectBestSegment } from "./chunker";
 import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
-import { detectTimelineMoments } from "../timeline";
+import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt } from "../timeline";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
 // Set NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true in .env.local (or Vercel env vars)
@@ -62,7 +62,16 @@ async function realGenerate(
   const useAdvanced = isEnabled("advanced_outputs");
   const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
   const systemPrompt = useAdvanced ? ADVANCED_SYSTEM_PROMPT : SYSTEM_PROMPT;
-  const userPrompt   = useAdvanced ? buildAdvancedPrompt(transcript) : buildPrompt(transcript);
+
+  // Build timeline context: compact string of top psychological moments as creative anchors.
+  // Returns "" when no moments — prompts stay byte-for-byte identical to before.
+  const timelineContext = formatTimelineMomentsForPrompt(timelineMoments ?? []);
+  const injectedMoments = timelineContext ? selectMomentsForPrompt(timelineMoments ?? []) : [];
+  const timelineInjected = injectedMoments.length > 0;
+
+  const userPrompt = useAdvanced
+    ? buildAdvancedPrompt(transcript, timelineContext)
+    : buildPrompt(transcript, timelineContext);
 
   const provider = getProvider();
 
@@ -109,6 +118,8 @@ async function realGenerate(
     coercionUsed,
     viralityScore,
     timelineMomentsDetected: timelineMoments?.length ?? 0,
+    timelineInjected,
+    injectedMomentCount: injectedMoments.length,
   };
 
   logDiagnostics(diagnostics);

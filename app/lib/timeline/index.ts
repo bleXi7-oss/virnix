@@ -9,7 +9,7 @@
 
 export type { TimelineMoment, MomentType, PlatformFit } from "./types";
 export { detectTimelineMoments } from "./moment-detector";
-export { formatTimelineMomentsForPrompt, formatMomentReport, formatMomentsReport } from "./formatter";
+export { formatTimelineMomentsForPrompt, selectMomentsForPrompt, formatMomentReport, formatMomentsReport } from "./formatter";
 export {
   parseTimestamp,
   formatTimestamp,

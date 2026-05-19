@@ -111,30 +111,89 @@ Added from gold dataset findings:
 
 ## Integration Status
 
-**Active as of Phase 12.** Timeline moments are:
-1. **Detected** on every real AI generation (zero-cost, runs in parallel with transcript fetch)
-2. **Returned** in `GenerateResult.timelineMoments`
-3. **Shown** in dev debug panel (collapsible "Best Clip Opportunities" section)
-4. **Logged** in diagnostics (`moments=N` in `[VIRNIX_AI]` log line)
+**Fully active as of Phase 14.** Timeline moments are:
+1. **Detected** on every real AI generation (zero-cost, runs after transcript fetch)
+2. **Injected** into the generation prompt as lightweight creative anchors (Phase 14)
+3. **Returned** in `GenerateResult.timelineMoments`
+4. **Shown** to users in the "Best moments to clip" section above output cards (Phase 13)
+5. **Logged** in diagnostics (`moments=N`, `timelineInjected=true(N)` in `[VIRNIX_AI]` log line)
 
 **NOT yet active:**
-- Prompt injection (`formatTimelineMomentsForPrompt` exists but not wired to generation)
-- Public UI display (debug panel only)
 - Clip export hints to users
+- Confession arc detection (multi-window)
+- Gold dataset calibration of signal word lists
+
+---
+
+## Prompt Grounding Flow (Phase 14)
+
+This is **not RAG**. It is lightweight creative scaffolding.
+
+```
+detectTimelineMoments(timestampedTranscript)
+  → selectMomentsForPrompt()       [filter to ≤3 high-priority types, min confidence 25]
+  → formatTimelineMomentsForPrompt() [compact block ~80 tokens]
+  → buildPrompt(transcript, timelineContext)
+      → injected after GENERATION PROFILE block
+      → absent if no moments qualified
+```
+
+### Why this is not RAG
+
+RAG retrieves relevant chunks from a vector store and injects them as primary context. This is different:
+
+- **No retrieval** — moments come from the same transcript already in the prompt
+- **No vector store** — purely deterministic heuristic scoring
+- **Not primary context** — moments appear as a small "creative anchors" block, after the core generation profile
+- **Zero new API calls** — all detection happens before the prompt is built
+- **Fallback = no change** — if no moments qualify, prompt is byte-for-byte identical to before
+
+### What gets injected
+
+Up to 3 moments, formatted as:
+
+```
+TRANSCRIPT HIGHLIGHTS — draw from these moments as creative anchors, don't copy verbatim:
+- "You're not failing — Your identity is fighting back against change." [validation hook · TikTok/Reels]
+- "This isn't what you think. Most people believe discipline is the answer." [mechanism reframe · Twitter/LinkedIn]
+- "I used to believe I was just lazy." [confession · TikTok/Reels]
+```
+
+### Token cost
+
+~80 tokens (3 moments × ~25 tokens each + header). On a typical 5000-token call, that's a ~1.6% increase. Within measurement noise.
+
+### Priority filtering (`selectMomentsForPrompt`)
+
+High-priority types (qualify at confidence ≥25):
+`validation_hook`, `mechanism_reframe`, `emotional_confession`, `contrarian_insight`, `transformation_moment`, `story_turning_point`, `fomo_loss_frame`
+
+Low-priority types (only qualify at confidence ≥40, fallback only):
+`educational_gem`, `authority_proof`, `quote_moment`
+
+### Known tradeoffs
+
+- Repetition risk: if moments are injected as "don't copy verbatim" and the model echoes them anyway, reduce injection or add stronger diversity instruction
+- Overfitting: if all outputs start referencing the same timestamp, lower confidence threshold or reduce to 2 moments
+- Diversity: moment types should vary — 3 × mechanism_reframe anchors would narrow the output
+
+Diagnostics (`timelineInjected`, `injectedMomentCount`) allow monitoring these tradeoffs across real generations.
 
 ---
 
 ## Removal Guarantee
 
 If `app/lib/timeline/` is deleted:
-- `app/lib/ai/generate.ts` — remove the `detectTimelineMoments` import and the two lines that call it
+- `app/lib/ai/generate.ts` — remove the 3 timeline imports and 4 lines (detect, format, select, timelineInjected)
 - `app/lib/ai/transcript.ts` — revert `getTranscriptFull` to `getTranscript` (plain string return)
 - `app/lib/types/generation.ts` — remove `timelineMoments?: TimelineMoment[]`
-- `app/lib/ai/diagnostics.ts` — remove `timelineMomentsDetected`
-- `app/components/DebugPanel.tsx` — remove moments prop and section
-- `app/page.tsx` — remove `timelineMoments` state
+- `app/lib/ai/diagnostics.ts` — remove 4 fields: `timelineMomentsDetected`, `timelineInjected`, `injectedMomentCount` + log line
+- `app/lib/prompts/index.ts` — remove `timelineContext` params from both builders (revert to `string` only)
+- `app/components/DebugPanel.tsx` — remove `timelineMoments` prop, clip section, and grounded row
+- `app/components/generation/ClipGuide.tsx` + `ClipMomentCard.tsx` — delete
+- `app/page.tsx` — remove `ClipGuide` import, render, and `timelineMoments` state
 
-No other modules are affected.
+No other modules are affected. Core generation, providers, schemas, parser — all unchanged.
 
 ---
 
@@ -152,8 +211,8 @@ No other modules are affected.
 
 ## Future Roadmap
 
-1. **Prompt injection** — connect `formatTimelineMomentsForPrompt()` to `buildPrompt()` when token cost is validated
-2. **Public clip guide UI** — show detected moments in the output panel as a "Best moments to clip" section
-3. **Gold dataset calibration** — score signal word lists against 50+ manually evaluated moments
-4. **Confession arc detection** — multi-window scoring to detect the full "setup → confession → resolution" arc
+1. **Gold dataset calibration** — score signal word lists against 50+ manually evaluated moments; adjust weights
+2. **Repetition monitoring** — track whether prompt injection increases output similarity across runs
+3. **Confession arc detection** — multi-window scoring to detect the full "setup → confession → resolution" arc
+4. **Clip export hints** — "Start at 02:14" shown next to detected moments in the creator UI
 5. **Video editing integration** — much later, optional, only after text layer is validated

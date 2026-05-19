@@ -456,3 +456,54 @@ Phase 12 built the detection pipeline and exposed moments in the dev debug panel
 - Lint: ✅ clean
 - Behavioral regression: ✅ none — mock mode unaffected, no moments = no section
 - Mobile: ✅ flex-wrap meta row, line-clamp preview
+
+---
+
+## Phase 14 — Prompt Grounding via Timeline Intelligence
+
+**Date:** 2026-05-19
+**Commit:** (pending)
+
+### Context
+
+Phase 13 showed detected clip moments in the public UI. Phase 14 connects those moments into the AI prompt as lightweight creative scaffolding — grounding generation in the transcript's actual psychological peak moments.
+
+### What Was Built
+
+**Updated: `app/lib/timeline/formatter.ts`**
+- New `selectMomentsForPrompt(moments)` — filters moments to ≤3 most prompt-worthy; priority types qualify at confidence ≥25, generic types only at ≥40 as fallback
+- Rewrote `formatTimelineMomentsForPrompt()` — hook-text format: `"suggested hook" [type · Platform/Platform]`; returns "" when no moments qualify
+
+**Updated: `app/lib/timeline/index.ts`**
+- Exports `selectMomentsForPrompt`
+
+**Updated: `app/lib/prompts/index.ts`**
+- `buildPrompt(transcript, timelineContext = "")` and `buildAdvancedPrompt(transcript, timelineContext = "")` accept optional pre-formatted context string
+- Injected after GENERATION PROFILE block, before "Apply this angle..." directive
+- Empty string default: prompts are byte-for-byte identical to before when no moments
+
+**Updated: `app/lib/ai/generate.ts`**
+- Calls `formatTimelineMomentsForPrompt(timelineMoments)` before AI call
+- Passes resulting string to prompt builders
+- Tracks `timelineInjected` and `injectedMomentCount` in diagnostics
+
+**Updated: `app/lib/ai/diagnostics.ts`**
+- New fields: `timelineInjected?: boolean`, `injectedMomentCount?: number`
+- Log line includes `timelineInjected=true(N)` when active
+
+**Updated: `app/components/DebugPanel.tsx`**
+- New `grounded` row: "yes · N moments" or "no"
+
+### Token Impact
+
+~80 tokens added when 3 moments inject. On a ~5000-token call, ~1.6% increase.
+
+### Fallback Guarantee
+
+Empty moments → `timelineContext = ""` → prompt builders receive default `""` → prompt identical to Phase 13 behavior.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Fallback: ✅ no moments = identical prompt
+- Behavioral regression: ✅ none — mock mode unaffected

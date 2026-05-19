@@ -1,4 +1,4 @@
-# Current Phase — Clip Guide UI
+# Current Phase — Prompt Grounding via Timeline Intelligence
 
 Phase started: 2026-05-19
 Status: complete and pushed
@@ -7,73 +7,108 @@ Status: complete and pushed
 
 ## Context
 
-Phase 12 (Timeline Intelligence Activation) built the full detection pipeline and wired it to the generation result. Moments were visible only in the dev debug panel.
-
-Phase 13 surfaces that intelligence directly in the main user experience — the first public-facing creator-oriented feature derived from timeline detection.
+Phase 13 surfaced timeline moments in the public UI as a "Best moments to clip" section.
+Phase 14 connects those same moments into the AI prompt as lightweight creative scaffolding —
+so the AI generation is grounded in the transcript's actual psychological peak moments.
 
 ---
 
 ## What Changed
 
-### New: `app/components/generation/ClipMomentCard.tsx`
+### Updated: `app/lib/timeline/formatter.ts`
 
-Single moment card component. Renders:
+**New `selectMomentsForPrompt(moments)`** — exported filter that selects up to 3 moments most effective as prompt anchors:
+- High-priority types qualify at confidence ≥25: `validation_hook`, `mechanism_reframe`, `emotional_confession`, `contrarian_insight`, `transformation_moment`, `story_turning_point`, `fomo_loss_frame`
+- Low-priority types (`educational_gem`, `authority_proof`, `quote_moment`) only qualify at confidence ≥40 as fallback
 
-- Timestamp range (`MM:SS–MM:SS`) in monospace
-- Moment type badge with subtle accent color per type
-- Confidence indicator (dot + label: "Strong match" / "Good match" / "Possible")
-- Suggested hook (prominent, quoted)
-- Why it works (psychological context)
-- Platform fit tags (top 3, humanized labels)
-- Source text preview (monospace, subtle, 2-line clamp)
-
-Left border accent per type:
-- `validation_hook` → amber
-- `mechanism_reframe` → violet
-- `emotional_confession` → rose
-- `contrarian_insight` → sky
-- `transformation_moment` → emerald
-- `educational_gem` → cyan
-- Others → zinc
+**Rewritten `formatTimelineMomentsForPrompt()`** — new hook-text format:
+```
+TRANSCRIPT HIGHLIGHTS — draw from these moments as creative anchors, don't copy verbatim:
+- "You're not failing — Your identity is protecting itself." [validation hook · TikTok/Reels]
+- "This isn't what you think. Discipline isn't the answer." [mechanism reframe · Twitter/LinkedIn]
+- "I used to believe hard work was enough." [confession · TikTok/Reels]
+```
+Cap: 3 moments. ~80 tokens total. Returns `""` when no moments qualify.
 
 ---
 
-### New: `app/components/generation/ClipGuide.tsx`
+### Updated: `app/lib/timeline/index.ts`
 
-Section container. Shows top 3 moments (by confidence, already sorted by detector).
-
-- Matching divider-header style as OutputPanel ("Best moments to clip")
-- Single card: `rounded-xl border` container, moments separated by thin `h-px` dividers
-- Footer: "{N} moments detected · ranked by psychological impact"
-- Fully isolated — returns `null` if no moments
+Exports `selectMomentsForPrompt` alongside existing public API.
 
 ---
 
-### Updated: `app/page.tsx`
+### Updated: `app/lib/prompts/index.ts`
 
-- `ClipGuide` imported
-- Rendered in `phase === "done"` block, **above** `OutputPanel`
-- Guard: only renders when `timelineMoments && timelineMoments.length > 0`
-- No new state, no new props — reuses existing `timelineMoments` state
+Both `buildPrompt(transcript, timelineContext = "")` and `buildAdvancedPrompt(transcript, timelineContext = "")` now accept an optional pre-formatted context string.
 
----
-
-## Integration Pattern
+Injection point: appended to the `GENERATION PROFILE` block, **before** "Apply this angle..." line.
 
 ```
-phase === "done"
-  ├── ClipGuide (moments)        ← NEW — psychological moment discovery
-  ├── OutputPanel (cards)        ← existing generated content
-  └── DebugPanel (diagnostics)   ← dev only
+━━━ GENERATION PROFILE ━━━
+[variation]
+[context]
+
+TRANSCRIPT HIGHLIGHTS — draw from these moments...   ← NEW (absent if empty string)
+
+Apply this angle to all 5 platforms.
 ```
+
+When `timelineContext` is `""`: **prompts are byte-for-byte identical to before.**
 
 ---
 
-## Component Isolation
+### Updated: `app/lib/ai/generate.ts`
 
-- `app/components/generation/ClipGuide.tsx` and `ClipMomentCard.tsx` are fully removable
-- Removing them requires only removing the `ClipGuide` import and render in `page.tsx`
-- No changes to generation pipeline, timeline detection, types, or API
+In `realGenerate()`, before the AI call:
+```typescript
+const timelineContext = formatTimelineMomentsForPrompt(timelineMoments ?? []);
+const injectedMoments = timelineContext ? selectMomentsForPrompt(timelineMoments ?? []) : [];
+const timelineInjected = injectedMoments.length > 0;
+```
+
+`timelineContext` is passed to prompt builders. `timelineInjected` and `injectedMomentCount` are added to diagnostics.
+
+---
+
+### Updated: `app/lib/ai/diagnostics.ts`
+
+Two new optional fields:
+- `timelineInjected?: boolean`
+- `injectedMomentCount?: number`
+
+`[VIRNIX_AI]` log line now includes `timelineInjected=true(N)` when grounding is active.
+
+---
+
+### Updated: `app/components/DebugPanel.tsx`
+
+New `grounded` row in AI Diagnostics:
+- `yes · 3 moments` when injected
+- `no` when timeline had no qualifying moments
+
+---
+
+## This is NOT RAG
+
+| RAG | Virnix prompt grounding |
+|-----|------------------------|
+| Vector retrieval from external store | Deterministic heuristic from same transcript |
+| Retrieves relevant chunks | Selects top psychological moments |
+| Primary context replacement | Small supplemental block after generation profile |
+| New API calls | Zero new calls |
+| Adds hundreds of tokens | ~80 tokens |
+| Fails if retrieval fails | Falls back to identical prompt |
+
+---
+
+## Fallback Guarantee
+
+If timeline detection returns `[]` or `selectMomentsForPrompt` returns `[]`:
+- `timelineContext` = `""`
+- Prompt builders receive empty string as default
+- Prompts are **identical** to pre-Phase 14 behavior
+- `timelineInjected` = `false` in diagnostics
 
 ---
 
@@ -81,15 +116,6 @@ phase === "done"
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Mock mode: ✅ unaffected (no moments → ClipGuide renders null)
-- Real AI mode: ✅ moments flow through to ClipGuide when detected
-- Mobile: ✅ flex-wrap on meta row, line-clamp on preview
-
----
-
-## Known Limitations
-
-- Heuristic detection only — confidence score is relative, not a virality predictor
-- No video rendering, no clip export, no editing tools
-- English transcripts only
-- Top 3 shown; remaining moments accessible via dev debug panel
+- Mock mode: ✅ unaffected (returns before transcript fetch)
+- Fallback: ✅ empty moments → identical prompt
+- Integration: timeline detection → filter → format → prompt → AI → output

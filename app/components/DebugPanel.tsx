@@ -32,6 +32,11 @@ export default function DebugPanel({ diagnostics, timelineMoments }: Props) {
     ...(diagnostics.timelineMomentsDetected != null
       ? [["moments", `${diagnostics.timelineMomentsDetected} detected`] as [string, string]]
       : []),
+    ...(diagnostics.timelineInjected != null
+      ? [["grounded", diagnostics.timelineInjected
+          ? `yes · ${diagnostics.injectedMomentCount ?? 0} moments`
+          : "no"] as [string, string]]
+      : []),
   ];
 
   return (
