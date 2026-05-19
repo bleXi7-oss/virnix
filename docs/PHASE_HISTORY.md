@@ -837,3 +837,25 @@ Calibrated against Phase 15 gold dataset findings across 12 creator transcripts.
 - Lint: ✅ clean
 - Mock mode: ✅ no quality card rendered (correct)
 - Fallback: ✅ null → no UI, no layout shift
+
+---
+
+## Phase 21 — Hero Card Transparency Polish (UI-POLISH-E, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Single targeted transparency adjustment to hero card surface.
+
+- `app/page.tsx`: hero card light-mode fill `bg-white/75` → `bg-white/65`
+- Dark mode, `backdrop-blur-xl`, input opacity, button unchanged
+
+35% card transparency (up from 25%) lets the pearl-chrome banner atmosphere
+show through more visibly while keeping text fully readable.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Light mode: banner atmosphere more visible through card
+- Dark mode: no regression
