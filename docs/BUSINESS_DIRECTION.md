@@ -1,9 +1,9 @@
 # Business Direction — Virnix
 
 > AI-readable strategic operating document. Distilled from the Virnix startup handbook
-> and validated against Phases 1–34 product decisions.
-> Last updated: BUSINESS-DOCS-B (2026-05-20)
-> Full roadmap: docs/roadmap/
+> and validated against Phases 1–35 product decisions.
+> Last updated: BUSINESS-DOCS-C (2026-05-20)
+> Full roadmap: docs/roadmap/ · Feedback system: docs/feedback/
 
 ---
 
@@ -250,6 +250,23 @@ Creator Energy is **included in Pro at no extra credit cost.** It adds ~100–15
 - Social scheduling
 - AI image generation
 - Video editing
+
+---
+
+## Feedback Loop
+
+Virnix needs a lightweight creator feedback loop to guide roadmap decisions after early users generate content. This is not an enterprise support system — it is a fast 5-question post-generation survey.
+
+**Goal:** Understand which outputs are actually useful, which creator archetypes Virnix underserves, and what to build next — before guessing.
+
+**Design:** 5 questions, predefined options, optional free text, under 60 seconds, non-blocking.
+
+**Questions cover:** Usefulness · Best output · Weakest point · Next priority · Creator type
+
+**Planned for:** v0.3.x (after auth exists). Anonymous-friendly pre-auth; attaches user_id post-auth.
+
+Full design: `docs/feedback/FEEDBACK_SURVEY_PLAN.md`  
+Process: `docs/feedback/IMPROVEMENT_LOOP.md`
 
 ---
 

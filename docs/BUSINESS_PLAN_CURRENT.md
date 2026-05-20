@@ -1,13 +1,14 @@
 # Virnix — Current Business Plan
 
-**Phase:** BUSINESS-DOCS-B  
+**Phase:** BUSINESS-DOCS-C  
 **Date:** 2026-05-20  
 **Status:** Living document. Update when strategy changes.
 
 > This is the markdown source for the Virnix business plan.
 > VIRNIX.docx (project root) should be updated manually from this file.
-> This document reflects product state after Phases 1–34 (BUSINESS-DOCS-B complete).
+> This document reflects product state after Phases 1–35 (BUSINESS-DOCS-C complete).
 > Full feature roadmap and versioning: docs/roadmap/
+> Feedback system design: docs/feedback/
 
 ---
 
@@ -312,7 +313,54 @@ What Virnix must never become:
 
 ---
 
-## 9. Future: Public Roadmap / Changelog Page
+## 9. Feedback-Driven Roadmap
+
+### Why feedback matters more than planning
+
+Internal assumptions about what creators want are often wrong. A creator who posts twice a week uses Virnix differently from a podcaster who posts monthly. The only reliable way to know what to build next is to ask early users after they've generated real content.
+
+### The feedback system
+
+A lightweight post-generation survey — 5 questions, under 60 seconds, non-blocking. Designed to capture:
+
+- Which outputs are actually useful vs. ignored
+- Which Creator Energy directions land vs. disappoint
+- Which creator archetypes feel underserved
+- What features have the most pull
+- What is broken or wrong
+
+Full design: [docs/feedback/FEEDBACK_SURVEY_PLAN.md](feedback/FEEDBACK_SURVEY_PLAN.md)
+
+### How feedback becomes decisions
+
+1. Collect responses (post-generation widget, v0.3.x)
+2. Tag by category: output quality · platform quality · missing feature · creator archetype · energy direction · bug
+3. Weekly review during private beta
+4. Pattern threshold: ≥3 identical complaints = signal; ≥5 = priority candidate
+5. Convert to roadmap action: P0 fix / P1 fix / PATCH / new Candidate
+
+Full process: [docs/feedback/IMPROVEMENT_LOOP.md](feedback/IMPROVEMENT_LOOP.md)
+
+### What feedback can change
+
+| Feedback signal | Potential action |
+|----------------|-----------------|
+| "Too generic" | Prompt or energy directive refinement |
+| "Wrong platform format" | Platform-specific prompt improvement |
+| Creator archetype underserved | Targeted real-AI test + prompt tuning |
+| Energy direction disappoints | Directed polish phase (like CE-C) |
+| Feature requested ≥5 times | Promote from Future → Candidate |
+| "Pricing feels expensive" | Review credit tier thresholds, not necessarily price |
+
+### What feedback will not change
+
+- Anti-goals (no analytics dashboard, no social scheduling, no video editing)
+- Core product philosophy (transcript-first, no video rendering)
+- Pricing model structure (credits, not unlimited)
+
+---
+
+## 10. Future: Public Roadmap / Changelog Page
 
 Not built yet. Do not add this to the app now.
 
@@ -339,7 +387,7 @@ When the product is post-launch (v0.3.0+), a minimal public-facing roadmap page 
 
 ---
 
-## 10. VIRNIX.docx Note
+## 11. VIRNIX.docx Note
 
 `VIRNIX.docx` exists in the project root but is a binary format. This markdown file (`docs/BUSINESS_PLAN_CURRENT.md`) is the authoritative source for the current business plan.
 

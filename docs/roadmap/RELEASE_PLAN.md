@@ -34,6 +34,7 @@ This is a coherent, demonstrable product. Hence v0.1.0, not v0.0.x.
 | PRICING-A (31) | Pricing / credits strategy |
 | BUSINESS-DOCS-A (33) | Business docs consolidation |
 | BUSINESS-DOCS-B (34) | Roadmap docs, pricing tier expansion |
+| BUSINESS-DOCS-C (35) | Feedback system design |
 
 ---
 
@@ -86,6 +87,8 @@ What v0.3.0 adds:
 - Upgrade CTA
 - Credit display in UI
 - Pro gating for Creator Energy and Advanced Kit on Free
+- Post-generation feedback widget (5-question survey, anonymous or user-linked)
+- Feedback stored to DB for internal review
 
 **Do not ship v0.3.0** until: Stripe webhooks tested, Pro credit allocation confirmed, Free-to-Pro upgrade flow tested, downgrade/cancel handling confirmed.
 

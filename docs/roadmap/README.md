@@ -23,6 +23,7 @@ This folder contains the practical planning documents for Virnix product develop
 | [../BUSINESS_PLAN_CURRENT.md](../BUSINESS_PLAN_CURRENT.md) | Full current business plan |
 | [../PRICING_CREDITS_PLAN.md](../PRICING_CREDITS_PLAN.md) | Full credits pricing strategy |
 | [../BUSINESS_DIRECTION.md](../BUSINESS_DIRECTION.md) | Strategic operating document |
+| [../feedback/README.md](../feedback/README.md) | Feedback system plan |
 
 ---
 
@@ -37,7 +38,8 @@ Private beta foundation. Product quality phases complete. No auth, no credits, n
 - Creator Energy Selection (CE-A through CE-C, real AI validated)
 - Domain-agnostic TikTok opener/closing system (QB-A)
 - Pricing/credits strategy documented (PRICING-A)
-- Business docs consolidated (BUSINESS-DOCS-A)
+- Business docs consolidated (BUSINESS-DOCS-A, BUSINESS-DOCS-B)
+- Feedback system designed (BUSINESS-DOCS-C)
 
 ---
 

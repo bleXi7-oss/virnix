@@ -1289,3 +1289,38 @@ Documentation-only phase. No production code changed.
 
 ### Next: AUTH-A — Supabase authentication
 Version baseline v0.1.0 established. Roadmap docs complete. Auth is the prerequisite gate for the entire credits + billing stack.
+
+---
+
+## Phase 35 — Feedback / Improvement Loop Plan (BUSINESS-DOCS-C, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Documentation-only phase. No production code changed.
+
+**Created: `docs/feedback/` folder (3 new files)**
+
+- `docs/feedback/README.md` — folder overview, design principles, implementation sequence
+- `docs/feedback/FEEDBACK_SURVEY_PLAN.md` — 5-question survey design, placement rules, future implementation architecture (FeedbackWidget, types, options, API route, DB sketch, implementation rules, copy guidelines)
+- `docs/feedback/IMPROVEMENT_LOOP.md` — feedback → decision process (collect → tag → review → pattern → action), 12-category tag system, review cadence, pattern detection rules, P0/P1/P2/Candidate priority framework, what feedback can/cannot change
+
+**Updated: `docs/roadmap/README.md`** — feedback folder reference added, shipped list updated  
+**Updated: `docs/roadmap/FEATURE_ROADMAP.md`** — feedback widget added to v0.3.x (Planned), v0.4.x (Candidate), v0.6.x (Future); v1.0.0 feedback row updated  
+**Updated: `docs/roadmap/RELEASE_PLAN.md`** — BUSINESS-DOCS-C added to v0.1.0 phases; v0.3.0 description updated  
+**Updated: `docs/BUSINESS_DIRECTION.md`** — header updated, new Feedback Loop section added  
+**Updated: `docs/BUSINESS_PLAN_CURRENT.md`** — header updated, new Section 9 (Feedback-Driven Roadmap) added
+
+### What Was NOT Changed
+- No app runtime code
+- No UI, prompts, AI logic
+- No Supabase / Stripe / auth
+- VIRNIX.docx not modified (binary)
+
+### Validation Status at End of Phase
+- git status: only docs and new feedback folder ✅
+- No build required (docs only)
+
+### Next: AUTH-A — Supabase authentication
+All planning phases complete. The full documentation suite (business plan, pricing, roadmap, versioning, feedback) is in place. AUTH-A is the first implementation gate — prerequisite for credits, billing, and feedback storage.

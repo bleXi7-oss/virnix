@@ -48,7 +48,8 @@
 
 ### v0.1.x patches (examples)
 
-- Roadmap docs created (this phase, BUSINESS-DOCS-B)
+- Roadmap docs created (BUSINESS-DOCS-B)
+- Feedback system designed (BUSINESS-DOCS-C)
 - Any future prompt wording adjustments
 - Any future UI polish tweaks
 - Any future QA script improvements
@@ -95,7 +96,12 @@
 | Pro gating: Creator Energy on Free | UI-CREDITS-A | 📋 Planned |
 | Pro gating: Advanced Kit on Free | UI-CREDITS-A | 📋 Planned |
 
-**Gate:** Validate Stripe + credit webhook reliability before exposing to real users.
+| Lightweight feedback widget (post-generation) | UI-FEEDBACK-A | 📋 Planned |
+| Feedback stored to DB (anonymous pre-auth, user_id post-auth) | UI-FEEDBACK-A | 📋 Planned |
+| Internal feedback review process (manual during private beta) | PROCESS | 📋 Planned |
+
+**Gate:** Validate Stripe + credit webhook reliability before exposing to real users.  
+**Note:** Feedback widget can ship in v0.3.x once auth exists, or as anonymous-only in v0.2.x.
 
 ---
 
@@ -110,6 +116,8 @@
 | Regenerate from previous transcript | 💡 Candidate |
 | Copy/export improvements | 💡 Candidate |
 | Minimal creator dashboard (history only) | 💡 Candidate |
+
+| Feedback-informed improvements (prompt/platform refinements from v0.3.x data) | PROCESS | 💡 Candidate |
 
 **Note:** History requires auth + DB writes. Do not build before v0.2.x.  
 **Note:** Dashboard must stay minimal — not a metrics dashboard, just history access.
@@ -147,6 +155,7 @@
 | Team seats (2–3) | 🔭 Future |
 | Studio pricing tier (€49/month, 350 credits) | 🔭 Future |
 | Priority processing | 🔭 Future |
+| Studio/Agency feedback categories (client workflow feedback) | 🔭 Future |
 
 ---
 
@@ -164,7 +173,7 @@
 | Reliable generation flow (timeout, retry, error handling) | ✅ Shipped (Phase 2) |
 | Production cost controls (duration limits, rate limiting) | ⏳ Blocked on v0.2.x |
 | Clear pricing page | ⏳ Blocked on v0.3.x |
-| User feedback loop (some form of in-product feedback) | 💡 Candidate |
+| User feedback loop (post-generation widget, planned in v0.3.x) | 📋 Planned |
 | Minimal onboarding (empty state, first-run UX) | 💡 Candidate |
 | Real-world validation (50+ real API generations logged) | ⏳ Blocked on auth |
 
