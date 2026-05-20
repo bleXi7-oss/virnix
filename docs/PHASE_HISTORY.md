@@ -1089,3 +1089,50 @@ SAFE TO KEEP CREATOR ENERGY: **YES**
 - Lint: ✅ clean
 - opener-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 creator-specific)
 - creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
+
+---
+
+## Phase 30 — Creator Energy Real AI Validation (CE-B, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Real AI output validation of Creator Energy Selection. 9 API calls across 3 transcript types and 7 energy modes.
+
+**New: `scripts/qa/creator-energy-real-ai.ts`**
+- Loads .env.local before API calls; exits cleanly if ANTHROPIC_API_KEY missing
+- 3 fixture transcripts embedded: creator/business, science, philosophy
+- 9 test cases: Creator × 5 (Balanced, Tactical, Contrarian, Analytical, Reflective), Science × 2 (Balanced, Relatable), Philosophy × 2 (Balanced, Harsh Truth)
+- Energy fingerprint detection + invented-numbers hallucination scan + platform-native format checks
+- TikTok and LinkedIn cross-energy comparison output
+
+**New: `docs/qa/CREATOR_ENERGY_REAL_AI_B.md`**
+- Full real AI QA report: 14 validation questions answered, per-platform analysis,
+  P0/P1/P2 findings, SAFE TO PROCEED verdict
+
+### Key Results
+
+- 9/9 API calls succeeded, 0 errors
+- All 4 single energies differ from Balanced on TikTok ✓
+- Tactical vs. Reflective: clearest differentiation pair ✓
+- Contrarian vs. Analytical: meaningfully different angle and framing ✓
+- Grounding rule held: Relatable on science = no invented confessions ✓
+- Harsh Truth on philosophy = no invented drama; stayed Nietzsche-grounded ✓
+- LinkedIn also shows energy steering (not just TikTok) ✓
+- No corporate AI voice in any of 9 LinkedIn outputs ✓
+- P2 only: Contrarian opener occasionally sounds tactical; some energy fingerprints low (tone-level steering vs. keyword-level)
+
+### Verdict
+
+SAFE TO PROCEED: **YES**
+
+Creator Energy Selection is production-ready. Real AI behavior matches static analysis predictions. No factual hallucinations. No format regressions. Clear energy differentiation on all tested platforms.
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- opener-audit.ts: ✅ ALL CHECKS PASS
+- creator-energy-audit.ts: ✅ ALL CHECKS PASS
+- creator-energy-real-ai.ts: ✅ 9/9 calls succeeded, 0 errors
+- Real AI: ✅ tested with live Anthropic Sonnet 4.6 API
