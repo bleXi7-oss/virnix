@@ -1,68 +1,108 @@
-# Current Phase — Creator Energy Real AI Validation (CE-B)
+# Current Phase — Pricing & Credits Plan (PRICING-A)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Creator Energy QA (CE-QA-A, 2026-05-20) — complete
+## Previous phase: Creator Energy Real AI Validation (CE-B, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-CE-B validates Creator Energy Selection (CE-A) with real Anthropic API calls.
-9 generations across 3 transcript types and 7 energy modes.
-Estimated cost: ~$0.33. Model: Claude Sonnet 4.6.
+PRICING-A is a strategy/documentation phase only.
+Nothing was implemented. No code was written. No schema was added.
+
+Goal: establish a credits pricing model that protects Virnix margin from power users while remaining simple for creators to understand.
 
 ---
 
 ## What Was Done
 
-### New: `scripts/qa/creator-energy-real-ai.ts`
-- 9-call real AI validation script
-- Loads .env.local for ANTHROPIC_API_KEY before any API calls
-- 3 fixture transcripts: creator/business, science, philosophy
-- Energy modes: Balanced, Tactical, Contrarian, Analytical, Reflective, Relatable, Harsh Truth
-- Energy fingerprint detection per output
-- Invented-numbers hallucination check (false positive: tweet numbering — P2)
-- Platform-native format checks
-- TikTok and LinkedIn cross-energy comparison output
+### New: `docs/PRICING_CREDITS_PLAN.md`
 
-### New: `docs/qa/CREATOR_ENERGY_REAL_AI_B.md`
-- Full real AI QA report: 14 validation questions, per-platform observations,
-  P0/P1/P2 issues, SAFE TO PROCEED verdict
+15-section pricing and credits strategy document covering:
+
+1. Executive summary
+2. Why credits (not unlimited)
+3. Why unlimited is dangerous (unit economics breakdown)
+4. Proposed plans — Free (3 trial credits) and Pro (€20/month, 100 credits)
+5. Credit consumption rules — duration tiers + mode extra
+6. Advanced mode pricing (+1 credit for Advanced Content Kit)
+7. Creator Energy decision (included in Pro, no extra cost)
+8. Example user scenarios — 4 archetypes with cost + margin estimates
+9. Margin assumptions — Sonnet 4.6 pricing, transcription cost projections, Stripe fees
+10. Abuse prevention — hard limits, soft limits, free tier vectors
+11. What to show users in UI — creator-native copy, credit cost labels
+12. What NOT to expose — no tokens, no model names, no API language
+13. Future pricing tiers — Creator tier, Team tier, pay-as-you-go
+14. Implementation notes for later — file structure, calculation formula, DB sketch
+15. Open questions before coding
 
 ---
 
-## Key Findings
+## Credit System Design (no code yet)
 
-- **All 9 API calls succeeded** (0 errors)
-- **Energy differentiation confirmed**: all 4 single energies on creator transcript differ from Balanced
-- **Tactical vs. Reflective** is the clearest contrast pair
-- **Grounding rule held**: Relatable on science produced no invented confessions; Harsh Truth on philosophy stayed grounded
-- **LinkedIn also shows energy steering** (not just TikTok)
-- **No corporate AI voice** detected across all 9 generations
-- **P2 only**: Contrarian opener occasionally sounds tactical; low fingerprint on some energies (tone-level steering, not keyword-level)
+```
+credits_used = duration_base_credits + mode_extra_credits
+```
+
+| Duration | Credits |
+|----------|---------|
+| 0–10 min | 1 |
+| 10–30 min | 2 |
+| 30–60 min | 4 |
+| 60–120 min | 8 |
+| 120+ min | Blocked |
+
+Advanced Content Kit: +1 credit.
+Creator Energy: included at no extra cost.
+
+---
+
+## Margin Model
+
+At €20/month / 100 credits:
+
+| User type | Credits used | Est. AI cost | Gross margin |
+|-----------|-------------|--------------|--------------|
+| Short-form creator | ~20 | ~€0.70 | ~92% |
+| Mixed creator | ~23 | ~€0.36 | ~94% |
+| Podcast power user (now) | ~64 | ~€0.40 | ~98% |
+| Podcast power user (w/ transcription) | ~64 | ~€4.72 | ~72% |
+| Advanced mode heavy | ~60 | ~€1.12 | ~90% |
+
+All scenarios within 60–80% gross margin target.
+
+---
+
+## What Was NOT Implemented
+
+- No Stripe integration
+- No credit database tables
+- No auth changes
+- No feature flags
+- No UI changes
+- No pricing page
+- No billing logic
+- No API changes
 
 ---
 
 ## Validation Status
 
-- Build: ✅ clean (TypeScript, Turbopack)
-- Lint: ✅ clean
-- opener-audit.ts: ✅ ALL CHECKS PASS
-- creator-energy-audit.ts: ✅ ALL CHECKS PASS
-- creator-energy-real-ai.ts: ✅ 9/9 API calls succeeded
-- Safe to proceed: ✅ YES
+- No build required (documentation only)
+- Lint: N/A
+- git status: clean
 
 ---
 
-## Verdict
+## Next Recommended Step
 
-Creator Energy Selection is production-ready.
-Real AI behavior matches the static analysis predictions.
-No factual hallucinations. No format regressions. Clear energy differentiation.
+**AUTH-A — Supabase authentication**
 
-Next: CE-C — Multi-energy combination validation (Tactical + Analytical, Contrarian + Reflective)
-Optional: Refine Contrarian promptDirective to strengthen opener pattern.
+Credits require user identity. Auth is the prerequisite for the entire billing system. Without auth, credits cannot be tracked per user. Ship auth before any billing implementation.
+
+After auth: CREDITS-A (implement credit check/deduction before AI call).
+After credits: BILLING-A (Stripe subscription + Pro plan gating).

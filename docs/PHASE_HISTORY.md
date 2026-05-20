@@ -1136,3 +1136,40 @@ Creator Energy Selection is production-ready. Real AI behavior matches static an
 - creator-energy-audit.ts: ✅ ALL CHECKS PASS
 - creator-energy-real-ai.ts: ✅ 9/9 calls succeeded, 0 errors
 - Real AI: ✅ tested with live Anthropic Sonnet 4.6 API
+
+---
+
+## Phase 31 — Pricing & Credits Plan (PRICING-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Strategy and documentation phase only. Nothing implemented.
+
+**New: `docs/PRICING_CREDITS_PLAN.md`** — 15-section pricing strategy document.
+
+**Pricing model decided:**
+- Free tier: 3 total trial credits, max 10 min, basic only, Creator Energy locked
+- Pro tier: €20/month, 100 credits/month, all platforms, Creator Energy included
+- Duration-based credit consumption: 0–10 min = 1, 10–30 min = 2, 30–60 min = 4, 60–120 min = 8, 120+ blocked
+- Advanced Content Kit: +1 credit
+- Creator Energy: included in Pro, no extra cost
+- Formula: `credits_used = duration_base_credits + mode_extra_credits`
+
+**Margin analysis:**
+4 user scenarios modeled. All within 60–80% gross margin target. Worst case (long podcast with future audio transcription): ~72% margin. Best case (short-form creator): ~92%.
+
+**Implementation prerequisites identified:**
+Auth must ship before credits. Credits must ship before billing. No billing without user identity.
+
+### What Was NOT Implemented
+- No code changes
+- No Stripe integration
+- No DB schema
+- No UI changes
+- No feature flags
+
+### Validation Status at End of Phase
+- Documentation only — no build required
+- git: clean commit, pushed
