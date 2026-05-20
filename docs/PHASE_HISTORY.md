@@ -1508,3 +1508,75 @@ AUTH-A is complete. CREDITS-A is the next gate: server-side session read, credit
 
 ### Next: CREDITS-A
 Heartbeat confirmed working. CREDITS-A is the next gate: server-side session read, credit check/deduct, free tier allocation, middleware. Add DB `SELECT 1` to heartbeat once CREDITS-A schema exists.
+
+---
+
+## Phase 39 — Credits Foundation (CREDITS-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Built
+
+**New: `app/lib/credits/` module**
+- `types.ts` — `CreditCost`, `GenerationMode`
+- `rules.ts` — `DURATION_CREDIT_TIERS` (0–10 min=1, 10–30=2, 30–60=4, 60–120=8, 120+=blocked), `MODE_EXTRA_CREDITS` (basic=+0, advanced=+1), `WORDS_PER_MINUTE_ESTIMATE`
+- `calculateCredits.ts` — `calculateCreditsForGeneration(durationSec, mode)` — server-side only; `estimateDurationFromWordCount()` as documented fallback
+- `server.ts` — `ensureUserCredits()`, `deductCredits(amount)` — wrappers over Supabase RPCs
+
+**New: `app/api/credits/route.ts`** — `GET /api/credits` — returns authenticated user's balance; calls `ensure_user_credits` RPC; 401 if not signed in
+
+**New: `app/components/credits/CreditBadge.tsx`** — top bar credit display; fetches on mount; updates from generation response; hidden when not signed in
+
+**Modified: `app/lib/ai/transcript.ts`** — `TranscriptResult` now includes `durationSec: number` (auto-detects ms vs seconds from YouTube segment format)
+
+**Modified: `app/lib/ai/generate.ts`** — accepts optional `PreloadedTranscript` second param; route passes pre-fetched transcript to avoid double fetch
+
+**Modified: `app/lib/types/generation.ts`** — `GenerateResponse` now includes optional `creditsUsed`, `creditsRemaining` (success) and `creditsRequired`, `creditsAvailable` (error 402)
+
+**Modified: `app/api/generate/route.ts`** — real AI mode now enforces: session check (401), transcript fetch, server-side credit calculation, 422 for 120+ min, `ensure_user_credits`, balance check (402), generation, atomic deduction, credit fields in response. Mock mode unchanged.
+
+**Modified: `app/page.tsx`** — `creditsRemaining` state, `CreditBadge` in top bar, generation error handling now parses JSON body from all status codes (gets server error message for 401/402)
+
+**New: `docs/credits/README.md`** — full credit system documentation
+
+**New: `docs/credits/SQL.md`** — ⚠ MANUAL ACTION REQUIRED — SQL for `user_credits` table, RLS policy, `ensure_user_credits()` RPC, `deduct_credits(integer)` RPC
+
+### What Was NOT Changed
+
+- No Stripe, billing, Pro subscriptions, pricing page
+- No Studio/Agency logic
+- No AI prompt changes, no Creator Energy changes
+- No major UI redesign
+- No new environment variables required (`NEXT_PUBLIC_SUPABASE_ANON_KEY` + session cookies sufficient)
+
+### Credit Rules Implemented
+
+```
+credits_used = duration_base_credits + mode_extra_credits
+```
+
+Duration tiers: 0–10 min=1, 10–30 min=2, 30–60 min=4, 60–120 min=8, 120+ min=blocked  
+Mode: basic=+0, advanced=+1. Creator Energy=+0.
+
+### Security / RLS
+
+- `user_credits` table: RLS enabled. SELECT policy: `auth.uid() = user_id`. No direct DML.
+- `ensure_user_credits()` and `deduct_credits(integer)`: `SECURITY DEFINER`, `grant execute to authenticated`.
+- Service role key NOT required — anon key + user session (cookies) is sufficient.
+- Credit cost calculated server-side from actual transcript duration. Never from client input.
+
+### Known Limitations
+
+1. Race condition window: two simultaneous requests can both pass balance check. Second deduction returns -1 (atomic RPC guards the DB). Generation is still served; logged as warning.
+2. No monthly credit reset until BILLING-A.
+3. No `credit_transactions` audit log (CREDITS-B).
+4. Rate limiting (20/hour per user) not yet enforced (CREDITS-B).
+
+### Validation Status at End of Phase
+
+- Lint: ✅ clean
+- Build: ✅ clean
+- SQL: ⏳ must be run manually in Supabase before end-to-end production test
+
+### Next: BILLING-A
+Run SQL in Supabase, test end-to-end (sign in → generate → credits deducted → badge updates), evaluate billing provider (Paddle/Lemon Squeezy/Stripe), implement Pro subscription + webhooks.

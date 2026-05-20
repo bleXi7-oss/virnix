@@ -18,5 +18,5 @@ export interface GenerateResult {
 }
 
 export type GenerateResponse =
-  | { ok: true; data: GenerateResult }
-  | { ok: false; error: string };
+  | { ok: true; data: GenerateResult; creditsUsed?: number; creditsRemaining?: number }
+  | { ok: false; error: string; creditsRequired?: number; creditsAvailable?: number };

@@ -23,7 +23,12 @@ import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsFor
 
 const MAX_WORDS = 3000;
 
-export async function generate(req: GenerateRequest): Promise<GenerateResult> {
+interface PreloadedTranscript {
+  transcript: string;
+  timestampedTranscript: string;
+}
+
+export async function generate(req: GenerateRequest, preloaded?: PreloadedTranscript): Promise<GenerateResult> {
   // Short-circuit before any network call — keeps mock mode fast and free
   if (!isEnabled("real_ai_generation")) return getMockResult();
 
@@ -31,12 +36,17 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
 
   let transcript: string;
   let timestampedTranscript: string;
-  try {
-    ({ transcript, timestampedTranscript } = await getTranscriptFull(req.youtubeUrl));
-  } catch (err) {
-    console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
-    // Fall back to mock cards — user sees output rather than an error screen
-    return { ...getMockResult(), diagnostics: makeFallbackDiagnostics("transcript-fetch-failed", startMs) };
+
+  if (preloaded) {
+    ({ transcript, timestampedTranscript } = preloaded);
+  } else {
+    try {
+      ({ transcript, timestampedTranscript } = await getTranscriptFull(req.youtubeUrl));
+    } catch (err) {
+      console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
+      // Fall back to mock cards — user sees output rather than an error screen
+      return { ...getMockResult(), diagnostics: makeFallbackDiagnostics("transcript-fetch-failed", startMs) };
+    }
   }
 
   const words = transcript.split(/\s+/).filter(Boolean).length;

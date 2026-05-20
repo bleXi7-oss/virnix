@@ -16,6 +16,7 @@ import TranscriptQualityCard from "./components/generation/TranscriptQualityCard
 import CreatorEnergySelector from "./components/CreatorEnergySelector";
 import dynamic from "next/dynamic";
 const AuthButton = dynamic(() => import("./components/auth/AuthButton"), { ssr: false });
+const CreditBadge = dynamic(() => import("./components/credits/CreditBadge"), { ssr: false });
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
 import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
@@ -47,6 +48,7 @@ export default function Home() {
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
   const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -86,11 +88,14 @@ export default function Home() {
         body: JSON.stringify({ youtubeUrl: targetUrl, energyIds: energies }),
       });
 
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
-      const json: GenerateResponse = await res.json();
+      const json: GenerateResponse = await res.json().catch(() => {
+        throw new Error(`Server error ${res.status}`);
+      });
+
       if (!json.ok) throw new Error(json.error);
 
       apiResultRef.current = json.data.cards;
+      if (json.creditsRemaining !== undefined) setCreditsRemaining(json.creditsRemaining);
       setDiagnostics(json.data.diagnostics ?? null);
       setTimelineMoments(json.data.timelineMoments ?? null);
       setTranscriptQuality(json.data.transcriptQuality ?? null);
@@ -214,6 +219,7 @@ export default function Home() {
             </p>
           </div>
           <div className="absolute right-0 flex items-center gap-2">
+            <CreditBadge balance={creditsRemaining} />
             <AuthButton />
             <ThemeToggle />
           </div>
