@@ -1,6 +1,6 @@
-# Virnix Auth — Setup Notes (AUTH-A / AUTH-A-FIX-3)
+# Virnix Auth — Setup Notes (AUTH-A / AUTH-A-CLEANUP)
 
-**Phase:** AUTH-A-FIX-3  
+**Phase:** AUTH-A-CLEANUP  
 **Date:** 2026-05-20  
 **Package:** `@supabase/ssr` + `@supabase/supabase-js`
 
@@ -21,11 +21,21 @@
 Add to `.env.local` (copy from `.env.example`):
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://pbpqvuxnlmwxmcdybtvc.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 Get both from: Supabase dashboard → Project → Settings → API
+
+**Note on the project URL:** The original URL had a typo (`pbqvux...` vs `pbpqvux...`). The correct URL is `https://pbpqvuxnlmwxmcdybtvc.supabase.co`. Always copy fresh from the Supabase dashboard — do not retype.
+
+**Accepted anon key formats:**
+- JWT anon key — a 3-part dot-separated token (~200+ chars), role `anon`
+- Publishable key — starts with `sb_publishable_...` (newer Supabase projects)
+
+Both are safe to expose in client-side code (`NEXT_PUBLIC_*`). Never use the `service_role` key in any client or `NEXT_PUBLIC_` variable.
+
+After editing `.env.local`, restart the dev server (`Ctrl+C` then `npm.cmd run dev`). After changing Vercel env vars, trigger a new deployment — `NEXT_PUBLIC_*` vars are baked into the frontend bundle at build time and are not read at runtime.
 
 **If these are missing or empty:**
 - `AuthButton` renders nothing (no crash, no error screen) — the top bar shows only the theme toggle
@@ -62,8 +72,10 @@ The `NEXT_PUBLIC_SUPABASE_URL` must match your Supabase project URL exactly:
 ### 3. Check the anon key is valid
 
 - Must be on **one line** — no line breaks, no quotes around the value
-- Must be the **anon/public** key, not the service_role key
-- Anon key is a JWT (~200 chars); service_role key is longer and starts differently
+- Must be the **anon/public** key, not the `service_role` key
+- Accepted formats:
+  - JWT anon key: 3 dot-separated parts, ~200+ chars, decodes to `{ role: "anon" }`
+  - Publishable key: starts with `sb_publishable_...` (newer Supabase projects)
 - After any edit to `.env.local`, **restart the dev server** (`Ctrl+C` then `npm.cmd run dev`)
 
 ### 4. Run the built-in connectivity check
@@ -203,16 +215,26 @@ CREDITS-A will:
 
 ---
 
-## Future: Supabase heartbeat route (post-CREDITS-A)
+## Pre-CREDITS-A: Supabase heartbeat route
 
-Before or during CREDITS-A, add a server-side health route that verifies Supabase config and reachability without exposing secrets:
+Implement `/api/health/supabase` before or at the start of CREDITS-A. Once auth is enforced server-side, this route becomes the fast way to verify Supabase connectivity from production without checking logs.
 
-Preferred endpoint: `/api/health/supabase`
+**Endpoint:** `GET /api/health/supabase`
 
-What it should check:
+**What it checks:**
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set
-- Supabase auth endpoint (`/auth/v1/health`) is reachable from the server
-- Returns `{ ok: true }` or `{ ok: false, reason: "..." }` — never exposes key values
+- Supabase auth endpoint (`/auth/v1/health`) is reachable from the Vercel server (server-side fetch, not client-side)
+- Optionally: database reachable via a lightweight `SELECT 1` query once CREDITS-A has a DB schema
 
-This gives production Vercel deployments a fast way to verify Supabase connectivity without checking logs.
-Do not implement until CREDITS-A — the route is only useful once auth is enforced server-side.
+**Response contract:**
+```json
+{ "ok": true }
+{ "ok": false, "reason": "Supabase URL missing" }
+{ "ok": false, "reason": "Supabase auth unreachable" }
+```
+
+Never expose key values or internal error details in the response body.
+
+**Why server-side matters:** `NEXT_PUBLIC_*` vars are baked into the client bundle. The heartbeat route runs on the Vercel edge/server and tests the actual server-to-Supabase path — a different network path from client → Supabase. If the heartbeat passes but the browser still fails, the issue is client-side (DNS cache, network, browser extension).
+
+**Implementation rule:** Do not implement until CREDITS-A begins. The route has no purpose before server-side auth is enforced.

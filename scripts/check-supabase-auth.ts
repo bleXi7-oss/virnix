@@ -2,7 +2,7 @@
  * Safe Supabase auth connectivity check.
  * Reads .env.local, prints safe diagnostics, tests auth endpoint reachability.
  * Does NOT send magic links. Does NOT print secrets.
- * Exit 0 = reachable, Exit 1 = misconfigured or unreachable.
+ * Exit 0 = reachable + auth accepted, Exit 1 = misconfigured or unreachable.
  *
  * Usage:
  *   npx tsx scripts/check-supabase-auth.ts
@@ -52,21 +52,25 @@ console.log("  NEXT_PUBLIC_SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("  ANON_KEY length:", supabaseKey?.length ?? 0);
 
 if (supabaseKey) {
-  try {
+  if (supabaseKey.startsWith("sb_publishable_")) {
+    console.log("  ANON_KEY format: publishable key ✅");
+  } else {
     const parts = supabaseKey.split(".");
     if (parts.length === 3) {
-      // base64url → base64
-      const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const payload = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
-      console.log("  ANON_KEY JWT role:", payload.role ?? "(no role field)");
-      if (payload.role !== "anon") {
-        console.warn("\n  WARNING: key role is not 'anon' — do not use the service_role key here!");
+      try {
+        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
+        console.log("  ANON_KEY format: JWT ✅");
+        console.log("  ANON_KEY JWT role:", payload.role ?? "(no role field)");
+        if (payload.role !== "anon") {
+          console.warn("\n  WARNING: key role is not 'anon' — do not use the service_role key here!");
+        }
+      } catch {
+        console.log("  ANON_KEY format: JWT (decode failed — key may be malformed)");
       }
     } else {
-      console.log("  ANON_KEY JWT: not a valid 3-part JWT");
+      console.log("  ANON_KEY format: unrecognized (not JWT, not publishable key)");
     }
-  } catch {
-    console.log("  ANON_KEY JWT decode: failed");
   }
 }
 
@@ -78,6 +82,7 @@ if (!supabaseUrl || !supabaseKey) {
 console.log("\nReachability:");
 const healthUrl = `${supabaseUrl}/auth/v1/health`;
 console.log("  Testing:", healthUrl);
+console.log("  (sending apikey header — key value not printed)");
 
 let parsed: URL;
 try {
@@ -93,20 +98,35 @@ const req = https.request(
     path: parsed.pathname + parsed.search,
     method: "GET",
     timeout: 8000,
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+    },
   },
   (res) => {
     let body = "";
     res.on("data", (d) => (body += d));
     res.on("end", () => {
       console.log("  HTTP status:", res.statusCode);
-      console.log("  Response:", body.slice(0, 200));
-      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 400) {
+      const preview = body.slice(0, 200);
+      if (preview) console.log("  Response:", preview);
+
+      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
         console.log("\nRESULT: Supabase DNS reachable ✅");
         console.log("RESULT: Supabase auth endpoint reachable ✅");
         process.exit(0);
+      } else if (res.statusCode === 401 || res.statusCode === 403) {
+        console.log("\nRESULT: Supabase DNS reachable ✅");
+        console.log("RESULT: Supabase auth endpoint reachable ✅ (reached, but auth check rejected)");
+        console.log("  Supabase returned", res.statusCode, "even with apikey header.");
+        console.log("  Possible causes:");
+        console.log("    - Anon key is invalid or was rotated");
+        console.log("    - URL and key are from different Supabase projects");
+        console.log("    - Re-copy both values fresh from Supabase dashboard → Settings → API");
+        process.exit(1);
       } else {
         console.log("\nRESULT: Supabase DNS reachable ✅");
-        console.log("RESULT: Supabase auth endpoint reachable ❌ (non-success HTTP status)");
+        console.log("RESULT: Supabase auth endpoint reachable ❌ (unexpected HTTP", res.statusCode + ")");
         process.exit(1);
       }
     });
