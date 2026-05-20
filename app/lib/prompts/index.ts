@@ -6,7 +6,7 @@
 //   ADVANCED_SYSTEM_PROMPT / buildAdvancedPrompt → all 8 outputs (advanced_outputs flag)
 
 import { STORYTELLING_PATTERNS, ANTI_GENERIC_RULES } from "./psychology";
-import { TIKTOK_OPENING_LINES } from "./platforms/tiktok";
+import { TIKTOK_OPENING_LINES, TIKTOK_CLOSING_LINES } from "./platforms/tiktok";
 import { TWITTER_TONE, TWITTER_FORMAT } from "./platforms/twitter";
 import { LINKEDIN_TONE, LINKEDIN_FORMAT } from "./platforms/linkedin";
 import { INSTAGRAM_TONE, INSTAGRAM_FORMAT } from "./platforms/instagram";
@@ -81,6 +81,7 @@ No SEO filler: 'In conclusion', 'It goes without saying'.`;
 export function buildPrompt(transcript: string, timelineContext = ""): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+  const tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES);
   const context = buildPromptContext(variation.angle);
 
   return `Transform this podcast transcript into viral content for 5 platforms.
@@ -103,7 +104,7 @@ Name something specific from this transcript — no claim that could apply to an
 Make the viewer feel this is about them specifically — not generic advice for anyone.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
-End with "Here's the exact system...". No hashtags.
+End with "${tiktokClosing}". No hashtags.
 
 Twitter / X (~2000 chars):
 Tone:
@@ -138,6 +139,7 @@ Return only the JSON object, nothing else.`;
 export function buildAdvancedPrompt(transcript: string, timelineContext = ""): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
+  const tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES);
   const context = buildPromptContext(variation.angle);
 
   return `Transform this podcast transcript into viral content for 8 platforms.
@@ -160,7 +162,7 @@ Name something specific from this transcript — no claim that could apply to an
 Make the viewer feel this is about them specifically — not generic advice for anyone.
 Short sentences only — one idea per line.
 Every line makes the next feel necessary.
-End with "Here's the exact system...". No hashtags.
+End with "${tiktokClosing}". No hashtags.
 
 TikTok / Reels — alternate hook (~300 chars, key "tiktok_alt"):
 Use a different emotional angle than the primary. Same length and format rules.

@@ -4,7 +4,7 @@
 
 // Proven structural formulas for high-CTR YouTube titles.
 export const YOUTUBE_TITLE_FORMULAS = [
-  "Curiosity gap: 'The [Thing] Nobody Talks About'",
+  "Curiosity gap: 'The Hidden [Thing] Behind [Common Outcome]'",
   "Transformation: 'How I [Result] Without [Common Excuse]'",
   "Number hook: 'I Did X for 30 Days — Here's What Happened'",
   "Contrarian: 'Stop [Popular Thing] — Do This Instead'",

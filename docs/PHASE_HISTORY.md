@@ -972,3 +972,41 @@ Fix: internal banner layer gives chrome texture *inside* the card boundary.
 ### Validation Status at End of Phase
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
+
+---
+
+## Phase 27 — TikTok Domain Unlock + Closing Pool (QB-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Fixed P0 content domain-lock and P1-1 YouTube title contradiction identified in QA-A.
+
+**P0-1 — TikTok opener pool:**
+- Removed 9 creator-growth-specific openers (creator, followers, algorithm, 100k, views, best-performing post)
+- Replaced with 9 domain-agnostic alternatives covering educational, medical, historical, philosophical, business, interview, and narrative content
+- All 26 openers now domain-agnostic (0% creator-specific ratio, down from ~40–46%)
+- Near-duplicate pair ("I was wrong for years" ≈ "I spent two years wrong") resolved
+
+**P0-2 — TikTok forced ending:**
+- Removed hardcoded `End with "Here's the exact system..."` instruction from both `buildPrompt` and `buildAdvancedPrompt`
+- Added `TIKTOK_CLOSING_LINES` pool (8 domain-agnostic endings) to `tiktok.ts`
+- Closing now uses `pickRandom(TIKTOK_CLOSING_LINES)` — same pattern as opener selection
+- Endings cover: system/framework, reframe, practical takeaway, mistake, pattern, reveal, question, moment
+
+**P1-1 — YouTube title contradiction:**
+- Removed formula `"Curiosity gap: 'The [Thing] Nobody Talks About'"` from `YOUTUBE_TITLE_FORMULAS`
+- Replaced with `"Curiosity gap: 'The Hidden [Thing] Behind [Common Outcome]'"`
+- Eliminates the contradiction where YOUTUBE_TITLE_RULES explicitly bans "Nobody Talks About"
+
+### Files Changed
+- `app/lib/prompts/platforms/tiktok.ts` — opener pool rewritten, TIKTOK_CLOSING_LINES added
+- `app/lib/prompts/index.ts` — import TIKTOK_CLOSING_LINES, `tiktokClosing = pickRandom(...)`, replace hardcoded ending in both builders
+- `app/lib/prompts/platforms/youtube.ts` — formula contradiction fixed
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- opener-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 creator-specific openers, 0 near-duplicates)
+- YouTube formula vs. rules: ✅ consistent (no contradiction)

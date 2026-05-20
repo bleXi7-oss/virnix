@@ -1,6 +1,7 @@
 // Proven TikTok/Reels first-line openers.
 // One is picked randomly per generation — variety prevents pattern fatigue.
-// Keep energy abrupt — the algorithm rewards fast hooks.
+// All openers are domain-agnostic: they work for educational, medical,
+// historical, philosophical, business, interview, and narrative content.
 
 export const TIKTOK_OPENING_LINES = [
   // Curiosity / hidden knowledge
@@ -8,7 +9,7 @@ export const TIKTOK_OPENING_LINES = [
   "I only found this out by accident.",
   "Here's the part they always skip:",
   "The data says something completely different.",
-  "There's a pattern in every creator who crossed 100k. Here it is:",
+  "Most people misunderstand this part:",
   "Something shifts at a certain point. Nobody tells you what it is.",
 
   // Self-doubt / pattern interrupt
@@ -19,13 +20,13 @@ export const TIKTOK_OPENING_LINES = [
 
   // Contrarian
   "The advice everyone gives is actually the problem.",
-  "What the top creators do is the opposite of what they teach.",
+  "The part nobody explains clearly is this:",
   "The metric you've been tracking is the wrong one.",
 
   // Validation / identity shift
   "You're not bad at this — you just weren't shown the system.",
-  "You're not a creator. You're a publisher who happens to film.",
-  "The creators who grow fastest stopped doing what they were told.",
+  "This sounds simple until you see what is actually happening:",
+  "The mistake starts earlier than you think:",
 
   // FOMO / loss framing
   "Most people are already behind on this. Here's why:",
@@ -35,15 +36,28 @@ export const TIKTOK_OPENING_LINES = [
   "Nobody teaches you this part until it's already cost you.",
   "Here's the exact framework. No theory — just the steps:",
 
-  // Confession
-  "I deleted my best-performing post. Here's what I learned.",
-  "I spent two years doing this completely wrong.",
+  // Confession / story pivot
+  "This is where the whole thing changes:",
+  "The real question is not what you think it is:",
 
   // Mechanism reframe
-  "The algorithm doesn't care about your content — it cares about this:",
-  "Most creators build the wrong thing first.",
+  "Here is the mechanism underneath it:",
+  "The uncomfortable part is this:",
 
-  // Harsh truth / business lesson
-  "The best content you've ever made probably got the fewest views.",
-  "Followers don't pay rent. Here's what does:",
+  // Practical / insight
+  "The real shift is not what you think:",
+  "This only makes sense once you notice one pattern:",
+] as const;
+
+// TikTok closing lines — one is picked randomly per generation.
+// Domain-agnostic endings that work across system, story, insight, and philosophical content.
+export const TIKTOK_CLOSING_LINES = [
+  "Here is the useful way to think about it:",
+  "Here is the part that changes the whole frame:",
+  "Here is the practical takeaway:",
+  "Here is the mistake to avoid:",
+  "Here is the pattern underneath it:",
+  "Here is what this reveals:",
+  "Here is the question worth asking:",
+  "Here is the moment that matters:",
 ] as const;

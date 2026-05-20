@@ -1,53 +1,58 @@
-# Current Phase — Hero Card Internal Atmosphere (UI-POLISH-K)
+# Current Phase — TikTok Domain Unlock + Closing Pool (QB-A)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Hero Card True Glass Surface (UI-POLISH-I, 2026-05-20) — complete
+## Previous phase: Hero Card Internal Atmosphere (UI-POLISH-K, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-Opacity-only tweaking (bg-white/20, dark/25) made the card milky and cheap, not premium.
-Root cause: the card had no internal atmosphere — transparency showed only the blurred
-page background, not real chrome texture. Fixed by rebalancing opacity to /40 + /52
-AND adding an internal banner layer + radial highlight directly inside the card,
-clipped by overflow-hidden.
+QA-A identified two P0 issues blocking Creator Energy Selection:
+1. ~40–46% of TikTok openers were creator-growth-specific (creator, followers, algorithm, 100k),
+   producing embarrassing output on medical, historical, educational, or narrative transcripts.
+2. The hardcoded TikTok ending "Here's the exact system..." forced a "system" framing onto
+   every transcript, causing hallucinated frameworks for confessional, philosophical, or story content.
+
+QA-A also identified a P1-1 contradiction in YouTube titles — "Nobody Talks About" appeared in
+both YOUTUBE_TITLE_FORMULAS (to use it) and YOUTUBE_TITLE_RULES (to avoid it).
 
 ---
 
 ## What Changed
 
-### Updated: `app/page.tsx` — HeroCard
+### Updated: `app/lib/prompts/platforms/tiktok.ts`
 
-**Card outer div:**
-- Added `overflow-hidden` (clips internal atmosphere to card shape)
-- Light: `bg-white/20` → `bg-white/40`
-- Dark: `dark:bg-[#0a0a0a]/25` → `dark:bg-[#0a0a0a]/52`
-- Blur: `backdrop-blur-md` → `backdrop-blur-lg` (both modes)
+**Opener pool (26 → 26):**
+- Removed 9 creator-specific openers (containing: creator, creators, followers, algorithm, 100k, views, best-performing post)
+- Replaced with 9 domain-agnostic alternatives
+- All 26 openers now pass creator-domain-specific detection check (0% ratio, down from ~40–46%)
+- Near-duplicate pair resolved
 
-**New: internal atmosphere layer (z-0, absolute inset-0, pointer-events-none):**
-- Light: banner.png `[filter:grayscale(1)_brightness(1.6)] opacity-[0.18] mix-blend-multiply`
-  + radial gradient `rgba(200,200,220,0.15)` top highlight
-- Dark: banner.png `opacity-[0.12]`
-  + radial gradient `rgba(255,255,255,0.05)` top highlight
-- Clipped to card shape via `rounded-[inherit]` + parent `overflow-hidden`
+**New: `TIKTOK_CLOSING_LINES` pool (8 entries):**
+- "Here is the useful way to think about it:"
+- "Here is the part that changes the whole frame:"
+- "Here is the practical takeaway:"
+- "Here is the mistake to avoid:"
+- "Here is the pattern underneath it:"
+- "Here is what this reveals:"
+- "Here is the question worth asking:"
+- "Here is the moment that matters:"
 
-**Content wrapper:** existing h1/p/input/button/chips wrapped in `relative z-10`
-so they sit above the internal atmosphere layer.
+### Updated: `app/lib/prompts/index.ts`
 
----
+- Import `TIKTOK_CLOSING_LINES` alongside `TIKTOK_OPENING_LINES`
+- Both `buildPrompt` and `buildAdvancedPrompt`: add `tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES)`
+- Replaced `End with "Here's the exact system..."` with `End with "${tiktokClosing}"` in both builders
 
-## Architecture: Why This Works
+### Updated: `app/lib/prompts/platforms/youtube.ts`
 
-`overflow-hidden` on the card + absolute-fill internal image = banner texture
-rendered inside the card boundary, not just around it. The card fill (bg-white/40)
-acts as a translucent white glaze over the banner, giving the pearl-chrome effect.
-`backdrop-blur-lg` blurs the page atmosphere behind the card. The internal layer
-adds the texture *on top of* the card fill, inside the card shape.
+- Replaced `"Curiosity gap: 'The [Thing] Nobody Talks About'"` in `YOUTUBE_TITLE_FORMULAS`
+  with `"Curiosity gap: 'The Hidden [Thing] Behind [Common Outcome]'"`
+- Eliminates internal contradiction with `YOUTUBE_TITLE_RULES` rule banning "Nobody Talks About"
 
 ---
 
@@ -55,7 +60,9 @@ adds the texture *on top of* the card fill, inside the card shape.
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- Light mode: pearl-chrome banner texture visible inside the card
-- Dark mode: black chrome texture visible inside the card
-- Text readability: z-10 content layer preserves all readability
-- Input/button: remain solid and high contrast
+- opener-audit.ts: ✅ ALL CHECKS PASS
+  - Openers: 26
+  - Creator-domain risk: 0/26 (0%)
+  - Near-duplicates: 0
+  - YouTube formula/rules contradiction: resolved
+  - Test failures: 0
