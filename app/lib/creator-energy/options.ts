@@ -13,7 +13,7 @@ export const CREATOR_ENERGIES: readonly CreatorEnergy[] = [
     label: "Contrarian",
     tagline: "Challenge · Reframe · Flip",
     promptDirective:
-      "Lead with the assumption most people have wrong. Find the sharpest reframe in the transcript. Take a clear, defensible position — don't hedge.",
+      "Challenge the assumption the transcript complicates or reverses. Find what most people get wrong about this topic and frame every output around that gap. Lead with the misunderstanding, not a framework — outputs should sound like a position, not a checklist. Pattern: 'most people believe X, but this transcript reveals Y.' Do not present this as steps or a system unless the transcript itself is about a framework. Stay grounded. Do not invent controversy where the transcript does not support it.",
   },
   {
     id: "analytical",

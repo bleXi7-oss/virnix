@@ -186,10 +186,10 @@ YES with one minor exception.
 
 ## Issues Found
 
-### P2 — Contrarian opener sounds tactical
-Contrarian TikTok opened with `"Here's the exact framework. No theory — just the steps:"` — which reads as Tactical energy. The body content then challenges assumptions correctly, but the opening hook is energy-misaligned. The Contrarian directive may need to be more explicit about the opener pattern.
+### P2 — Contrarian opener sounds tactical (FIXED in CE-C)
+Contrarian TikTok opened with `"Here's the exact framework. No theory — just the steps:"` — which reads as Tactical energy. The body content then challenges assumptions correctly, but the opening hook was energy-misaligned.
 
-Not a blocking issue — the overall output is contrarian in framing. The hook opener is the weakest point.
+**Fixed in CE-C:** `promptDirective` updated to explicitly steer toward assumption-challenging framing and prohibit framework/steps openers. Post-fix spot check (CE-C) produced: `"The mistake starts earlier than you think: Posting more is not the fix."` — correct contrarian framing, no framework language detected.
 
 ### P2 — Low fingerprint scores on some energies
 - Tactical: 13% vocabulary fingerprint

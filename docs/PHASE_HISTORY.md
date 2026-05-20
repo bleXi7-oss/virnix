@@ -1173,3 +1173,35 @@ Auth must ship before credits. Credits must ship before billing. No billing with
 ### Validation Status at End of Phase
 - Documentation only — no build required
 - git: clean commit, pushed
+
+---
+
+## Phase 32 — Contrarian Energy Directive Polish (CE-C, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Single-directive quality fix. No new features, no architecture changes.
+
+**P2 fix: `app/lib/creator-energy/options.ts` — Contrarian `promptDirective`**
+
+CE-B found Contrarian sometimes opened with tactical/framework language. Root cause: the old directive said "find the sharpest reframe" without prohibiting framework/steps framing.
+
+Old directive: `"Lead with the assumption most people have wrong. Find the sharpest reframe in the transcript. Take a clear, defensible position — don't hedge."`
+
+New directive: explicitly steers toward assumption-challenging framing, prohibits steps/framework openers unless the transcript is about a framework, includes example pattern ("most people believe X, but this transcript reveals Y"), retains grounding rule.
+
+**Updated: `docs/qa/CREATOR_ENERGY_REAL_AI_B.md`** — CE-C resolution note added to P2 finding.
+
+### Real AI Spot Check
+
+One Contrarian call on creator transcript (~$0.037).
+
+Post-fix TikTok opener: `"The mistake starts earlier than you think: Posting more is not the fix."` — clear assumption-challenging framing. Framework language: none. Contrarian signals: "most people", "actually", "assumption", "reveals".
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
+- Real AI spot check: ✅ PASS — no framework language, contrarian signals present

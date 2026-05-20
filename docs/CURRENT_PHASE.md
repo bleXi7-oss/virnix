@@ -1,100 +1,56 @@
-# Current Phase — Pricing & Credits Plan (PRICING-A)
+# Current Phase — Contrarian Energy Directive Polish (CE-C)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Creator Energy Real AI Validation (CE-B, 2026-05-20) — complete
+## Previous phase: Pricing & Credits Plan (PRICING-A, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-PRICING-A is a strategy/documentation phase only.
-Nothing was implemented. No code was written. No schema was added.
+CE-C is a single-directive quality polish. No new features. No architecture changes.
 
-Goal: establish a credits pricing model that protects Virnix margin from power users while remaining simple for creators to understand.
-
----
-
-## What Was Done
-
-### New: `docs/PRICING_CREDITS_PLAN.md`
-
-15-section pricing and credits strategy document covering:
-
-1. Executive summary
-2. Why credits (not unlimited)
-3. Why unlimited is dangerous (unit economics breakdown)
-4. Proposed plans — Free (3 trial credits) and Pro (€20/month, 100 credits)
-5. Credit consumption rules — duration tiers + mode extra
-6. Advanced mode pricing (+1 credit for Advanced Content Kit)
-7. Creator Energy decision (included in Pro, no extra cost)
-8. Example user scenarios — 4 archetypes with cost + margin estimates
-9. Margin assumptions — Sonnet 4.6 pricing, transcription cost projections, Stripe fees
-10. Abuse prevention — hard limits, soft limits, free tier vectors
-11. What to show users in UI — creator-native copy, credit cost labels
-12. What NOT to expose — no tokens, no model names, no API language
-13. Future pricing tiers — Creator tier, Team tier, pay-as-you-go
-14. Implementation notes for later — file structure, calculation formula, DB sketch
-15. Open questions before coding
+CE-B real AI validation (Phase 30) found a P2: Contrarian energy sometimes opened with
+tactical/framework-style language ("Here's the exact framework. No theory — just the steps:")
+instead of assumption-challenging framing. The directive was insufficiently specific about
+what "contrarian" means vs. "tactical."
 
 ---
 
-## Credit System Design (no code yet)
+## What Changed
 
-```
-credits_used = duration_base_credits + mode_extra_credits
-```
+### Updated: `app/lib/creator-energy/options.ts` — Contrarian `promptDirective`
 
-| Duration | Credits |
-|----------|---------|
-| 0–10 min | 1 |
-| 10–30 min | 2 |
-| 30–60 min | 4 |
-| 60–120 min | 8 |
-| 120+ min | Blocked |
+**Before:**
+> "Lead with the assumption most people have wrong. Find the sharpest reframe in the transcript. Take a clear, defensible position — don't hedge."
 
-Advanced Content Kit: +1 credit.
-Creator Energy: included at no extra cost.
+**After:**
+> "Challenge the assumption the transcript complicates or reverses. Find what most people get wrong about this topic and frame every output around that gap. Lead with the misunderstanding, not a framework — outputs should sound like a position, not a checklist. Pattern: 'most people believe X, but this transcript reveals Y.' Do not present this as steps or a system unless the transcript itself is about a framework. Stay grounded. Do not invent controversy where the transcript does not support it."
 
----
+Key additions:
+- Explicit anti-framework instruction: "Lead with the misunderstanding, not a framework"
+- Distinguishes from Tactical: "outputs should sound like a position, not a checklist"
+- Example pattern: "'most people believe X, but this transcript reveals Y.'"
+- Explicit prohibition: "Do not present this as steps or a system unless..."
+- Grounding reminder: "Do not invent controversy..."
 
-## Margin Model
-
-At €20/month / 100 credits:
-
-| User type | Credits used | Est. AI cost | Gross margin |
-|-----------|-------------|--------------|--------------|
-| Short-form creator | ~20 | ~€0.70 | ~92% |
-| Mixed creator | ~23 | ~€0.36 | ~94% |
-| Podcast power user (now) | ~64 | ~€0.40 | ~98% |
-| Podcast power user (w/ transcription) | ~64 | ~€4.72 | ~72% |
-| Advanced mode heavy | ~60 | ~€1.12 | ~90% |
-
-All scenarios within 60–80% gross margin target.
-
----
-
-## What Was NOT Implemented
-
-- No Stripe integration
-- No credit database tables
-- No auth changes
-- No feature flags
-- No UI changes
-- No pricing page
-- No billing logic
-- No API changes
+### Updated: `docs/qa/CREATOR_ENERGY_REAL_AI_B.md`
+- Added CE-C resolution note to P2 finding
 
 ---
 
 ## Validation Status
 
-- No build required (documentation only)
-- Lint: N/A
-- git status: clean
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
+- Real AI spot check: ✅ PASS
+  - TikTok: "The mistake starts earlier than you think: Posting more is not the fix."
+  - Framework language: none detected
+  - Contrarian signals: "most people", "actually", "assumption", "reveals"
 
 ---
 
@@ -102,7 +58,6 @@ All scenarios within 60–80% gross margin target.
 
 **AUTH-A — Supabase authentication**
 
-Credits require user identity. Auth is the prerequisite for the entire billing system. Without auth, credits cannot be tracked per user. Ship auth before any billing implementation.
-
-After auth: CREDITS-A (implement credit check/deduction before AI call).
-After credits: BILLING-A (Stripe subscription + Pro plan gating).
+The product quality phases (QB-A, CE-A, CE-QA-A, CE-B, CE-C) are complete.
+The pricing strategy is documented (PRICING-A).
+The next required step before monetization is auth.
