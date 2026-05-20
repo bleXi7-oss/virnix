@@ -26,18 +26,41 @@ export default function LoginPage() {
       setErrorMsg("Authentication is not configured. Please contact support.");
       return;
     }
-    const { error } = await supabase.auth.signInWithOtp({
-      email: trimmed,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    if (process.env.NODE_ENV === "development") {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      console.log("[Virnix Auth] config:", {
+        configured: !!supabaseUrl,
+        host: supabaseUrl ? new URL(supabaseUrl).hostname : "none",
+        keyPresent: !!(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+        keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length ?? 0,
+      });
+    }
 
-    if (error) {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: trimmed,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setState("error");
+        setErrorMsg(error.message);
+      } else {
+        setState("sent");
+      }
+    } catch (err) {
       setState("error");
-      setErrorMsg(error.message);
-    } else {
-      setState("sent");
+      const isNetworkError =
+        err instanceof TypeError &&
+        (err.message.toLowerCase().includes("fetch") ||
+          err.message.toLowerCase().includes("network"));
+      setErrorMsg(
+        isNetworkError
+          ? "Could not reach the authentication service. Check your internet connection and try again."
+          : "An unexpected error occurred. Please try again."
+      );
     }
   }
 

@@ -1,6 +1,6 @@
-# Virnix Auth — Setup Notes (AUTH-A)
+# Virnix Auth — Setup Notes (AUTH-A / AUTH-A-FIX-2)
 
-**Phase:** AUTH-A  
+**Phase:** AUTH-A-FIX-2  
 **Date:** 2026-05-20  
 **Package:** `@supabase/ssr` + `@supabase/supabase-js`
 
@@ -34,6 +34,53 @@ Get both from: Supabase dashboard → Project → Settings → API
 - The app will never show the error boundary screen because of missing Supabase env vars
 
 **On Vercel:** set both vars in Project → Settings → Environment Variables for Production, Preview, and Development. Without them the app works but auth is hidden.
+
+---
+
+## Troubleshooting: "Failed to fetch" on /login
+
+If the magic-link form shows **"Could not reach the authentication service"** (or a `TypeError: Failed to fetch` in browser dev tools), work through this checklist in order:
+
+### 1. Check Supabase project status (most likely cause)
+
+Supabase **free-tier projects pause after 1 week of inactivity**. When paused, the subdomain stops resolving in DNS — every request fails with a network error before it reaches Supabase.
+
+**Fix:**
+1. Log in at https://app.supabase.com
+2. Find your project
+3. If the project shows "Paused", click **Restore project** (takes ~30–60 seconds)
+4. Once restored, DNS resolves and auth works immediately
+
+### 2. Verify the project URL is correct
+
+The `NEXT_PUBLIC_SUPABASE_URL` must match your Supabase project URL exactly:
+- Format: `https://<project-id>.supabase.co`
+- No trailing slash
+- Must start with `https://`
+- Get the correct URL from: Supabase dashboard → Project → Settings → API
+
+### 3. Check the anon key is valid
+
+- Must be on **one line** — no line breaks, no quotes around the value
+- Must be the **anon/public** key, not the service_role key
+- Anon key is a JWT (~200 chars); service_role key is longer and starts differently
+- After any edit to `.env.local`, **restart the dev server** (`Ctrl+C` then `npm.cmd run dev`)
+
+### 4. Run the built-in connectivity check
+
+```bash
+npx tsx scripts/check-supabase-auth.ts
+```
+
+This script reads `.env.local`, prints safe diagnostics (no secrets), and tests DNS + HTTP reachability to your Supabase project. Exit 0 = healthy, Exit 1 = misconfigured or unreachable.
+
+### 5. Browser/network checks
+
+If the script reaches Supabase but the browser still fails:
+- Disable browser extensions (ad blockers, privacy extensions can block Supabase)
+- Check if a VPN or corporate firewall is routing traffic
+- Try in an incognito window
+- Check browser network tab: the failing request URL and error message are shown there
 
 ---
 
@@ -111,3 +158,19 @@ CREDITS-A will:
 3. Deduct credits atomically
 4. Allocate trial credits on first sign-in
 5. Add middleware for session refresh on all routes
+
+---
+
+## Future: Supabase heartbeat route (post-CREDITS-A)
+
+Before or during CREDITS-A, add a server-side health route that verifies Supabase config and reachability without exposing secrets:
+
+Preferred endpoint: `/api/health/supabase`
+
+What it should check:
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set
+- Supabase auth endpoint (`/auth/v1/health`) is reachable from the server
+- Returns `{ ok: true }` or `{ ok: false, reason: "..." }` — never exposes key values
+
+This gives production Vercel deployments a fast way to verify Supabase connectivity without checking logs.
+Do not implement until CREDITS-A — the route is only useful once auth is enforced server-side.
