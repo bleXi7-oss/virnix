@@ -1470,3 +1470,41 @@ Documentation-only phase. No production code changed.
 
 ### Next: CREDITS-A
 AUTH-A is complete. CREDITS-A is the next gate: server-side session read, credit check/deduct, free tier allocation, middleware.
+
+---
+
+## Phase 38 — Supabase Heartbeat (SUPABASE-HEARTBEAT-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Built
+
+**New: `app/api/health/supabase/route.ts`**
+- `GET /api/health/supabase` — server-side diagnostic endpoint
+- Reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from env
+- Validates URL format
+- Fetches `/auth/v1/health` server-side with `apikey` + `Authorization: Bearer` headers; 8s timeout
+- Returns safe JSON diagnostics only — no key values, no secrets, no user data
+- HTTP 200 on success, HTTP 503 on any failure
+- Handles: missing env vars, malformed URL, DNS failure, timeout, 401/403, unexpected status
+
+**Updated: `docs/auth/README.md`**
+- "Pre-CREDITS-A heartbeat plan" section replaced with "Supabase heartbeat route"
+- Documents implemented endpoint, response contract, what it checks vs. not yet, why no-auth is safe
+
+### What Was NOT Changed
+
+- No auth components, login page, or other API routes
+- No prompts, AI logic, or generation code
+- No Supabase / Stripe / billing / credits
+- No UI components
+- `scripts/check-supabase-auth.ts` already up to date from AUTH-A-CLEANUP
+
+### Validation Status at End of Phase
+- Lint: ✅ clean
+- Build: ✅ clean — 7 routes including `/api/health/supabase`
+- Checker: ✅ exit 0
+- Local endpoint: ✅ `GET http://localhost:3000/api/health/supabase` returns `{"status":"ok","dnsReachable":true,"authReachable":true,...}`
+
+### Next: CREDITS-A
+Heartbeat confirmed working. CREDITS-A is the next gate: server-side session read, credit check/deduct, free tier allocation, middleware. Add DB `SELECT 1` to heartbeat once CREDITS-A schema exists.

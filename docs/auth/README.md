@@ -215,26 +215,54 @@ CREDITS-A will:
 
 ---
 
-## Pre-CREDITS-A: Supabase heartbeat route
+## Supabase heartbeat route
 
-Implement `/api/health/supabase` before or at the start of CREDITS-A. Once auth is enforced server-side, this route becomes the fast way to verify Supabase connectivity from production without checking logs.
-
-**Endpoint:** `GET /api/health/supabase`
+`GET /api/health/supabase` — implemented in SUPABASE-HEARTBEAT-A (2026-05-20).
 
 **What it checks:**
 - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set
-- Supabase auth endpoint (`/auth/v1/health`) is reachable from the Vercel server (server-side fetch, not client-side)
-- Optionally: database reachable via a lightweight `SELECT 1` query once CREDITS-A has a DB schema
+- Supabase auth endpoint (`/auth/v1/health`) is reachable from the server (server-side fetch, not client-side)
+- Sends `apikey` + `Authorization: Bearer` headers — same check as the CLI script
+
+**What it does NOT check yet:**
+- Database connectivity (no credit tables exist yet — add a `SELECT 1` check during CREDITS-A once the schema is in place)
+- User session validity
+- Credit balance
 
 **Response contract:**
+
+Success (HTTP 200):
 ```json
-{ "ok": true }
-{ "ok": false, "reason": "Supabase URL missing" }
-{ "ok": false, "reason": "Supabase auth unreachable" }
+{
+  "status": "ok",
+  "configured": true,
+  "supabaseUrlPresent": true,
+  "supabaseKeyPresent": true,
+  "supabaseHost": "pbpqvuxnlmwxmcdybtvc.supabase.co",
+  "dnsReachable": true,
+  "authReachable": true,
+  "checkedAt": "2026-05-20T13:13:49.104Z"
+}
 ```
 
-Never expose key values or internal error details in the response body.
+Failure (HTTP 503):
+```json
+{
+  "status": "error",
+  "configured": false,
+  "supabaseUrlPresent": false,
+  "supabaseKeyPresent": false,
+  "dnsReachable": false,
+  "authReachable": false,
+  "message": "Supabase env vars are missing",
+  "checkedAt": "..."
+}
+```
 
-**Why server-side matters:** `NEXT_PUBLIC_*` vars are baked into the client bundle. The heartbeat route runs on the Vercel edge/server and tests the actual server-to-Supabase path — a different network path from client → Supabase. If the heartbeat passes but the browser still fails, the issue is client-side (DNS cache, network, browser extension).
+Never exposes key values, tokens, user data, or database contents.
 
-**Implementation rule:** Do not implement until CREDITS-A begins. The route has no purpose before server-side auth is enforced.
+**Why server-side matters:** `NEXT_PUBLIC_*` vars are baked into the client bundle. The heartbeat route runs on the Vercel server and tests the server-to-Supabase network path — different from client → Supabase. If the heartbeat passes but the browser still fails, the issue is client-side (DNS cache, network, browser extension).
+
+**File:** `app/api/health/supabase/route.ts`
+
+**No auth required** — the endpoint is diagnostic and secret-free. It reveals only that configuration is present and Supabase is reachable, which is safe to expose publicly.
