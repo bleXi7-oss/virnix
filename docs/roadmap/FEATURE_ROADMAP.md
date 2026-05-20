@@ -83,13 +83,14 @@
 
 | Feature | Phase | Status |
 |---------|-------|--------|
-| Stripe subscription integration | BILLING-A | 📋 Planned |
-| Pro plan activation flow | BILLING-A | 📋 Planned |
+| Billing provider evaluation (Paddle MoR / Lemon Squeezy MoR / Stripe + Stripe Tax) | BILLING-A | 📋 Planned |
+| VAT-safe checkout (MoR preferred for early global launch) | BILLING-A | 📋 Planned |
+| Pro plan subscription flow | BILLING-A | 📋 Planned |
 | Monthly credit allocation (100 credits on billing date) | BILLING-A | 📋 Planned |
 | Webhook: subscription.created → allocate credits | BILLING-A | 📋 Planned |
 | Webhook: invoice.paid → reset monthly credits | BILLING-A | 📋 Planned |
 | Failed payment / cancel handling | BILLING-A | 📋 Planned |
-| Pricing page | UI-PRICING-A | 📋 Planned |
+| Pricing page (€20/month + VAT wording) | UI-PRICING-A | 📋 Planned |
 | Upgrade CTA in product | UI-PRICING-A | 📋 Planned |
 | Credit display in UI (X credits remaining) | UI-CREDITS-A | 📋 Planned |
 | Credit cost estimate before generation | UI-CREDITS-A | 📋 Planned |
@@ -100,7 +101,8 @@
 | Feedback stored to DB (anonymous pre-auth, user_id post-auth) | UI-FEEDBACK-A | 📋 Planned |
 | Internal feedback review process (manual during private beta) | PROCESS | 📋 Planned |
 
-**Gate:** Validate Stripe + credit webhook reliability before exposing to real users.  
+**Gate:** Choose billing provider before starting implementation. Validate subscription webhook reliability before exposing to real users.  
+**MoR note:** Merchant of Record (Paddle/Lemon Squeezy) is the preferred path for global VAT simplicity at early stage. Full comparison: `docs/PRICING_CREDITS_PLAN.md` Section 16.  
 **Note:** Feedback widget can ship in v0.3.x once auth exists, or as anonymous-only in v0.2.x.
 
 ---

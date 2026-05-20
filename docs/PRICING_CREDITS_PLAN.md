@@ -247,7 +247,9 @@ No scenario in this table breaches the 60% floor at current costs.
 | Infrastructure (Vercel, Supabase) | €10–30/month shared | Estimate, depends on scale |
 | EUR/USD rate | ~0.92 | Approximate |
 
-**Target gross margin range:** 60–80% after AI + transcription costs, before Stripe and infrastructure.
+**Target gross margin range:** 60–80% after AI + transcription costs, before billing provider fees and infrastructure.
+
+> ⚠ Billing fee assumption: Stripe €0.30 + 2.9% used in scenario calculations above. If MoR is chosen (Paddle/Lemon Squeezy), the fee is approximately €0.50 + 5% per transaction — roughly €1.50–€1.72/transaction at €20 net, vs. ~€0.88 for Stripe. See Section 16 for MoR transaction examples. The MoR fee reduces payout by ~€0.60–€0.84 per transaction compared to Stripe direct, but removes VAT compliance overhead. Margin scenarios should be recalculated once provider is chosen.
 
 **Danger zone:** Any user whose combined AI + transcription cost exceeds €12/month on a €20 plan (60% gross margin floor). The credit cap and duration limits prevent this in all modeled scenarios.
 
@@ -466,7 +468,7 @@ credit_transactions (
 
 These must be answered before any billing implementation:
 
-1. **Stripe or LemonSqueezy?** Stripe is the de facto choice but requires more setup. LemonSqueezy handles EU VAT automatically. Decision affects tax compliance timeline.
+1. **Billing provider: MoR or processor?** Key candidates: Paddle (MoR), Lemon Squeezy (MoR), Stripe + Stripe Tax (processor). MoR handles EU VAT and global sales tax automatically at higher per-transaction cost (~5% + ~€0.50). Stripe requires you to file tax returns per jurisdiction. Decision affects tax compliance timeline and implementation architecture. **Evaluate before starting BILLING-A.** See Section 16 for full comparison and transaction examples.
 
 2. **Auth first?** Credits system requires user identity. Supabase auth must ship before credits. Current state: no auth. Don't build credits without auth.
 
@@ -485,6 +487,187 @@ These must be answered before any billing implementation:
 9. **€ or $ pricing?** Business direction suggests €. Validate target market — if US-heavy, $ may reduce friction. Stripe supports multi-currency.
 
 10. **When does real-cost validation happen?** Before shipping credits. Need at least 50 real generations in production logs to validate the token cost estimates used in this document.
+
+---
+
+## 16. Merchant of Record / VAT-Safe Pricing Approach
+
+> ⚠ This section is business planning documentation, not legal or tax advice.
+> VAT treatment must be confirmed by a qualified accountant before public launch.
+> Provider fees must be verified from official pricing pages before implementation.
+
+---
+
+### What is a Merchant of Record?
+
+A Merchant of Record (MoR) is a payment service provider that acts as the legally responsible seller of your product to the end customer. This means the MoR:
+
+- Calculates and adds VAT or sales tax at checkout based on the customer's country and type (B2C, B2B, VAT-registered)
+- Collects tax on behalf of the applicable authorities
+- Files and remits tax returns in relevant jurisdictions
+- Issues compliant invoices to customers
+- Manages chargebacks and disputes
+
+The practical benefit for a solo founder: you receive a single net payout, and the MoR handles tax paperwork across every country your customer is in. No manual VAT registration in each EU country. No OSS filing. No per-country compliance calendar.
+
+**The MoR is not a substitute for:**
+- Your own bookkeeping and payout reconciliation
+- Accountant review before launch and at year-end
+- Understanding your own tax residency obligations as the company
+- Reading the provider's terms of service before signing up
+
+---
+
+### MoR vs. payment processor comparison
+
+Two practical approaches to handling billing for Virnix:
+
+| Approach | How it works | Tax handling | Approximate fee | Founder complexity |
+|----------|-------------|--------------|-----------------|-------------------|
+| **Merchant of Record** (Paddle, Lemon Squeezy) | MoR is the seller. You receive net payout. MoR handles all tax. | Automatic: VAT + sales tax calculated, collected, filed globally | ~5% + ~€0.50/transaction ⚠ verify | Low — MoR owns compliance |
+| **Payment processor + Tax plugin** (Stripe + Stripe Tax) | You are the seller. Stripe processes payment and calculates tax. You file returns. | Stripe Tax calculates; you file in each jurisdiction | ~2.9% + ~€0.30 + Stripe Tax costs ⚠ verify | Higher — you own filing calendar |
+
+**Early-stage recommendation:** MoR trades a higher per-transaction fee for significantly lower operational and compliance overhead. This is the preferred path for global launch before internal finance capacity exists.
+
+**At higher revenue:** compare total cost — MoR fee (5%) vs. processor fee (2.9%) + Stripe Tax overhead + accountant time for multi-country filing. The right choice depends on volume and in-house capacity.
+
+---
+
+### Pro pricing: net + VAT model
+
+**Pro — €20/month + VAT where applicable**
+
+The €20 is the net revenue target — the amount Virnix aims to receive after payment/MoR fees, before AI and transcription costs. VAT and sales tax are added at checkout by the MoR based on the customer's country and customer type.
+
+- For valid EU B2B VAT-registered customers: reverse charge may apply (no VAT collected, handled by the buyer's business) ⚠ confirm with accountant
+- For B2C customers in VAT-applicable countries: VAT is added on top of the €20 at the applicable local rate ⚠ confirm with accountant
+- Do not present €20 as "including all taxes" or "VAT included" until this is legally confirmed
+- Do not treat any of the above as guaranteed without professional advice
+
+---
+
+### Fee assumptions
+
+> ⚠ These are based on publicly available information as of 2026-05-20.
+> Verify current rates directly from each provider's official pricing page before implementation.
+> Providers may have different rates by region, currency, or transaction size.
+> Custom pricing may be available at scale.
+
+| Provider | Type | Approx. fee | Notes |
+|----------|------|------------|-------|
+| Paddle | MoR | ~5% + ~$0.50/transaction | Handles EU VAT, US sales tax, global SaaS compliance |
+| Lemon Squeezy | MoR | ~5% + ~$0.50/transaction | US-based, handles EU VAT, US sales tax, international SaaS |
+| Stripe | Processor | ~2.9% + ~€0.30/transaction | Does not handle tax filing |
+| Stripe + Stripe Tax | Processor + tax calc | ~2.9% + ~€0.30 + Stripe Tax costs | Tax calculation only; you file returns per jurisdiction |
+
+Do not hardcode a provider choice. Evaluate Paddle, Lemon Squeezy, and Stripe Tax before BILLING-A implementation. Final decision should account for fee rates, payout timelines, supported currencies, acceptable-use policy, and support quality.
+
+---
+
+### Transaction examples
+
+> All figures are estimates. Fee basis (gross vs. net) varies by provider — both scenarios shown.
+
+---
+
+**Example A — Single B2C transaction with 22% VAT**
+
+| Item | Amount |
+|------|--------|
+| Virnix Pro (net price) | €20.00 |
+| VAT at 22% (added at checkout) | €4.40 |
+| **Customer pays (gross)** | **€24.40** |
+
+MoR fee scenario 1 — fee applied to gross checkout amount:
+
+| Item | Amount |
+|------|--------|
+| Fee: 5% × €24.40 | €1.22 |
+| Fixed fee | ~€0.50 |
+| Total MoR fee | **~€1.72** |
+| VAT remitted by MoR | €4.40 |
+| **Approx. payout before AI/transcription** | **~€18.28** |
+
+MoR fee scenario 2 — fee applied to net amount:
+
+| Item | Amount |
+|------|--------|
+| Fee: 5% × €20.00 | €1.00 |
+| Fixed fee | ~€0.50 |
+| Total MoR fee | **~€1.50** |
+| VAT remitted by MoR | €4.40 |
+| **Approx. payout before AI/transcription** | **~€18.50** |
+
+**Summary:** For a €20 net Pro plan, estimated payout before AI/transcription is approximately **€18.28–€18.50** depending on exact provider fee basis. Verify actual fee basis with provider documentation before finalizing.
+
+---
+
+**Example B — 100 Pro transactions**
+
+| Item | Amount |
+|------|--------|
+| Net sales target (100 × €20) | €2,000 |
+| Approx. MoR fees (100 × €1.50–€1.72) | €150–€172 |
+| **Approx. payout before AI/transcription** | **€1,828–€1,850** |
+
+---
+
+**Example C — After AI/transcription costs (100 users)**
+
+Payout baseline before AI (from Example B): **~€1,828**
+
+| Avg cost per user | Net per user (after MoR fees) | Net per 100 users |
+|-------------------|-------------------------------|-------------------|
+| €3/user | ~€15.28 | **~€1,528** |
+| €5/user | ~€13.28 | **~€1,328** |
+| €7/user | ~€11.28 | **~€1,128** |
+
+> Infrastructure costs (Vercel, Supabase) not included above.
+> Current AI-only cost is ~€0.035/call. The €3–€7/user range reflects future audio transcription scenarios, not current YouTube-captions-only implementation.
+> All figures are estimates requiring production validation.
+
+---
+
+### Pricing optimization recommendations
+
+1. **Keep Pro at €20 net + VAT.** The €20 is the revenue target; VAT is added at checkout. Do not absorb VAT into the sticker price unless there is a specific strategic reason (e.g., a market where tax-inclusive display is strongly expected).
+
+2. **Use credits to control AI cost.** 100 credits/month, duration-based tiers, Advanced Content Kit +1 credit, 120+ min blocked, 60+ min Pro cap. These protect margin in all modeled scenarios including future audio transcription.
+
+3. **Keep Free genuinely limited.** 3 one-time credits, max 10 min, basic outputs only, Creator Energy locked. No path to unlimited free usage. 3 credits is enough for one strong generation — enough to demonstrate value, not enough to extract value indefinitely.
+
+4. **Prefer MoR for early global launch simplicity.** Lower tax/admin burden during the period when all focus must be on product, not compliance paperwork. The higher per-transaction fee is the cost of simplicity.
+
+5. **Revisit provider choice at volume.** When monthly revenue is materially higher (€5k+ MRR), model total cost: MoR fee vs. Stripe + Stripe Tax + accountant cost per month. The right answer depends on volume and internal capacity at that point.
+
+6. **Avoid micro-transactions.** The ~€0.50 fixed fee makes tiny PAYG credit packs uneconomical. €20/month subscription absorbs fixed fees across the month. If PAYG is added later, price credits high enough to cover the fixed fee floor (€0.30/credit minimum at current fee assumptions).
+
+7. **Verify before implementing.** Provider pricing, fee basis, supported payment methods, payout timelines, and acceptable-use policies must all be verified from official sources before BILLING-A implementation.
+
+---
+
+### What not to over-optimize yet
+
+| Do not do | Why |
+|-----------|-----|
+| Build manual VAT tax logic | If MoR is chosen, the provider handles this |
+| Implement EU OSS (One-Stop-Shop) filing manually | MoR handles OSS if chosen |
+| Add many pricing tiers at launch | Free + Pro only. Complexity hurts conversion at early stage. |
+| Promise tax-inclusive pricing ("€20 all in") | Tax treatment is country- and customer-type-dependent |
+| Sell unlimited AI usage | Credits protect margin. Unlimited destroys it at scale. |
+| Lock in a billing provider before evaluation | Paddle vs. Lemon Squeezy vs. Stripe Tax requires a decision phase |
+| Build BILLING-A before provider is chosen | Provider choice drives architecture (webhook format, SDK, fee structure) |
+
+---
+
+### Legal and accounting disclaimer
+
+> **This section is internal business planning documentation, not legal or tax advice.**
+>
+> - VAT treatment, including reverse charge eligibility, must be confirmed by a qualified accountant or tax advisor before public launch.
+> - Provider fees, tax handling rules, and terms of service must be verified directly from each provider before implementation.
+> - Virnix's tax residency, entity type, and registration obligations vary by jurisdiction and must be evaluated with professional advice.
+> - The transaction examples and margin estimates in this section are for internal planning only and must not be relied upon for legal or financial compliance decisions.
 
 ---
 

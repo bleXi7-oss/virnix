@@ -1,62 +1,71 @@
-# Current Phase — Supabase Authentication (AUTH-A)
+# Current Phase — Merchant of Record / VAT-Safe Pricing Plan (BUSINESS-DOCS-D)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Feedback / Improvement Loop Plan (BUSINESS-DOCS-C, 2026-05-20) — complete
+## Previous phase: Supabase Authentication (AUTH-A, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-AUTH-A adds Supabase magic link authentication. Generation and landing page remain public — no auth gate on usage yet. CREDITS-A will enforce usage server-side.
+BUSINESS-DOCS-D adds the Merchant of Record / VAT-safe pricing strategy to the documentation suite. Documentation and business planning only — no code changes.
+
+Goal: Clarify that Pro is €20/month + VAT (not €20 VAT-included), evaluate MoR as the preferred early-launch billing approach, add worked transaction examples, and document what not to over-optimize before provider choice is made.
 
 ---
 
 ## What Changed
 
-### New files
-
-| File | Purpose |
-|------|---------|
-| `app/lib/auth/supabase-client.ts` | `createBrowserClient` for `"use client"` components |
-| `app/lib/auth/supabase-server.ts` | Async `createServerClient` with cookie store for server components / route handlers |
-| `app/auth/callback/route.ts` | Magic link code exchange → session cookies → redirect |
-| `app/components/auth/AuthButton.tsx` | Sign in link / email + Sign out button |
-| `app/login/page.tsx` | Magic link form with premium Virnix aesthetic |
-| `docs/auth/README.md` | Setup notes, env vars, dashboard config, flow walkthrough, security notes |
-
-### Modified files
+### Updated files
 
 | File | Change |
 |------|--------|
-| `app/page.tsx` | `AuthButton` added to top bar via `dynamic(..., { ssr: false })`; top bar flex row with ThemeToggle |
-| `.env.example` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` added; redirect URL docs |
+| `docs/PRICING_CREDITS_PLAN.md` | New Section 16 (MoR/VAT approach, fee comparison, transaction examples, recommendations, disclaimer); Section 9 billing fee note; Section 15 provider question expanded |
+| `docs/BUSINESS_PLAN_CURRENT.md` | Header updated (BUSINESS-DOCS-D); Pro price updated to €20/month + VAT; new Section 11 (MoR/VAT summary); billing sequence updated to include provider evaluation; Section 12 VIRNIX.docx renumbered |
+| `docs/BUSINESS_DIRECTION.md` | Header updated (BUSINESS-DOCS-D); Pro price updated to €20/month + VAT; Feature Priorities billing note updated; Validation Status: AUTH-A marked done, BILLING-A updated with MoR evaluation |
+| `docs/roadmap/FEATURE_ROADMAP.md` | v0.3.x billing section: provider evaluation row added, MoR note added |
+| `docs/roadmap/RELEASE_PLAN.md` | v0.3.0: billing provider evaluation step added, MoR note; BUSINESS-DOCS-D (37) added to v0.1.0 phases; AUTH-A marked complete |
 | `docs/CURRENT_PHASE.md` | This file |
-| `docs/PHASE_HISTORY.md` | Phase 36 appended |
-| `docs/roadmap/FEATURE_ROADMAP.md` | Auth rows marked ✅ Shipped |
-| `docs/roadmap/RELEASE_PLAN.md` | AUTH-A (36) added to v0.1.0 phases |
+| `docs/PHASE_HISTORY.md` | Phase 37 appended |
+
+---
+
+## Key decisions documented
+
+**Pro — €20/month + VAT where applicable**
+- The €20 is the net revenue target. VAT added at checkout based on customer country and type.
+- B2C: VAT added at applicable rate. B2B EU: reverse charge may apply. ⚠ confirm with accountant.
+
+**Merchant of Record is the preferred early-launch billing approach**
+- Paddle or Lemon Squeezy handle VAT calculation, collection, and filing globally
+- Higher per-transaction fee (~5% + ~€0.50) but near-zero tax compliance overhead at early stage
+- Evaluate Paddle / Lemon Squeezy / Stripe + Stripe Tax before BILLING-A implementation
+
+**Transaction estimate for €20 net Pro transaction:**
+- B2C with 22% VAT: customer pays €24.40, Virnix receives ~€18.28–€18.50 after MoR fees
+- 100 Pro users: ~€1,828–€1,850 payout before AI costs
 
 ---
 
 ## What Was NOT Implemented
 
-- No credit check or deduction (CREDITS-A)
-- No Pro gating (BILLING-A)
-- No generation history (v0.4.x)
-- No feedback storage (v0.3.x)
-- No middleware for automatic token refresh (CREDITS-A)
-- No auth gate on generation or landing page
+- No billing code added
+- No Stripe / Paddle / Lemon Squeezy integration
+- No database tables
+- No checkout UI
+- No credits code
+- No auth changes
+- No app runtime code touched
 
 ---
 
 ## Validation
 
-- Build: ✅ clean (TypeScript, Turbopack)
-- Lint: ✅ clean
-- `dynamic(..., { ssr: false })` fix applied for SSR prerender compatibility
+- git status: only docs changed ✅
+- No build required (docs only)
 
 ---
 
@@ -64,9 +73,9 @@ AUTH-A adds Supabase magic link authentication. Generation and landing page rema
 
 **CREDITS-A — Server-side credit check and deduction**
 
-Auth is the prerequisite. Now implement:
+AUTH-A is complete. Now implement:
 1. Server-side session read in `/api/generate`
-2. Credit balance check before AI call
-3. Atomic deduction
+2. Credit balance check before AI call (reject 402 if insufficient)
+3. Atomic credit deduction
 4. Free tier trial credit allocation on first sign-in
 5. Middleware for session refresh on all routes

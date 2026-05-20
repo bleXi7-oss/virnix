@@ -1,14 +1,15 @@
 # Virnix — Current Business Plan
 
-**Phase:** BUSINESS-DOCS-C  
+**Phase:** BUSINESS-DOCS-D  
 **Date:** 2026-05-20  
 **Status:** Living document. Update when strategy changes.
 
 > This is the markdown source for the Virnix business plan.
 > VIRNIX.docx (project root) should be updated manually from this file.
-> This document reflects product state after Phases 1–35 (BUSINESS-DOCS-C complete).
+> This document reflects product state after Phases 1–37 (BUSINESS-DOCS-D complete).
 > Full feature roadmap and versioning: docs/roadmap/
 > Feedback system design: docs/feedback/
+> VAT/MoR billing strategy: docs/PRICING_CREDITS_PLAN.md Section 16
 
 ---
 
@@ -130,7 +131,8 @@ Full strategy: `docs/PRICING_CREDITS_PLAN.md`
 - Creator Energy: locked
 - Purpose: product trial. One good generation demonstrates value.
 
-**Pro — €20/month**
+**Pro — €20/month + VAT where applicable**
+- The €20 is the net revenue target. VAT is added at checkout based on customer country and type.
 - 100 credits/month (reset on billing date, unused expire)
 - Max 60 min content
 - Basic + Advanced Content Kit (+1 credit)
@@ -245,8 +247,11 @@ CREDITS-A — Server-side credit system
   Credit allocation on plan activation
   app/lib/credits/ module
      ↓
-BILLING-A — Stripe subscription
+BILLING-A — Billing provider evaluation + subscription
+  Evaluate: Paddle (MoR) / Lemon Squeezy (MoR) / Stripe + Stripe Tax
+  Choose provider before implementation (architecture depends on choice)
   Pro plan subscription flow
+  VAT-safe checkout (MoR handles or Stripe Tax handles, depending on choice)
   Webhook: subscription.created → allocate 100 credits
   Webhook: invoice.paid → reset monthly credits
   app/lib/billing/ module
@@ -387,7 +392,49 @@ When the product is post-launch (v0.3.0+), a minimal public-facing roadmap page 
 
 ---
 
-## 11. VIRNIX.docx Note
+## 11. Merchant of Record / VAT-Safe Pricing
+
+> ⚠ This section is business planning, not legal or tax advice.
+> VAT treatment must be confirmed by an accountant before public launch.
+> Provider fees must be verified from official sources before implementation.
+
+### Pro pricing model
+
+**Pro — €20/month + VAT where applicable**
+
+The €20 is the net revenue target — the amount Virnix aims to receive after payment/MoR fees and before AI and transcription costs. VAT and sales tax are calculated and added at checkout by the billing provider, based on the customer's country and customer type.
+
+- B2C customers in VAT-applicable countries: VAT added on top of €20 at local rate ⚠ confirm with accountant
+- Valid EU B2B VAT-registered customers: reverse charge may apply ⚠ confirm with accountant
+- Do not present €20 as "VAT included" or "all taxes included" until legally confirmed
+
+### Why Merchant of Record is the preferred early-launch path
+
+A Merchant of Record (MoR) — e.g., Paddle or Lemon Squeezy — acts as the legally responsible seller, handling VAT calculation, collection, filing, and remittance across jurisdictions. This trades a higher per-transaction fee (~5% + ~€0.50) for near-zero tax compliance overhead for the founder.
+
+The alternative (Stripe + Stripe Tax) provides tax calculation but requires the founder to file VAT returns per jurisdiction — significantly higher operational burden at early stage.
+
+**Recommendation:** Evaluate Paddle, Lemon Squeezy, and Stripe Tax as part of BILLING-A. Choose provider before starting implementation.
+
+### Transaction estimate (single Pro transaction)
+
+| Scenario | Customer pays | Approx. MoR fee | Approx. payout |
+|----------|--------------|-----------------|----------------|
+| €20 net + 22% VAT via MoR | €24.40 | ~€1.50–€1.72 | **~€18.28–€18.50** |
+| €20 net + 0% VAT (B2B reverse charge) via MoR | €20.00 | ~€1.00–€1.50 | **~€18.50–€19.00** |
+
+All figures are estimates. Verify with provider documentation. Full worked examples: `docs/PRICING_CREDITS_PLAN.md` Section 16.
+
+### What not to optimize early
+
+- Do not build manual VAT filing logic — MoR handles this if chosen
+- Do not add multiple pricing tiers at launch — Free + Pro only
+- Do not promise tax-inclusive pricing until confirmed by accountant
+- Do not lock in a billing provider before the evaluation phase
+
+---
+
+## 12. VIRNIX.docx Note
 
 `VIRNIX.docx` exists in the project root but is a binary format. This markdown file (`docs/BUSINESS_PLAN_CURRENT.md`) is the authoritative source for the current business plan.
 

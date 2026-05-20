@@ -36,6 +36,7 @@ This is a coherent, demonstrable product. Hence v0.1.0, not v0.0.x.
 | BUSINESS-DOCS-B (34) | Roadmap docs, pricing tier expansion |
 | BUSINESS-DOCS-C (35) | Feedback system design |
 | AUTH-A (36) | Supabase magic link auth, AuthButton, login page |
+| BUSINESS-DOCS-D (37) | MoR/VAT pricing approach, transaction examples, billing provider evaluation |
 
 ---
 
@@ -57,21 +58,21 @@ Examples of what counts as a v0.1.x patch:
 
 ### v0.2.0 — Auth + credits foundation
 
-**Planned phases:** AUTH-A + CREDITS-A  
-**Prerequisite:** None (first major implementation phase)  
+**Planned phases:** AUTH-A (complete) + CREDITS-A  
+**Prerequisite:** AUTH-A ✅ shipped  
 **Gate:** Auth must be stable before exposing credits to users
 
 What v0.2.0 adds:
-- Supabase auth (signup, login, session)
-- User identity (user_id)
-- Credit balance per user
-- Server-side credit calculation (duration → credits)
-- Credit check before every AI call
-- Atomic credit deduction
-- Free tier: 3 trial credits on signup
-- Basic usage guardrails (rate limit, duration check)
+- Supabase auth (signup, login, session) ✅ AUTH-A complete
+- User identity (user_id) ✅ AUTH-A complete
+- Credit balance per user (CREDITS-A)
+- Server-side credit calculation (duration → credits) (CREDITS-A)
+- Credit check before every AI call (CREDITS-A)
+- Atomic credit deduction (CREDITS-A)
+- Free tier: 3 trial credits on signup (CREDITS-A)
+- Basic usage guardrails (rate limit, duration check) (CREDITS-A)
 
-**Do not ship v0.2.0** until: auth session management is stable, credit deduction + generation flow is tested end-to-end, 402 rejection on zero credits is confirmed.
+**Do not ship v0.2.0** until: credit deduction + generation flow is tested end-to-end, 402 rejection on zero credits is confirmed.
 
 ---
 
@@ -81,17 +82,20 @@ What v0.2.0 adds:
 **Prerequisite:** v0.2.0 (credits + auth)
 
 What v0.3.0 adds:
-- Stripe subscription (Pro plan, €20/month)
+- **Billing provider evaluation:** Paddle (MoR) vs. Lemon Squeezy (MoR) vs. Stripe + Stripe Tax — choose before coding
+- Pro plan subscription (€20/month + VAT where applicable)
+- VAT-safe checkout (MoR preferred for global launch simplicity)
 - Monthly credit allocation (100 on billing date, expire unused)
 - Webhook reliability (subscription.created, invoice.paid, payment_failed)
-- Pricing page
+- Pricing page (€20/month + VAT wording)
 - Upgrade CTA
 - Credit display in UI
 - Pro gating for Creator Energy and Advanced Kit on Free
 - Post-generation feedback widget (5-question survey, anonymous or user-linked)
 - Feedback stored to DB for internal review
 
-**Do not ship v0.3.0** until: Stripe webhooks tested, Pro credit allocation confirmed, Free-to-Pro upgrade flow tested, downgrade/cancel handling confirmed.
+**Do not ship v0.3.0** until: billing provider chosen and documented, subscription webhooks tested, Pro credit allocation confirmed, Free-to-Pro upgrade flow tested, downgrade/cancel handling confirmed.  
+**MoR note:** Merchant of Record (Paddle/Lemon Squeezy) handles VAT calculation, collection, and filing globally. Higher per-transaction fee (~5% + ~€0.50) but near-zero tax compliance overhead for early-stage. Full comparison: `docs/PRICING_CREDITS_PLAN.md` Section 16.
 
 ---
 

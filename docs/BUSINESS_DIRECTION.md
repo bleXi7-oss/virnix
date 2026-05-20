@@ -1,9 +1,9 @@
 # Business Direction — Virnix
 
 > AI-readable strategic operating document. Distilled from the Virnix startup handbook
-> and validated against Phases 1–35 product decisions.
-> Last updated: BUSINESS-DOCS-C (2026-05-20)
-> Full roadmap: docs/roadmap/ · Feedback system: docs/feedback/
+> and validated against Phases 1–37 product decisions.
+> Last updated: BUSINESS-DOCS-D (2026-05-20)
+> Full roadmap: docs/roadmap/ · Feedback system: docs/feedback/ · VAT/MoR: docs/PRICING_CREDITS_PLAN.md §16
 
 ---
 
@@ -72,7 +72,8 @@ Virnix is also not "powered by Claude" or "AI-powered content." The AI is invisi
 - Basic outputs only (5 platforms)
 - Creator Energy locked — upgrade motivation
 
-**Pro — €20/month**
+**Pro — €20/month + VAT where applicable**
+- The €20 is the net revenue target. VAT is added at checkout based on customer country and type. ⚠ confirm tax treatment with accountant before launch.
 - 100 credits/month (reset on billing date, unused expire)
 - Max 60 min content
 - All platforms + Advanced Content Kit (+1 credit)
@@ -232,9 +233,12 @@ Creator Energy is **included in Pro at no extra credit cost.** It adds ~100–15
 - ✅ Creator Energy Selection (CE-A through CE-C)
 
 **Next required — must ship before monetization:**
-1. **Auth — Supabase (AUTH-A):** user identity required for credit tracking
+1. **Auth — Supabase (AUTH-A):** user identity required for credit tracking ✅ complete
 2. **Credits system (CREDITS-A):** server-side credit check/deduct/allocate
-3. **Billing — Stripe (BILLING-A):** subscription + credit allocation on payment
+3. **Billing — BILLING-A:** evaluate MoR vs. processor → implement subscription + VAT-safe checkout + credit allocation on payment
+   - Evaluate: Paddle (MoR) / Lemon Squeezy (MoR) / Stripe + Stripe Tax
+   - MoR is the preferred early-launch path for global VAT simplicity
+   - Full comparison and transaction examples: `docs/PRICING_CREDITS_PLAN.md` Section 16
 
 **Next valuable — after Pro validates:**
 - Non-YouTube source support (direct audio upload, podcast RSS)
@@ -308,9 +312,9 @@ All product quality phases complete. Pricing strategy documented. Auth is the ne
 | CE-B (30) | Real AI test — 9 calls, clear differentiation, no hallucinations | ✅ Done |
 | CE-C (32) | Contrarian directive polished — assumption-challenging framing confirmed | ✅ Done |
 | PRICING-A (31) | Pricing / credits strategy documented | ✅ Done |
-| AUTH-A | Supabase authentication | ⏳ Not started |
-| CREDITS-A | Server-side credit calculation / check / deduction | ⏳ Blocked on AUTH-A |
-| BILLING-A | Stripe subscription + credit allocation | ⏳ Blocked on CREDITS-A |
+| AUTH-A | Supabase authentication (magic link, AuthButton, /login) | ✅ Done |
+| CREDITS-A | Server-side credit calculation / check / deduction | ⏳ Blocked on nothing — AUTH-A complete |
+| BILLING-A | Provider evaluation (MoR vs. Stripe Tax) + subscription + credit allocation | ⏳ Blocked on CREDITS-A |
 
 ---
 

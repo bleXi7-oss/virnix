@@ -1399,3 +1399,74 @@ Initial build failed: `AuthButton` was imported as a static import, causing `cre
 
 ### Next: CREDITS-A
 Server-side credit check in `/api/generate`, free tier allocation, atomic deduction, middleware for session refresh.
+
+---
+
+## Phase 37 — Merchant of Record / VAT-Safe Pricing Plan (BUSINESS-DOCS-D, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Documentation-only phase. No production code changed.
+
+**Updated: `docs/PRICING_CREDITS_PLAN.md`**
+- New **Section 16: Merchant of Record / VAT-Safe Pricing Approach**
+  - What is a Merchant of Record (simple founder explanation)
+  - MoR vs. payment processor comparison table (Paddle/Lemon Squeezy vs. Stripe + Stripe Tax)
+  - Pro pricing model: €20/month + VAT where applicable
+  - Fee assumptions with ⚠ verification reminders
+  - **Transaction examples:**
+    - Example A: single B2C transaction with 22% VAT → payout ~€18.28–€18.50
+    - Example B: 100 Pro transactions → payout €1,828–€1,850
+    - Example C: after AI/transcription costs at €3/€5/€7 per user
+  - Pricing optimization recommendations (6 rules)
+  - What not to over-optimize yet
+  - Legal and accounting disclaimer
+- Section 9 (Margin Assumptions): added note that billing fee assumption (~€0.90 Stripe) varies by provider; MoR fee ~€1.50–€1.72 per transaction
+- Section 15 (Open Questions): expanded provider question from "Stripe or LemonSqueezy?" to full MoR evaluation guidance
+
+**Updated: `docs/BUSINESS_PLAN_CURRENT.md`**
+- Header updated to BUSINESS-DOCS-D, Phases 1–37
+- Pro plan updated: €20/month + VAT where applicable (with note about net revenue target)
+- Billing sequence updated: provider evaluation step added before implementation
+- New Section 11: Merchant of Record / VAT-Safe Pricing (summary section)
+- Old Section 11 VIRNIX.docx Note → Section 12
+
+**Updated: `docs/BUSINESS_DIRECTION.md`**
+- Header updated to BUSINESS-DOCS-D, Phases 1–37
+- Pro price: €20/month → €20/month + VAT where applicable
+- Feature Priorities: billing note updated to include MoR evaluation step
+- Validation Status: AUTH-A marked ✅ Done; BILLING-A updated with provider evaluation context
+
+**Updated: `docs/roadmap/FEATURE_ROADMAP.md`**
+- v0.3.x Billing + Pro Plan: provider evaluation row added, MoR note added to gates
+
+**Updated: `docs/roadmap/RELEASE_PLAN.md`**
+- v0.2.0: AUTH-A marked ✅ shipped
+- v0.3.0: billing provider evaluation step added; MoR note added
+- v0.1.0 phases table: BUSINESS-DOCS-D (37) added
+
+### What Was NOT Changed
+
+- No app runtime code touched
+- No UI components modified
+- No prompts or AI logic touched
+- No Supabase / billing integration
+- `docs/PROJECT_BRAIN.md` not rewritten
+- `VIRNIX.docx` not modified (binary — manual merge from BUSINESS_PLAN_CURRENT.md required)
+
+### Key business decisions documented
+
+- **Pro is €20/month + VAT** (not €20 VAT-included). Net revenue target.
+- **Merchant of Record is the preferred early billing path.** Paddle or Lemon Squeezy handle global VAT. Higher fee than Stripe but near-zero compliance overhead.
+- **Evaluate before implementing BILLING-A.** Provider choice drives architecture.
+- **Transaction estimate:** €20 net Pro, 22% VAT → customer pays €24.40 → Virnix receives ~€18.28–€18.50 after MoR fees.
+- **All tax treatment must be confirmed by an accountant before public launch.**
+
+### Validation Status at End of Phase
+- Build: ✅ not required (docs only)
+- git status: only docs changed ✅
+
+### Next: CREDITS-A
+AUTH-A is complete. CREDITS-A is the next gate: server-side session read, credit check/deduct, free tier allocation, middleware.
