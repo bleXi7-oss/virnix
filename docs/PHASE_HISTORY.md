@@ -1050,3 +1050,42 @@ Added creator-native energy/angle steering before generation.
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
 - opener-audit.ts: ✅ ALL CHECKS PASS (0 failures)
+
+---
+
+## Phase 29 — Creator Energy QA (CE-QA-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Static validation of CE-A (Creator Energy Selection). No new features.
+
+**P1 fix: `app/lib/creator-energy/prompt-context.ts`**
+- Added `Priority:` instruction to `formatEnergyContext()` output
+- Without it: model may apply random variation angle (curiosity/controversy/etc.) instead of creator-selected energy
+- With it: creator energy is primary creative direction; variation profile provides structural scaffolding only
+
+**New: `scripts/qa/creator-energy-audit.ts`**
+- 9-section static audit, no API calls, $0 cost
+- Sections: balanced/empty mode, single-energy formatting (6×), multi-energy combinations (3 combos), allowlist validation (6 valid + 10 invalid), prompt injection position, balanced prompt integrity, directive specificity, variation angle priority, domain safety grounding
+- 3 transcript types: creator/business, science, philosophy
+- Run 1: 1 failure + 6 warnings → P1 fix applied → Run 2: ✅ ALL CHECKS PASS
+
+**New: `docs/qa/CREATOR_ENERGY_QA_A.md`**
+- Full static QA report with per-section results, issues found/fixed, verdict
+
+### Verdict
+
+SAFE TO KEEP CREATOR ENERGY: **YES**
+- Balanced/empty = guaranteed no-op ✓
+- Allowlist injection-safe ✓
+- Correct prompt position ✓
+- Priority instruction resolves variation-angle ambiguity ✓
+- Grounding rule prevents hallucination on mismatched transcripts ✓
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- opener-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 creator-specific)
+- creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)

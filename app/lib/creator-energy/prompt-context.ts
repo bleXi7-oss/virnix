@@ -15,5 +15,6 @@ export function formatEnergyContext(energyIds: CreatorEnergyId[]): string {
   return `Creator energy: ${labels}
 Directives:
 ${directives}
+Priority: These energy directives are the primary creative direction for this generation. The variation profile above provides structural and rhythmic scaffolding.
 Grounding rule: Use selected energies as creative steering. If an energy does not fit the transcript, use the closest grounded version — never invent facts or emotions to satisfy the direction.`;
 }
