@@ -1,56 +1,71 @@
-# Current Phase — Contrarian Energy Directive Polish (CE-C)
+# Current Phase — Business Docs Consolidation (BUSINESS-DOCS-A)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Pricing & Credits Plan (PRICING-A, 2026-05-20) — complete
+## Previous phase: Contrarian Energy Directive Polish (CE-C, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-CE-C is a single-directive quality polish. No new features. No architecture changes.
+BUSINESS-DOCS-A is a documentation-only phase. No code changed.
 
-CE-B real AI validation (Phase 30) found a P2: Contrarian energy sometimes opened with
-tactical/framework-style language ("Here's the exact framework. No theory — just the steps:")
-instead of assumption-challenging framing. The directive was insufficiently specific about
-what "contrarian" means vs. "tactical."
+Goal: merge the current Virnix product/pricing direction into business documents after:
+- Premium UI polish (Phases 18–26)
+- Creator Energy Selection (CE-A through CE-C)
+- Real AI validation (CE-B)
+- Pricing/credits strategy (PRICING-A)
 
 ---
 
 ## What Changed
 
-### Updated: `app/lib/creator-energy/options.ts` — Contrarian `promptDirective`
+### Updated: `docs/BUSINESS_DIRECTION.md`
 
-**Before:**
-> "Lead with the assumption most people have wrong. Find the sharpest reframe in the transcript. Take a clear, defensible position — don't hedge."
+Targeted updates — content preserved, stale sections replaced:
 
-**After:**
-> "Challenge the assumption the transcript complicates or reverses. Find what most people get wrong about this topic and frame every output around that gap. Lead with the misunderstanding, not a framework — outputs should sound like a position, not a checklist. Pattern: 'most people believe X, but this transcript reveals Y.' Do not present this as steps or a system unless the transcript itself is about a framework. Stay grounded. Do not invent controversy where the transcript does not support it."
+- **Core Positioning:** updated one-liner to "Turn long-form content into platform-native posts, hooks, and clip ideas with creator-directed AI." Secondary one-liner preserved. Added "creator intelligence engine" framing. Explicit note that AI is invisible infrastructure, not the brand.
+- **Monetization Direction:** replaced old Phase 2 guesses (€19, 50 generations) with PRICING-A decisions (€20/month, 100 credits, duration tiers, credit formula, margin targets).
+- **Competitive Moat:** added Creator Energy Selection and Transcript-first (no rendering) as explicit moat points. Domain-agnostic prompts added. Credits model added.
+- **Creator Energy Selection:** new section — energy modes table, key rules, pricing decision, validation status.
+- **Feature Priorities:** updated shipped list (CE-A through CE-C ✅). Replaced "Next tier" with auth/credits/billing sequence. Removed stale "Expanded TikTok opener pool" (fixed in QB-A).
+- **Validation Status table:** new section before Business Constraints — phases QB-A through PRICING-A, next gates AUTH-A / CREDITS-A / BILLING-A.
+- **Business Constraints:** added auth-first requirement and real-cost validation note.
 
-Key additions:
-- Explicit anti-framework instruction: "Lead with the misunderstanding, not a framework"
-- Distinguishes from Tactical: "outputs should sound like a position, not a checklist"
-- Example pattern: "'most people believe X, but this transcript reveals Y.'"
-- Explicit prohibition: "Do not present this as steps or a system unless..."
-- Grounding reminder: "Do not invent controversy..."
+### Created: `docs/BUSINESS_PLAN_CURRENT.md`
 
-### Updated: `docs/qa/CREATOR_ENERGY_REAL_AI_B.md`
-- Added CE-C resolution note to P2 finding
+New 9-section business plan document reflecting current product reality:
+
+1. Product positioning (updated one-liners, honest claims, what Virnix is not)
+2. Core differentiation (7 moat points)
+3. Creator Energy Selection (full mode table, rules, pricing, validation)
+4. Pricing / credits model (plans, formula, examples)
+5. Margin logic (why unlimited is dangerous, scenario table, key assumptions)
+6. Implementation roadmap (AUTH-A → CREDITS-A → BILLING-A sequence with rules)
+7. Anti-goals (13 explicit anti-goals)
+8. Validation status (complete phases, next gates)
+9. VIRNIX.docx note (binary file; this is the authoritative markdown source)
 
 ---
 
-## Validation Status
+## What Was NOT Changed
 
-- Build: ✅ clean (TypeScript, Turbopack)
-- Lint: ✅ clean
-- creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
-- Real AI spot check: ✅ PASS
-  - TikTok: "The mistake starts earlier than you think: Posting more is not the fix."
-  - Framework language: none detected
-  - Contrarian signals: "most people", "actually", "assumption", "reveals"
+- No app runtime code touched
+- No UI components modified
+- No prompts or AI logic touched
+- No Supabase / Stripe / auth work done
+- `docs/PROJECT_BRAIN.md` not rewritten (still accurate for architecture reference)
+- `VIRNIX.docx` not modified (binary format; manual merge required from BUSINESS_PLAN_CURRENT.md)
+
+---
+
+## Validation
+
+- `git status`: only docs changed ✅
+- No build required (docs only)
 
 ---
 
@@ -58,6 +73,9 @@ Key additions:
 
 **AUTH-A — Supabase authentication**
 
-The product quality phases (QB-A, CE-A, CE-QA-A, CE-B, CE-C) are complete.
-The pricing strategy is documented (PRICING-A).
+All product quality phases complete (QB-A, CE-A, CE-QA-A, CE-B, CE-C).
+Pricing strategy documented (PRICING-A).
+Business docs consolidated (BUSINESS-DOCS-A).
 The next required step before monetization is auth.
+
+Auth is the prerequisite for credits, which is the prerequisite for billing.

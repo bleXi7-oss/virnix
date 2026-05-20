@@ -1205,3 +1205,42 @@ Post-fix TikTok opener: `"The mistake starts earlier than you think: Posting mor
 - Lint: ✅ clean
 - creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
 - Real AI spot check: ✅ PASS — no framework language, contrarian signals present
+
+---
+
+## Phase 33 — Business Docs Consolidation (BUSINESS-DOCS-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Documentation-only phase. No production code changed.
+
+**Updated: `docs/BUSINESS_DIRECTION.md`**
+- Core Positioning: updated one-liner + "creator intelligence engine" framing. Added note that AI is invisible infrastructure.
+- Monetization Direction: replaced stale Phase 2 guesses with PRICING-A decisions (€20/month, 100 credits, duration tiers, credit formula, margin targets, cost control rules).
+- Competitive Moat: added Creator Energy Selection, Transcript-first (no rendering), Domain-agnostic prompts, Credits model as explicit moat points.
+- New section: Creator Energy Selection — energy modes table, rules, pricing decision, validation status.
+- Feature Priorities: updated to reflect CE-A through CE-C shipped; replaced "Next tier" with auth → credits → billing sequence.
+- New section: Validation Status — phases QB-A through PRICING-A, next gates.
+- Business Constraints: added auth-first requirement, real-cost validation note.
+
+**Created: `docs/BUSINESS_PLAN_CURRENT.md`**
+- 9-section business plan document reflecting current product reality
+- Sections: product positioning, core differentiation, Creator Energy, pricing/credits, margin logic, roadmap, anti-goals, validation status, VIRNIX.docx note
+- Intended as authoritative markdown source for manual merge into VIRNIX.docx
+
+### What Was NOT Changed
+- No app runtime code
+- No UI components
+- No prompts or AI logic
+- No Supabase / Stripe / auth work
+- `docs/PROJECT_BRAIN.md` not rewritten
+- `VIRNIX.docx` not modified (binary — manual merge from BUSINESS_PLAN_CURRENT.md required)
+
+### Validation Status at End of Phase
+- git status: only docs changed ✅
+- No build required (docs only)
+
+### Next: AUTH-A — Supabase authentication
+All product quality phases complete. Pricing and business docs consolidated. Auth is the next gate before monetization.
