@@ -1,12 +1,13 @@
 # Virnix — Current Business Plan
 
-**Phase:** BUSINESS-DOCS-A  
+**Phase:** BUSINESS-DOCS-B  
 **Date:** 2026-05-20  
 **Status:** Living document. Update when strategy changes.
 
 > This is the markdown source for the Virnix business plan.
 > VIRNIX.docx (project root) should be updated manually from this file.
-> This document reflects product state after Phases 1–32 (CE-C + PRICING-A complete).
+> This document reflects product state after Phases 1–34 (BUSINESS-DOCS-B complete).
+> Full feature roadmap and versioning: docs/roadmap/
 
 ---
 
@@ -135,9 +136,32 @@ Full strategy: `docs/PRICING_CREDITS_PLAN.md`
 - Creator Energy: included, no extra cost
 - Purpose: core creator workflow — weekly podcast → week of short-form content
 
-**Creator — future, not yet priced**
-- Higher credit pool, audio upload, saved history
-- Build when Pro validates at €1k MRR
+**Studio — €49/month (future, not at launch)**
+- 350 credits/month (reset monthly, unused expire)
+- Everything in Pro
+- Max 90 min content (future — requires audio upload)
+- Advanced Content Kit included
+- Creator Energy included
+- Export content packs
+- Saved generation history
+- Candidate for 2–3 team seats
+- Priority processing candidate
+- **Build when:** Pro validates at €1k MRR + audio upload is live
+
+**Agency — €99/month (future, not at launch)**
+- 900 credits/month (reset monthly, unused expire)
+- Everything in Studio
+- Client/project organization
+- Multiple team seats
+- Client-ready export formats
+- Priority support
+- **Build when:** Studio validates with paying users + evidence of agency usage patterns
+
+**Pay-as-you-go — candidate, not designed**
+- €0.30/credit à la carte, no subscription
+- Serves occasional users who won't commit monthly
+- Lower margin per credit but reduces churn risk
+- Consider as fallback offer only if subscription conversion is weak
 
 ### Credit formula
 
@@ -201,6 +225,10 @@ Any user whose combined AI + transcription cost exceeds €12/month on a €20 p
 ---
 
 ## 6. Implementation Roadmap
+
+> Full versioned roadmap: [docs/roadmap/FEATURE_ROADMAP.md](roadmap/FEATURE_ROADMAP.md)  
+> Release plan and changelog: [docs/roadmap/RELEASE_PLAN.md](roadmap/RELEASE_PLAN.md)  
+> Versioning rules: [docs/roadmap/VERSIONING.md](roadmap/VERSIONING.md)
 
 ### Prerequisite sequence (do not skip steps)
 
@@ -284,15 +312,42 @@ What Virnix must never become:
 
 ---
 
-## 9. VIRNIX.docx Note
+## 9. Future: Public Roadmap / Changelog Page
+
+Not built yet. Do not add this to the app now.
+
+When the product is post-launch (v0.3.0+), a minimal public-facing roadmap page could help with:
+- Showing momentum to potential users
+- Building trust through transparency ("here's what just shipped")
+- Reducing support questions about upcoming features
+
+**What it should show (if built):**
+- Current version
+- Recently shipped (last 2–3 milestones)
+- Now (what's in active development)
+- Next (what's clearly coming)
+- Later (candidates, not promises)
+- Minimal changelog
+
+**What it should NOT show:**
+- Dates or ETAs
+- Speculative features
+- Competitor comparisons
+- Internal implementation phases or technical details
+
+**Implementation note:** A single static page (`/roadmap`) or external Notion/Changelog page is fine. Do not build a dynamic roadmap system — maintain it as a simple markdown-to-UI page or a hosted changelog tool (e.g., Changelog.so, Headway, or custom static page). Prioritize the generator flow — the roadmap page is secondary.
+
+---
+
+## 10. VIRNIX.docx Note
 
 `VIRNIX.docx` exists in the project root but is a binary format. This markdown file (`docs/BUSINESS_PLAN_CURRENT.md`) is the authoritative source for the current business plan.
 
-To merge into VIRNIX.docx: open both files side-by-side and update or replace the relevant sections manually. Sections 1–8 above map cleanly to the VIRNIX.docx structure.
+To merge into VIRNIX.docx: open both files side-by-side and update or replace the relevant sections manually. Sections 1–9 above map cleanly to the VIRNIX.docx structure.
 
 Sections most likely to need updating in VIRNIX.docx:
-- Pricing / monetization model (now PRICING-A with duration-based credits)
+- Pricing / monetization model (PRICING-A credits model, Studio/Agency as future tiers)
 - Creator Energy Selection (new section, not in original VIRNIX.docx)
 - Product positioning (updated one-liner, "creator intelligence engine" framing)
-- Feature roadmap (CE-A through CE-C shipped, AUTH-A next)
-- Margin / unit economics (new modeled scenarios, €20 Pro at 60–80% target)
+- Feature roadmap (versioned roadmap added, AUTH-A next gate)
+- Margin / unit economics (modeled scenarios, €20 Pro at 60–80% target)

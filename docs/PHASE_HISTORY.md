@@ -1244,3 +1244,48 @@ Documentation-only phase. No production code changed.
 
 ### Next: AUTH-A — Supabase authentication
 All product quality phases complete. Pricing and business docs consolidated. Auth is the next gate before monetization.
+
+---
+
+## Phase 34 — Pricing Expansion + Roadmap Docs (BUSINESS-DOCS-B, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Documentation-only phase. No production code changed.
+
+**Created: `docs/roadmap/` folder (4 new files)**
+
+- `docs/roadmap/README.md` — roadmap folder overview, current stage, next sequence, tier table
+- `docs/roadmap/VERSIONING.md` — semantic versioning system: MAJOR.MINOR.PATCH with Virnix-specific rules, version table (v0.1.0 → v1.0.0), phase-to-version mapping
+- `docs/roadmap/FEATURE_ROADMAP.md` — features by version (v0.1.x through v1.0.0), status legend, shipped list (25+ items), planned/candidate/future/never sections, Studio/Agency readiness checklists
+- `docs/roadmap/RELEASE_PLAN.md` — v0.1.0 baseline definition, upcoming release plans (v0.2.0–v1.0.0), changelog format, PATCH/MINOR/MAJOR decision guide, release checklist
+
+**Updated: `docs/BUSINESS_DIRECTION.md`**
+- Header updated to BUSINESS-DOCS-B, Phases 1–34, roadmap folder reference
+- Future tiers: "Creator tier" replaced with named Studio (€49, 350 credits) and Agency (€99, 900 credits)
+
+**Updated: `docs/BUSINESS_PLAN_CURRENT.md`**
+- Header updated to BUSINESS-DOCS-B, roadmap links added to Section 6
+- Future pricing expanded: Studio / Agency / PAYG with full details
+- New Section 9: Future public roadmap/changelog page concept (docs-only)
+
+**Updated: `docs/PRICING_CREDITS_PLAN.md`**
+- Section 13 rewritten: "Creator tier" → Studio (€49, 350cr), "Team tier" → Agency (€99, 900cr)
+- PAYG candidate documented
+- Tier positioning summary table added
+- plans.ts comment updated to Free/Pro/Studio/Agency
+
+### What Was NOT Changed
+- No app runtime code
+- No UI, prompts, AI logic
+- No Supabase / Stripe / auth
+- VIRNIX.docx not modified (binary — manual merge required)
+
+### Validation Status at End of Phase
+- git status: only docs and new roadmap folder ✅
+- No build required (docs only)
+
+### Next: AUTH-A — Supabase authentication
+Version baseline v0.1.0 established. Roadmap docs complete. Auth is the prerequisite gate for the entire credits + billing stack.

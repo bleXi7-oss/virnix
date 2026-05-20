@@ -328,13 +328,66 @@ The user only needs to understand: content length → credit cost. Everything el
 
 ## 13. Future Pricing Tiers
 
-Not designed yet. Wait for Pro to validate at €1k MRR.
+**Launch tiers: Free + Pro only.** Do not add Studio or Agency until Pro validates.
 
-**Creator tier (~€49/month):** Higher credit pool (300–500 credits), audio file upload support, saved generation history, brand voice calibration (future). Only justified when the feature set meaningfully exceeds Pro.
+---
 
-**Team tier (~€99/month):** Shared credit pool, multiple seats, generation history. Only when there's evidence of team usage patterns. Not a priority.
+### Studio — €49/month (future)
 
-**Pay-as-you-go (no subscription):** €0.30/credit à la carte. Serves occasional users who won't commit to monthly. Lower margin per credit but no churn. Consider as a fallback offer.
+Target: serious creators, podcasters, small teams who exhaust Pro's 100 credits.
+
+| Feature | Value |
+|---------|-------|
+| Credits | 350/month |
+| Max content | 90 min (requires audio upload) |
+| Output mode | All — basic + advanced kit |
+| Creator Energy | Included |
+| Saved history | Included |
+| Export packs | Included |
+| Team seats | Candidate (2–3 seats) |
+| Priority processing | Candidate |
+
+**Margin estimate at 350 credits with realistic usage:** similar to Pro or better — most Studio users won't saturate 350 credits in current-AI-only mode. Transcription costs become significant at this tier with heavy audio upload use.
+
+**When to build:** Pro at €1k MRR + audio upload live + export pack feature complete.
+
+---
+
+### Agency — €99/month (future)
+
+Target: agencies doing client content work, teams needing project organization.
+
+| Feature | Value |
+|---------|-------|
+| Credits | 900/month |
+| Everything in Studio | Included |
+| Client/project folders | Included |
+| Team seats | Multiple (TBD) |
+| Client-ready exports | Included |
+| Priority support | Included |
+
+**When to build:** Studio validated with paying users + evidence of agency usage patterns in real data.
+
+---
+
+### Pay-as-you-go (candidate, not designed)
+
+€0.30/credit à la carte. No subscription.
+
+Serves occasional users who won't commit to monthly. Lower margin per credit (€0.30/credit vs. €0.20/credit on Pro) but no churn. Consider as a fallback offer only if subscription conversion is lower than expected.
+
+---
+
+### Tier positioning summary
+
+| Tier | Who it's for | Price |
+|------|-------------|-------|
+| Free | First-time trial | — |
+| Pro | Individual creator, weekly workflow | €20/month |
+| Studio | Serious creator / podcaster / small team | €49/month (future) |
+| Agency | Client work, agency, multi-seat | €99/month (future) |
+
+**Do not position Studio or Agency as launch tiers.** They complicate the initial pricing page and imply feature parity that isn't shipped yet.
 
 ---
 
@@ -346,7 +399,7 @@ Not designed yet. Wait for Pro to validate at €1k MRR.
 
 ```
 app/lib/pricing/
-  plans.ts           ← plan definitions (Free, Pro, Creator)
+  plans.ts           ← plan definitions (Free, Pro, Studio, Agency)
   index.ts           ← exports
 
 app/lib/credits/

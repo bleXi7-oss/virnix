@@ -1,8 +1,9 @@
 # Business Direction — Virnix
 
 > AI-readable strategic operating document. Distilled from the Virnix startup handbook
-> and validated against Phases 1–32 product decisions.
-> Last updated: BUSINESS-DOCS-A (2026-05-20)
+> and validated against Phases 1–34 product decisions.
+> Last updated: BUSINESS-DOCS-B (2026-05-20)
+> Full roadmap: docs/roadmap/
 
 ---
 
@@ -77,9 +78,15 @@ Virnix is also not "powered by Claude" or "AI-powered content." The AI is invisi
 - All platforms + Advanced Content Kit (+1 credit)
 - Creator Energy included, no extra cost
 
-**Creator tier — future, not yet priced**
-- Higher credit pool, audio upload support, saved history
+**Studio — €49/month (future, not at launch)**
+- 350 credits/month, everything in Pro
+- Audio upload, saved history, export packs
 - Do not build until Pro validates at €1k MRR
+
+**Agency — €99/month (future, not at launch)**
+- 900 credits/month, everything in Studio
+- Team seats, client/project folders, priority support
+- Do not build until Studio validates
 
 ### Credit formula
 
