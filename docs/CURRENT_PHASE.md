@@ -1,100 +1,72 @@
-# Current Phase — Feedback / Improvement Loop Plan (BUSINESS-DOCS-C)
+# Current Phase — Supabase Authentication (AUTH-A)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Pricing Expansion + Roadmap Docs (BUSINESS-DOCS-B, 2026-05-20) — complete
+## Previous phase: Feedback / Improvement Loop Plan (BUSINESS-DOCS-C, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-BUSINESS-DOCS-C adds the feedback system design to the documentation suite.
-
-Goal: Document a lightweight post-generation creator feedback loop so early users can tell us which outputs are useful, what's wrong, and what to build next. Nothing implemented — design and planning only.
+AUTH-A adds Supabase magic link authentication. Generation and landing page remain public — no auth gate on usage yet. CREDITS-A will enforce usage server-side.
 
 ---
 
 ## What Changed
 
-### Created: `docs/feedback/` folder (3 new files)
+### New files
 
-**`docs/feedback/README.md`**
-- Folder overview: purpose, design principles, implementation sequence
-- Links to FEEDBACK_SURVEY_PLAN.md and IMPROVEMENT_LOOP.md
-- Cross-links to roadmap docs
+| File | Purpose |
+|------|---------|
+| `app/lib/auth/supabase-client.ts` | `createBrowserClient` for `"use client"` components |
+| `app/lib/auth/supabase-server.ts` | Async `createServerClient` with cookie store for server components / route handlers |
+| `app/auth/callback/route.ts` | Magic link code exchange → session cookies → redirect |
+| `app/components/auth/AuthButton.tsx` | Sign in link / email + Sign out button |
+| `app/login/page.tsx` | Magic link form with premium Virnix aesthetic |
+| `docs/auth/README.md` | Setup notes, env vars, dashboard config, flow walkthrough, security notes |
 
-**`docs/feedback/FEEDBACK_SURVEY_PLAN.md`**
-- 5-question survey design (full questions, options, purpose of each)
-- Survey placement rules (post-generation, non-blocking, skippable)
-- Future implementation architecture:
-  - `FeedbackWidget.tsx` component
-  - `app/lib/feedback/types.ts` — `FeedbackAnswer`, `FeedbackSubmission`
-  - `app/lib/feedback/options.ts` — typed question/options registry
-  - `app/api/feedback/route.ts` — server-side validation, Supabase write
-  - `feedback_responses` DB table sketch
-- Implementation rules (server-side validation, anonymous pre-auth, no secrets, free text limit)
-- Copy guidelines (creator-native language, no NPS, no corporate survey filler)
+### Modified files
 
-**`docs/feedback/IMPROVEMENT_LOOP.md`**
-- Full feedback → decision process (collect → tag → review → pattern → action)
-- 12-category tag system (output-quality, platform-quality, missing-feature, creator-archetype, energy-direction, etc.)
-- Review cadence by user volume (immediate → weekly → biweekly)
-- Pattern detection rules (3 = signal, 5 = priority)
-- Priority framework (P0/P1/P2/Candidate)
-- What feedback can vs. cannot change (anti-goals are not overridable)
-- Connection to public roadmap
-
-### Updated: `docs/roadmap/README.md`
-- Feedback folder reference added to Related docs
-- v0.1.0 shipped list updated (BUSINESS-DOCS-B/C)
-
-### Updated: `docs/roadmap/FEATURE_ROADMAP.md`
-- v0.1.x patches: BUSINESS-DOCS-C added
-- v0.3.x: feedback widget + DB storage added as Planned
-- v0.4.x: feedback-informed improvements added as Candidate
-- v0.6.x: Studio/Agency feedback categories added as Future
-- v1.0.0: "User feedback loop" upgraded from Candidate to Planned
-
-### Updated: `docs/roadmap/RELEASE_PLAN.md`
-- BUSINESS-DOCS-C (35) added to v0.1.0 phases
-- v0.3.0 description updated with feedback widget
-
-### Updated: `docs/BUSINESS_DIRECTION.md`
-- Header updated to BUSINESS-DOCS-C, Phases 1–35, feedback folder reference
-- New section: Feedback Loop (5-question survey, purpose, planned version)
-
-### Updated: `docs/BUSINESS_PLAN_CURRENT.md`
-- Header updated to BUSINESS-DOCS-C
-- New Section 9: Feedback-Driven Roadmap (full process, signal → decision table, what feedback can/cannot change)
-- Old Section 9 → 10, old Section 10 → 11
+| File | Change |
+|------|--------|
+| `app/page.tsx` | `AuthButton` added to top bar via `dynamic(..., { ssr: false })`; top bar flex row with ThemeToggle |
+| `.env.example` | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` added; redirect URL docs |
+| `docs/CURRENT_PHASE.md` | This file |
+| `docs/PHASE_HISTORY.md` | Phase 36 appended |
+| `docs/roadmap/FEATURE_ROADMAP.md` | Auth rows marked ✅ Shipped |
+| `docs/roadmap/RELEASE_PLAN.md` | AUTH-A (36) added to v0.1.0 phases |
 
 ---
 
-## What Was NOT Changed
+## What Was NOT Implemented
 
-- No app runtime code touched
-- No UI components modified
-- No prompts or AI logic touched
-- No Supabase / Stripe / auth work done
-- `docs/PROJECT_BRAIN.md` not rewritten
-- `VIRNIX.docx` not modified (binary format)
+- No credit check or deduction (CREDITS-A)
+- No Pro gating (BILLING-A)
+- No generation history (v0.4.x)
+- No feedback storage (v0.3.x)
+- No middleware for automatic token refresh (CREDITS-A)
+- No auth gate on generation or landing page
 
 ---
 
 ## Validation
 
-- `git status`: only docs and feedback folder changed ✅
-- No build required (docs only)
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- `dynamic(..., { ssr: false })` fix applied for SSR prerender compatibility
 
 ---
 
 ## Next Recommended Step
 
-**AUTH-A — Supabase authentication**
+**CREDITS-A — Server-side credit check and deduction**
 
-All planning/documentation work complete (product quality, pricing, business plan, roadmap, versioning, feedback system).
-
-The next required implementation step is auth. Auth is the prerequisite for credits, billing, and feedback storage.
+Auth is the prerequisite. Now implement:
+1. Server-side session read in `/api/generate`
+2. Credit balance check before AI call
+3. Atomic deduction
+4. Free tier trial credit allocation on first sign-in
+5. Middleware for session refresh on all routes

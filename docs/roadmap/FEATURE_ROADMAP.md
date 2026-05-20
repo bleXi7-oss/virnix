@@ -62,9 +62,9 @@
 
 | Feature | Phase | Status |
 |---------|-------|--------|
-| Supabase authentication | AUTH-A | 🔨 Next |
-| User identity (user_id in DB) | AUTH-A | 🔨 Next |
-| Session management | AUTH-A | 🔨 Next |
+| Supabase authentication | AUTH-A | ✅ Shipped |
+| User identity (user_id in DB) | AUTH-A | ✅ Shipped |
+| Session management | AUTH-A | ✅ Shipped |
 | Credit balance per user | CREDITS-A | 🔨 Next |
 | Server-side credit calculation | CREDITS-A | 🔨 Next |
 | Credit check before AI call (reject 402 if insufficient) | CREDITS-A | 🔨 Next |
@@ -167,7 +167,7 @@
 
 | Requirement | Status |
 |-------------|--------|
-| Stable auth (Supabase, session management) | ⏳ Blocked on v0.2.x |
+| Stable auth (Supabase, session management) | ✅ Shipped (AUTH-A) |
 | Stable credits (check/deduct/allocate cycle tested) | ⏳ Blocked on v0.2.x |
 | Stable billing (Stripe webhooks validated) | ⏳ Blocked on v0.3.x |
 | Reliable generation flow (timeout, retry, error handling) | ✅ Shipped (Phase 2) |

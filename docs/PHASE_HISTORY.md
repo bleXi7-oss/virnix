@@ -1324,3 +1324,78 @@ Documentation-only phase. No production code changed.
 
 ### Next: AUTH-A — Supabase authentication
 All planning phases complete. The full documentation suite (business plan, pricing, roadmap, versioning, feedback) is in place. AUTH-A is the first implementation gate — prerequisite for credits, billing, and feedback storage.
+
+---
+
+## Phase 36 — Supabase Authentication (AUTH-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Built
+
+**New: `app/lib/auth/supabase-client.ts`**
+- `createBrowserClient` wrapper for use in `"use client"` components
+- Reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+**New: `app/lib/auth/supabase-server.ts`**
+- Async `createServerClient` for Server Components and Route Handlers
+- Cookie store wired via `next/headers` `cookies()` (Next.js App Router pattern)
+- `setAll` silently catches in Server Components where cookie writes are middleware-only
+
+**New: `app/auth/callback/route.ts`**
+- GET handler: exchanges `?code=` for session via `exchangeCodeForSession()`
+- Sets session cookies via server Supabase client
+- Redirects to `next` param or `/` on success; redirects to `/?auth_error=true` on failure
+
+**New: `app/components/auth/AuthButton.tsx`**
+- Client component: `Sign in` link when logged out, email + `Sign out` button when logged in
+- `useMemo(() => createClient(), [])` pattern prevents client re-creation on render
+- `onAuthStateChange` subscription for reactive state; cleaned up in effect teardown
+
+**New: `app/login/page.tsx`**
+- Magic link form: idle / loading / sent / error states
+- Full Virnix premium aesthetic: glass card, chrome border glow, banner.png internal atmosphere, matching input/button styles
+- "sent" state shows email confirmation with "Use a different email" reset
+- `← Back to Virnix` footer link
+
+**Updated: `app/page.tsx`**
+- `AuthButton` imported via `dynamic(..., { ssr: false })` — prevents SSR prerender calling `createBrowserClient` without env vars
+- Top bar right slot: `<div className="absolute right-0">` → `<div className="absolute right-0 flex items-center gap-2">` with `<AuthButton />` before `<ThemeToggle />`
+
+**Updated: `.env.example`**
+- `NEXT_PUBLIC_SUPABASE_URL=` and `NEXT_PUBLIC_SUPABASE_ANON_KEY=` added
+- Redirect URL docs: `http://localhost:3000/auth/callback` + `https://virnix.com/auth/callback`
+- `SUPABASE_SERVICE_ROLE_KEY` commented out with client-exposure warning
+
+**Created: `docs/auth/README.md`**
+- Setup notes: env vars, Supabase dashboard config (redirect URLs), flow walkthrough, file structure, security notes, what AUTH-A does NOT include, CREDITS-A next step
+
+### Auth Flow
+
+1. User visits `/login`, enters email
+2. `signInWithOtp({ email, emailRedirectTo: origin + '/auth/callback' })` — Supabase sends magic link email
+3. User clicks link → `/auth/callback?code=...` → `exchangeCodeForSession(code)` → session cookies set
+4. Redirect to `/` — `AuthButton` shows email + Sign out
+
+### Build Fix Applied
+
+Initial build failed: `AuthButton` was imported as a static import, causing `createBrowserClient` to be called during SSR prerendering when Supabase env vars are not set in the build environment. Fixed by switching to `dynamic(() => import("./components/auth/AuthButton"), { ssr: false })` — auth state is inherently client-only and cannot be known at prerender time.
+
+### What Was NOT Implemented
+
+- No credit check or deduction (CREDITS-A)
+- No Pro gating (BILLING-A)
+- No generation history (v0.4.x)
+- No feedback storage (v0.3.x)
+- No middleware for automatic token refresh (CREDITS-A)
+- No auth gate on generation or landing page — usage remains public
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- Auth flow: ✅ implemented — requires Supabase project + env vars to test end-to-end
+- Landing page regression: ✅ none
+- Generation regression: ✅ none — no AI/prompt/credit code touched
+
+### Next: CREDITS-A
+Server-side credit check in `/api/generate`, free tier allocation, atomic deduction, middleware for session refresh.

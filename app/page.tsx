@@ -14,6 +14,8 @@ import DebugPanel from "./components/DebugPanel";
 import ClipGuide from "./components/generation/ClipGuide";
 import TranscriptQualityCard from "./components/generation/TranscriptQualityCard";
 import CreatorEnergySelector from "./components/CreatorEnergySelector";
+import dynamic from "next/dynamic";
+const AuthButton = dynamic(() => import("./components/auth/AuthButton"), { ssr: false });
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
 import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
@@ -211,7 +213,8 @@ export default function Home() {
               VIRNIX
             </p>
           </div>
-          <div className="absolute right-0">
+          <div className="absolute right-0 flex items-center gap-2">
+            <AuthButton />
             <ThemeToggle />
           </div>
         </div>

@@ -35,6 +35,7 @@ This is a coherent, demonstrable product. Hence v0.1.0, not v0.0.x.
 | BUSINESS-DOCS-A (33) | Business docs consolidation |
 | BUSINESS-DOCS-B (34) | Roadmap docs, pricing tier expansion |
 | BUSINESS-DOCS-C (35) | Feedback system design |
+| AUTH-A (36) | Supabase magic link auth, AuthButton, login page |
 
 ---
 
