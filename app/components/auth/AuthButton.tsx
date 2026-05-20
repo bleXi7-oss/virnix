@@ -8,9 +8,12 @@ import { createClient } from "../../lib/auth/supabase-client";
 export default function AuthButton() {
   const supabase = useMemo(() => createClient(), []);
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Start loading only if Supabase is configured — otherwise skip auth entirely
+  const [loading, setLoading] = useState(supabase !== null);
 
   useEffect(() => {
+    if (!supabase) return;
+
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
       setLoading(false);
@@ -26,7 +29,8 @@ export default function AuthButton() {
     return () => subscription.unsubscribe();
   }, [supabase]);
 
-  if (loading) return null;
+  // Supabase not configured or auth check in progress — render nothing
+  if (loading || !supabase) return null;
 
   if (!user) {
     return (

@@ -27,6 +27,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 Get both from: Supabase dashboard → Project → Settings → API
 
+**If these are missing or empty:**
+- `AuthButton` renders nothing (no crash, no error screen) — the top bar shows only the theme toggle
+- `/login` form shows "Authentication is not configured" when submitted
+- The landing page and generation flow are completely unaffected
+- The app will never show the error boundary screen because of missing Supabase env vars
+
+**On Vercel:** set both vars in Project → Settings → Environment Variables for Production, Preview, and Development. Without them the app works but auth is hidden.
+
 ---
 
 ## Required Supabase dashboard configuration

@@ -21,6 +21,11 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     const supabase = createClient();
+    if (!supabase) {
+      setState("error");
+      setErrorMsg("Authentication is not configured. Please contact support.");
+      return;
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email: trimmed,
       options: {
