@@ -1,4 +1,5 @@
 import type { GenerateRequest, GenerateResult } from "../types/generation";
+import type { CreatorEnergyId } from "../creator-energy/types";
 import type { AIDiagnostics } from "./diagnostics";
 import { SYSTEM_PROMPT, ADVANCED_SYSTEM_PROMPT, buildPrompt, buildAdvancedPrompt } from "../prompts";
 import { getTranscriptFull } from "./transcript";
@@ -9,6 +10,7 @@ import { getProvider } from "./provider";
 import { estimateTokens, estimateCost, selectBestSegment } from "./chunker";
 import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
+import { formatEnergyContext } from "../creator-energy/prompt-context";
 import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt, evaluateTranscriptQuality } from "../timeline";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
@@ -51,13 +53,14 @@ export async function generate(req: GenerateRequest): Promise<GenerateResult> {
     console.log(`[virnix] timeline: ${timelineMoments.length} moments detected`);
   }
 
-  return realGenerate(truncated, startMs, timelineMoments);
+  return realGenerate(truncated, startMs, timelineMoments, req.energyIds ?? []);
 }
 
 async function realGenerate(
   transcript: string,
   startMs: number,
-  timelineMoments: GenerateResult["timelineMoments"] = []
+  timelineMoments: GenerateResult["timelineMoments"] = [],
+  energyIds: CreatorEnergyId[] = []
 ): Promise<GenerateResult> {
   const useAdvanced = isEnabled("advanced_outputs");
   const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
@@ -69,9 +72,15 @@ async function realGenerate(
   const injectedMoments = timelineContext ? selectMomentsForPrompt(timelineMoments ?? []) : [];
   const timelineInjected = injectedMoments.length > 0;
 
+  // Build energy context: empty string when no energies selected — prompts unchanged.
+  const energyContext = formatEnergyContext(energyIds);
+  if (energyIds.length > 0) {
+    console.log(`[virnix] creator energy: ${energyIds.join(", ")}`);
+  }
+
   const userPrompt = useAdvanced
-    ? buildAdvancedPrompt(transcript, timelineContext)
-    : buildPrompt(transcript, timelineContext);
+    ? buildAdvancedPrompt(transcript, timelineContext, energyContext)
+    : buildPrompt(transcript, timelineContext, energyContext);
 
   const provider = getProvider();
 

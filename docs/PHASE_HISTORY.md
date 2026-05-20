@@ -1010,3 +1010,43 @@ Fixed P0 content domain-lock and P1-1 YouTube title contradiction identified in 
 - Lint: ✅ clean
 - opener-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 creator-specific openers, 0 near-duplicates)
 - YouTube formula vs. rules: ✅ consistent (no contradiction)
+
+---
+
+## Phase 28 — Creator Energy Selection (CE-A, 2026-05-20)
+
+**Commit:** (see git log for hash)
+
+### What Was Done
+
+Added creator-native energy/angle steering before generation.
+
+**New module: `app/lib/creator-energy/`**
+- `types.ts` — `CreatorEnergyId` union + `CreatorEnergy` interface
+- `options.ts` — 6 energy definitions (Tactical, Contrarian, Analytical, Reflective, Relatable, Harsh Truth)
+  with per-energy `promptDirective` strings + `isValidEnergyId()` allowlist guard
+- `prompt-context.ts` — `formatEnergyContext(energyIds)` → "" when empty, structured block when set
+
+**New component: `app/components/CreatorEnergySelector.tsx`**
+- Pill-style toggles matching ExamplesRow aesthetic (not a settings panel)
+- "Balanced" pill = default clear state (active when nothing selected)
+- Multiselect — one or more energies toggleable independently
+- Visible in HeroCard at idle phase only; hidden during loading/done
+
+**Wiring (4 modified files):**
+- `app/lib/types/generation.ts` — `energyIds?: CreatorEnergyId[]` added to `GenerateRequest`
+- `app/api/generate/route.ts` — server-side allowlist validation; unknown values silently dropped
+- `app/lib/ai/generate.ts` — energyIds → `formatEnergyContext` → injected into prompts
+- `app/lib/prompts/index.ts` — `buildPrompt/buildAdvancedPrompt` gain optional `energyContext` param
+- `app/page.tsx` — state, `runGeneration(url, energies)`, HeroCard integration
+
+**Behavior:**
+- Empty selection (Balanced) = no-op; prompt identical to pre-CE-A
+- 1–6 energies selected = directives + grounding rule injected into GENERATION PROFILE
+- All platforms receive the energy steering (not TikTok-only)
+- Grounding rule prevents hallucinated emotions/facts to satisfy energy choice
+
+### Validation Status at End of Phase
+- Build: ✅ clean (TypeScript, Turbopack)
+- Lint: ✅ clean
+- opener-audit.ts: ✅ ALL CHECKS PASS (0 failures)

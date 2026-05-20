@@ -1,58 +1,104 @@
-# Current Phase — TikTok Domain Unlock + Closing Pool (QB-A)
+# Current Phase — Creator Energy Selection (CE-A)
 
 Phase started: 2026-05-20
 Status: complete and pushed
 
 ---
 
-## Previous phase: Hero Card Internal Atmosphere (UI-POLISH-K, 2026-05-20) — complete
+## Previous phase: TikTok Domain Unlock + Closing Pool (QB-A, 2026-05-20) — complete
 
 ---
 
 ## Context
 
-QA-A identified two P0 issues blocking Creator Energy Selection:
-1. ~40–46% of TikTok openers were creator-growth-specific (creator, followers, algorithm, 100k),
-   producing embarrassing output on medical, historical, educational, or narrative transcripts.
-2. The hardcoded TikTok ending "Here's the exact system..." forced a "system" framing onto
-   every transcript, causing hallucinated frameworks for confessional, philosophical, or story content.
+Following QB-A (domain-agnostic opener/closing pools), the foundation was clean enough to add
+Creator Energy Selection — a creator-native control for steering the output angle before generation.
 
-QA-A also identified a P1-1 contradiction in YouTube titles — "Nobody Talks About" appeared in
-both YOUTUBE_TITLE_FORMULAS (to use it) and YOUTUBE_TITLE_RULES (to avoid it).
+This feature lets the creator choose what kind of energy/angle they want in the outputs.
+It is explicitly NOT a settings panel — it is a creative direction control.
+Empty selection = Virnix picks automatically (balanced/default). No generation is blocked.
 
 ---
 
 ## What Changed
 
-### Updated: `app/lib/prompts/platforms/tiktok.ts`
+### New: `app/lib/creator-energy/types.ts`
+- `CreatorEnergyId` union type (tactical | contrarian | analytical | reflective | relatable | harsh-truth)
+- `CreatorEnergy` interface (id, label, tagline, promptDirective)
 
-**Opener pool (26 → 26):**
-- Removed 9 creator-specific openers (containing: creator, creators, followers, algorithm, 100k, views, best-performing post)
-- Replaced with 9 domain-agnostic alternatives
-- All 26 openers now pass creator-domain-specific detection check (0% ratio, down from ~40–46%)
-- Near-duplicate pair resolved
+### New: `app/lib/creator-energy/options.ts`
+- `CREATOR_ENERGIES` — 6 energy definitions with short labels, tooltips, and prompt directives
+- `VALID_ENERGY_IDS` set for allowlist validation
+- `isValidEnergyId(id)` type guard for server-side safety
 
-**New: `TIKTOK_CLOSING_LINES` pool (8 entries):**
-- "Here is the useful way to think about it:"
-- "Here is the part that changes the whole frame:"
-- "Here is the practical takeaway:"
-- "Here is the mistake to avoid:"
-- "Here is the pattern underneath it:"
-- "Here is what this reveals:"
-- "Here is the question worth asking:"
-- "Here is the moment that matters:"
+### New: `app/lib/creator-energy/prompt-context.ts`
+- `formatEnergyContext(energyIds)` — returns "" when empty (no-op), or a structured block with
+  selected energy labels, directives, and a grounding rule injected into the GENERATION PROFILE
+
+### New: `app/components/CreatorEnergySelector.tsx`
+- Pill-style toggle UI matching ExamplesRow pill aesthetic (premium, not settings-panel)
+- "Balanced" pill = default/clear (active when no specific energy selected)
+- Individual energy pills are multiselect toggles
+- Selecting "Balanced" clears all others; selecting any energy deactivates "Balanced"
+- `title` attributes show taglines on hover (no visual clutter)
+- Light + dark mode via existing zinc palette
+
+### Updated: `app/lib/types/generation.ts`
+- Added `energyIds?: CreatorEnergyId[]` to `GenerateRequest`
+
+### Updated: `app/api/generate/route.ts`
+- Changed body type to `Record<string, unknown>` (proper JSON parsing)
+- Validates energyIds against VALID_ENERGY_IDS allowlist (unknown values silently dropped)
+- Passes `{ youtubeUrl, energyIds }` to `generate()`
+
+### Updated: `app/lib/ai/generate.ts`
+- Imports `CreatorEnergyId` and `formatEnergyContext`
+- `realGenerate()` gains `energyIds: CreatorEnergyId[] = []` parameter
+- Builds `energyContext = formatEnergyContext(energyIds)` — empty string when no energies
+- Logs `[virnix] creator energy: tactical, contrarian` when energies are selected
+- Passes `energyContext` as third arg to `buildPrompt()` / `buildAdvancedPrompt()`
 
 ### Updated: `app/lib/prompts/index.ts`
+- `buildPrompt(transcript, timelineContext, energyContext = "")` — optional third param
+- `buildAdvancedPrompt(transcript, timelineContext, energyContext = "")` — same
+- `energyContext` appended after timelineContext in GENERATION PROFILE block when non-empty
 
-- Import `TIKTOK_CLOSING_LINES` alongside `TIKTOK_OPENING_LINES`
-- Both `buildPrompt` and `buildAdvancedPrompt`: add `tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES)`
-- Replaced `End with "Here's the exact system..."` with `End with "${tiktokClosing}"` in both builders
+### Updated: `app/page.tsx`
+- Imports `CreatorEnergySelector` and `CreatorEnergyId`
+- `useState<CreatorEnergyId[]>([])` for selected energies
+- `runGeneration(targetUrl, energies)` — energies passed explicitly (no stale closure)
+- `handleGenerate`, `handleExampleSelect`, `handlePaste` all pass `selectedEnergies`
+- `HeroCard` receives `selectedEnergies` + `onEnergyChange` props
+- `<CreatorEnergySelector>` rendered inside HeroCard at `phase === "idle"` only
 
-### Updated: `app/lib/prompts/platforms/youtube.ts`
+---
 
-- Replaced `"Curiosity gap: 'The [Thing] Nobody Talks About'"` in `YOUTUBE_TITLE_FORMULAS`
-  with `"Curiosity gap: 'The Hidden [Thing] Behind [Common Outcome]'"`
-- Eliminates internal contradiction with `YOUTUBE_TITLE_RULES` rule banning "Nobody Talks About"
+## Prompt Injection Format (when energies selected)
+
+```
+Creator energy: Tactical, Contrarian
+Directives:
+- Make outputs save-worthy and practical. Prioritize clear steps, concrete takeaways...
+- Lead with the assumption most people have wrong. Find the sharpest reframe...
+Grounding rule: Use selected energies as creative steering. If an energy does not fit
+the transcript, use the closest grounded version — never invent facts or emotions.
+```
+
+When empty: `formatEnergyContext([])` returns `""` — prompt is identical to pre-CE-A behavior.
+
+---
+
+## Energy Options
+
+| Label | Tagline | Direction |
+|-------|---------|-----------|
+| Balanced | (default) | Automatic — Virnix picks the angle |
+| Tactical | Steps · Tips · Takeaways | Save-worthy, actionable, clear steps |
+| Contrarian | Challenge · Reframe · Flip | Assumption-breaking, sharp position |
+| Analytical | Mechanism · Pattern · Why | Cause-effect, system, mechanism-first |
+| Reflective | Meaning · Identity · Worldview | Deeper meaning, identity shift |
+| Relatable | Story · Emotion · Human | Human tension, confession, story beats |
+| Harsh Truth | Direct · Uncomfortable · Grounded | Plain uncomfortable truth, no hedging |
 
 ---
 
@@ -60,9 +106,7 @@ both YOUTUBE_TITLE_FORMULAS (to use it) and YOUTUBE_TITLE_RULES (to avoid it).
 
 - Build: ✅ clean (TypeScript, Turbopack)
 - Lint: ✅ clean
-- opener-audit.ts: ✅ ALL CHECKS PASS
-  - Openers: 26
-  - Creator-domain risk: 0/26 (0%)
-  - Near-duplicates: 0
-  - YouTube formula/rules contradiction: resolved
-  - Test failures: 0
+- opener-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 creator-specific openers)
+- Mock flow: ✅ unaffected (bypasses generate() before energyIds are used)
+- Real AI flow: ✅ energy context correctly injected when energies selected
+- Empty selection: ✅ no-op (prompt identical to balanced/default mode)

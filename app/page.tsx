@@ -13,9 +13,11 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import DebugPanel from "./components/DebugPanel";
 import ClipGuide from "./components/generation/ClipGuide";
 import TranscriptQualityCard from "./components/generation/TranscriptQualityCard";
+import CreatorEnergySelector from "./components/CreatorEnergySelector";
 import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
 import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
+import type { CreatorEnergyId } from "./lib/creator-energy/types";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -42,6 +44,7 @@ export default function Home() {
   const [diagnostics, setDiagnostics] = useState<AIDiagnostics | null>(null);
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
+  const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -54,7 +57,7 @@ export default function Home() {
     }
   }, []);
 
-  const runGeneration = useCallback(async (targetUrl: string) => {
+  const runGeneration = useCallback(async (targetUrl: string, energies: CreatorEnergyId[]) => {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -78,7 +81,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ youtubeUrl: targetUrl }),
+        body: JSON.stringify({ youtubeUrl: targetUrl, energyIds: energies }),
       });
 
       if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -118,22 +121,22 @@ export default function Home() {
       return;
     }
     track("generate_clicked", { url: trimmedUrl });
-    await runGeneration(trimmedUrl);
-  }, [phase, url, runGeneration]);
+    await runGeneration(trimmedUrl, selectedEnergies);
+  }, [phase, url, runGeneration, selectedEnergies]);
 
   function handleExampleSelect(exampleUrl: string, exampleLabel: string) {
     if (phase === "loading") return;
     track("example_clicked", { label: exampleLabel, url: exampleUrl });
     setUrl(exampleUrl);
     setError(null);
-    void runGeneration(exampleUrl);
+    void runGeneration(exampleUrl, selectedEnergies);
   }
 
   function handlePaste(pasted: string) {
     if (phase === "loading") return;
     setUrl(pasted);
     setError(null);
-    setTimeout(() => void runGeneration(pasted), 200);
+    setTimeout(() => void runGeneration(pasted, selectedEnergies), 200);
   }
 
   const handleReset = useCallback(() => {
@@ -222,6 +225,8 @@ export default function Home() {
           onPaste={handlePaste}
           onClearUrl={handleClearUrl}
           error={phase === "idle" ? error : null}
+          selectedEnergies={selectedEnergies}
+          onEnergyChange={setSelectedEnergies}
         />
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
@@ -260,6 +265,8 @@ function HeroCard({
   onPaste,
   onClearUrl,
   error,
+  selectedEnergies,
+  onEnergyChange,
 }: {
   phase: Phase;
   url: string;
@@ -269,6 +276,8 @@ function HeroCard({
   onPaste: (pasted: string) => void;
   onClearUrl: () => void;
   error: string | null;
+  selectedEnergies: CreatorEnergyId[];
+  onEnergyChange: (ids: CreatorEnergyId[]) => void;
 }) {
   const trimmedUrl = url.trim();
   const isValidUrl = trimmedUrl.length > 0 && isValidYouTubeUrl(trimmedUrl);
@@ -379,6 +388,10 @@ function HeroCard({
         </div>
 
         {phase === "idle" && <ExamplesRow onSelect={onExampleSelect} currentUrl={url} />}
+
+        {phase === "idle" && (
+          <CreatorEnergySelector selectedIds={selectedEnergies} onChange={onEnergyChange} />
+        )}
 
         <p className="mt-4 text-[12px]">{hintText}</p>
         </div>

@@ -78,7 +78,7 @@ No SEO filler: 'In conclusion', 'It goes without saying'.`;
 // Variation is re-picked on every call — same transcript produces a different emotional
 // angle each time, making repeated generations feel genuinely different.
 
-export function buildPrompt(transcript: string, timelineContext = ""): string {
+export function buildPrompt(transcript: string, timelineContext = "", energyContext = ""): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
   const tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES);
@@ -91,7 +91,7 @@ ${transcript}
 
 ━━━ GENERATION PROFILE ━━━
 ${formatVariationBlock(variation)}
-${formatPromptContext(context)}${timelineContext ? `\n\n${timelineContext}` : ""}
+${formatPromptContext(context)}${timelineContext ? `\n\n${timelineContext}` : ""}${energyContext ? `\n\n${energyContext}` : ""}
 
 Apply this angle to all 5 platforms. Don't name the angle. Don't explain it. Embody it.
 
@@ -136,7 +136,7 @@ Return only the JSON object, nothing else.`;
 // ─── Advanced user prompt (8 outputs) ────────────────────────────────────────
 // Extends buildPrompt with 3 additional platform sections.
 
-export function buildAdvancedPrompt(transcript: string, timelineContext = ""): string {
+export function buildAdvancedPrompt(transcript: string, timelineContext = "", energyContext = ""): string {
   const variation = pickVariation();
   const tiktokOpener = pickRandom(TIKTOK_OPENING_LINES);
   const tiktokClosing = pickRandom(TIKTOK_CLOSING_LINES);
@@ -149,7 +149,7 @@ ${transcript}
 
 ━━━ GENERATION PROFILE ━━━
 ${formatVariationBlock(variation)}
-${formatPromptContext(context)}${timelineContext ? `\n\n${timelineContext}` : ""}
+${formatPromptContext(context)}${timelineContext ? `\n\n${timelineContext}` : ""}${energyContext ? `\n\n${energyContext}` : ""}
 
 Apply this angle to all platforms. Don't name the angle. Don't explain it. Embody it.
 

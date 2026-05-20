@@ -2,9 +2,11 @@ import type { OutputCardData } from "../outputCards";
 import type { AIDiagnostics } from "../ai/diagnostics";
 import type { TimelineMoment } from "../timeline/types";
 import type { TranscriptQualityReport } from "../timeline/transcript-quality";
+import type { CreatorEnergyId } from "../creator-energy/types";
 
 export interface GenerateRequest {
   youtubeUrl: string;
+  energyIds?: CreatorEnergyId[];
 }
 
 export interface GenerateResult {
