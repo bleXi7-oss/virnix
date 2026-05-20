@@ -33,6 +33,7 @@ export default function LoginPage() {
         host: supabaseUrl ? new URL(supabaseUrl).hostname : "none",
         keyPresent: !!(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
         keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length ?? 0,
+        redirectOrigin: window.location.origin,
       });
     }
 

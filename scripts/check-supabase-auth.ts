@@ -101,10 +101,12 @@ const req = https.request(
       console.log("  HTTP status:", res.statusCode);
       console.log("  Response:", body.slice(0, 200));
       if (res.statusCode && res.statusCode >= 200 && res.statusCode < 400) {
-        console.log("\nRESULT: Supabase auth endpoint reachable ✅");
+        console.log("\nRESULT: Supabase DNS reachable ✅");
+        console.log("RESULT: Supabase auth endpoint reachable ✅");
         process.exit(0);
       } else {
-        console.log("\nRESULT: Supabase returned non-success status ⚠️");
+        console.log("\nRESULT: Supabase DNS reachable ✅");
+        console.log("RESULT: Supabase auth endpoint reachable ❌ (non-success HTTP status)");
         process.exit(1);
       }
     });
@@ -113,7 +115,8 @@ const req = https.request(
 
 req.on("timeout", () => {
   console.log("  ERROR: Request timed out after 8s");
-  console.log("\nRESULT: Supabase not reachable (timeout) ❌");
+  console.log("\nRESULT: Supabase DNS reachable ❓ (unknown — request timed out)");
+  console.log("RESULT: Supabase auth endpoint reachable ❌");
   console.log("ACTION: Check if project is paused at https://app.supabase.com");
   req.destroy();
   process.exit(1);
@@ -122,15 +125,19 @@ req.on("timeout", () => {
 req.on("error", (err: NodeJS.ErrnoException) => {
   console.log("  ERROR:", err.message);
   if (err.code === "ENOTFOUND" || (err.message && err.message.includes("getaddrinfo"))) {
-    console.log("  CAUSE: DNS resolution failed for", parsed.hostname);
-    console.log("  LIKELY: Project paused, wrong project ID, or local DNS/VPN issue");
+    console.log("  Project subdomain does not resolve. Check if project is paused/restoring or if project URL/ref is wrong.");
     console.log("  ACTION:");
     console.log("    1. Log in at https://app.supabase.com");
     console.log("    2. Check the project exists and is not paused");
-    console.log("    3. Verify NEXT_PUBLIC_SUPABASE_URL matches the project URL exactly");
-    console.log("    4. If paused, click 'Restore project' in the Supabase dashboard");
+    console.log("    3. Copy the Project URL directly from Settings → API — paste into .env.local and Vercel env vars");
+    console.log("    4. If paused, click 'Restore project' (takes ~30–60s)");
+    console.log("    5. After env var update on Vercel, redeploy — NEXT_PUBLIC_* vars are baked at build time");
+    console.log("\nRESULT: Supabase DNS reachable ❌");
+    console.log("RESULT: Supabase auth endpoint reachable ❌");
+  } else {
+    console.log("\nRESULT: Supabase DNS reachable ❓");
+    console.log("RESULT: Supabase auth endpoint reachable ❌");
   }
-  console.log("\nRESULT: Supabase not reachable ❌");
   process.exit(1);
 });
 

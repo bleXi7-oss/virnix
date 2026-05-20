@@ -1,6 +1,6 @@
-# Virnix Auth — Setup Notes (AUTH-A / AUTH-A-FIX-2)
+# Virnix Auth — Setup Notes (AUTH-A / AUTH-A-FIX-3)
 
-**Phase:** AUTH-A-FIX-2  
+**Phase:** AUTH-A-FIX-3  
 **Date:** 2026-05-20  
 **Package:** `@supabase/ssr` + `@supabase/supabase-js`
 
@@ -84,15 +84,57 @@ If the script reaches Supabase but the browser still fails:
 
 ---
 
+## Troubleshooting: Production ERR_NAME_NOT_RESOLVED
+
+If the **production** app fails with `net::ERR_NAME_NOT_RESOLVED` on the Supabase OTP request:
+
+### Step 1 — Confirm the request host in DevTools
+
+Open browser DevTools → Network tab → submit the login form → find the `otp` request.
+
+- Check the request URL: it will be `https://<project-id>.supabase.co/auth/v1/otp?...`
+- If `<project-id>` is wrong, the production Vercel env var has the wrong URL (or old deployment is serving stale bundle — see below)
+- If `<project-id>` is correct but DNS fails → Supabase project itself is the problem (paused, wrong ref, or still restoring)
+
+### Step 2 — NEXT_PUBLIC_* vars are baked at Vercel build time
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are inlined into the JavaScript bundle when Vercel builds the app. They are **not read at runtime** from environment variables.
+
+**Consequences:**
+- After changing either variable in Vercel Project → Settings → Environment Variables, you **must trigger a new deployment** before production picks up the new values.
+- A hard refresh in the browser is not enough — the browser is still serving the old bundle.
+- The fastest way to redeploy: push any commit to `main`, or use Vercel dashboard → Deployments → Redeploy.
+
+**How to verify the production bundle has the right URL:**
+1. Open the production site
+2. Open DevTools → Application tab → Sources (or Network)
+3. Trigger the login form and check the request host
+4. If still wrong: Vercel env var is missing or the redeploy hasn't propagated yet (wait ~60s after deploy finishes)
+
+### Step 3 — Verify the Supabase project URL in the dashboard
+
+After every Supabase project restore or recreation, copy the Project URL fresh from:
+
+**Supabase dashboard → Project → Settings → API → Project URL**
+
+Do not rely on a URL saved in a previous session — Supabase may issue a new project ref on restore or if the project is recreated.
+
+Update `.env.local` and Vercel env vars, then redeploy.
+
+---
+
 ## Required Supabase dashboard configuration
 
 ### Auth → URL Configuration → Redirect URLs
 
-Add both:
+Add all three:
 ```
 http://localhost:3000/auth/callback
-https://virnix.com/auth/callback
+https://virnix.pro/auth/callback
+https://www.virnix.pro/auth/callback
 ```
+
+**Important:** The production browser error showed `redirect_to=https://www.virnix.pro/auth/callback` (with www). Both www and non-www must be in the allowlist or magic links will fail with a redirect URL error after DNS is resolved.
 
 Without these, magic link emails will fail with a redirect URL error.
 
