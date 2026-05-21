@@ -1580,3 +1580,167 @@ Mode: basic=+0, advanced=+1. Creator Energy=+0.
 
 ### Next: BILLING-A
 Run SQL in Supabase, test end-to-end (sign in → generate → credits deducted → badge updates), evaluate billing provider (Paddle/Lemon Squeezy/Stripe), implement Pro subscription + webhooks.
+
+---
+
+## Phase 40 — Dark Mode Output Readability Polish (UI-POLISH-L, 2026-05-21)
+
+**Commit:** `3c32429`
+
+### What Was Done
+
+Targeted dark mode contrast fixes across all output/report components. No logic changes.
+
+**Modified: `app/components/generation/ClipMomentCard.tsx`**
+- Confidence label ("Good match", "Possible"): `dark:zinc-600` → `zinc-500`
+- Timestamp: `dark:zinc-500` → `zinc-400`
+- "Why it works" description: `dark:zinc-500` → `zinc-400`
+- Platform pills text: `dark:zinc-600` → `zinc-400`
+- Platform pills border: `dark:border-zinc-800` → `dark:border-zinc-700/60`
+- Source text preview quote: `dark:zinc-700` → `zinc-600`
+
+**Modified: `app/components/generation/ClipGuide.tsx`**
+- Section header "Strongest moments": `dark:zinc-600` → `zinc-500`
+- Footer "N moments detected": `dark:zinc-600` → `zinc-500`
+
+**Modified: `app/components/generation/TranscriptQualityCard.tsx`**
+- Section header: `dark:zinc-600` → `zinc-500`
+- Clipability sublabel: `dark:zinc-600` → `zinc-500`
+- Summary paragraph (most important body text): `dark:zinc-400` → `zinc-300`
+- "Strongest signals" label: `dark:zinc-600` → `zinc-500`
+- Weakness text: `dark:zinc-600` → `zinc-500`
+- "Best fit:" label: `dark:zinc-600` → `zinc-500`
+- Platform fit pills: `dark:zinc-500` → `zinc-400`
+
+**Modified: `app/components/OutputCard.tsx`**
+- Platform label (TIKTOK, TWITTER…): `dark:zinc-600` → `zinc-500`
+- Card body content: `dark:zinc-400` → `zinc-300`
+- Char count: `dark:zinc-700` → `zinc-500`
+
+### What Was NOT Changed
+- Light mode: no light-mode class touched
+- Credits logic, Supabase, auth, API routes: untouched
+- CreditBadge placement: inspected, acceptable as-is at time of this phase
+
+### Validation Status at End of Phase
+- Lint: ✅ clean
+- Build: ✅ clean
+
+---
+
+## Phase 41 — Output Language Selection (LANG-A, 2026-05-21)
+
+**Commit:** (see git log for hash)
+
+### What Was Built
+
+**New: `app/lib/languages/` module**
+- `types.ts` — `OutputLanguageId` union type (auto | en | sl | hr | sr-latn | bs | de | it | es | fr | pt), `OutputLanguage` interface
+- `options.ts` — `OUTPUT_LANGUAGES` array (11 options), `isValidLanguageId()` server-side allowlist guard, `getLanguageById()` lookup
+- `prompt-context.ts` — `formatLanguageContext(id)` — returns "" for "auto" (no-op), full native-language directive block for any explicit selection
+
+**New: `app/components/LanguageSelector.tsx`**
+- Pill-based selector matching exact style of `CreatorEnergySelector`
+- Label: "Write in" / default: Auto
+- Shown inside HeroCard when `phase === "idle"`, below CreatorEnergySelector
+
+**Modified: `app/lib/types/generation.ts`**
+- `GenerateRequest` extended with `outputLanguage?: OutputLanguageId`
+
+**Modified: `app/lib/prompts/index.ts`**
+- `buildPrompt(transcript, timelineContext, energyContext, languageContext)` — languageContext injected after energyContext in GENERATION PROFILE
+- `buildAdvancedPrompt(transcript, timelineContext, energyContext, languageContext)` — same
+
+**Modified: `app/lib/ai/generate.ts`**
+- Import `formatLanguageContext` from language module
+- `generate()` passes `req.outputLanguage ?? "auto"` to `realGenerate()`
+- `realGenerate()` accepts `outputLanguage: OutputLanguageId`, calls `formatLanguageContext()`, logs non-auto selection, injects into prompt
+
+**Modified: `app/api/generate/route.ts`**
+- Imports `isValidLanguageId`, `OutputLanguageId`
+- Validates `body.outputLanguage` against allowlist — unknown values fall back to "auto"
+- Passes validated `outputLanguage` to both real-AI and mock `generate()` calls
+
+**Modified: `app/page.tsx`**
+- `selectedLanguage` state (default: "auto")
+- `outputLanguage: selectedLanguage` included in fetch body
+- `LanguageSelector` rendered inside HeroCard when idle, below Direction controls
+- **CreditBadge repositioned**: moved from right controls cluster to `absolute left-0` — logo stays center, auth+theme stays right, credits badge now has its own left-side space with no logo collision
+
+**New: `docs/languages/README.md`** — language system documentation
+
+### Language Options (Phase LANG-A)
+
+| ID | Label | Notes |
+|----|-------|-------|
+| auto | Auto | Same as transcript — no prompt injection |
+| en | English | |
+| sl | Slovenian | Regional note injected |
+| hr | Croatian | No-mix regional note |
+| sr-latn | Serbian Latin | Latin only, no Cyrillic, no-mix note |
+| bs | Bosnian | No-mix regional note |
+| de | German | |
+| it | Italian | |
+| es | Spanish | |
+| fr | French | |
+| pt | Portuguese | |
+
+### Prompt Injection
+
+Language context injects after `energyContext` in the GENERATION PROFILE block:
+
+```
+Output language: {promptName}
+Write all outputs natively in {promptName}. Do not literally translate English viral hook formulas. Use natural creator and social media phrasing for that language and region.
+{nativeNote if present}
+Priority: Output language is mandatory and overrides all other stylistic instructions. Creator Energy is creative steering. Variation profile is secondary and must not override language.
+```
+
+For "auto": returns "", prompt unchanged.
+
+### Security
+
+- Server validates language against typed allowlist — arbitrary strings from client are ignored, coerced to "auto"
+- No new environment variables required
+- Language selection never increases credit cost (LANG-A)
+
+### Credits Impact
+
+Language selection = +0 credits in this phase. All existing credit rules unchanged.
+
+### Mock Mode
+
+Mock mode (`real_ai_generation=false`) passes `outputLanguage` through `generate()` but hits `getMockResult()` before any prompt is built — mock output is unaffected.
+
+### What Was NOT Changed
+
+- Credits logic, Supabase, auth, billing: untouched
+- Creator Energy behavior: untouched (language is a separate parallel parameter)
+- AI provider architecture: untouched
+- No external translation API — all native generation via Claude
+- No database persistence for language selection (ephemeral page state only)
+- No rate limiting changes
+
+### CreditBadge Placement Fix
+
+Before: CreditBadge lived inside the `absolute right-0` controls cluster, crowded between logo (center) and AuthButton.
+
+After: Three-section top bar — `absolute left-0` (CreditBadge) | centered (logo + wordmark) | `absolute right-0` (AuthButton + ThemeToggle). Clear visual separation, no collision with logo area.
+
+### Validation Status at End of Phase
+
+- Lint: ✅ clean
+- Build: ✅ clean
+- Mock mode: ✅ unaffected
+- Language allowlist: ✅ server-validated
+- Prompt injection: ✅ language context injects after energy context in GENERATION PROFILE
+- CreditBadge placement: ✅ left side, no logo collision
+
+### Next Recommended Step
+
+**BILLING-A** — billing provider evaluation (Paddle/Lemon Squeezy/Stripe + Stripe Tax), Pro subscription flow, webhook credit allocation/reset.
+
+Prerequisites:
+1. Run `docs/credits/SQL.md` in Supabase (if not yet done)
+2. Test end-to-end credits flow (sign in → generate → deduction → badge)
+3. Optionally test LANG-A with real AI: select Slovenian, generate from English podcast, verify native output

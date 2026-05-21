@@ -14,6 +14,7 @@ import DebugPanel from "./components/DebugPanel";
 import ClipGuide from "./components/generation/ClipGuide";
 import TranscriptQualityCard from "./components/generation/TranscriptQualityCard";
 import CreatorEnergySelector from "./components/CreatorEnergySelector";
+import LanguageSelector from "./components/LanguageSelector";
 import dynamic from "next/dynamic";
 const AuthButton = dynamic(() => import("./components/auth/AuthButton"), { ssr: false });
 const CreditBadge = dynamic(() => import("./components/credits/CreditBadge"), { ssr: false });
@@ -21,6 +22,7 @@ import type { AIDiagnostics } from "./lib/ai/diagnostics";
 import type { TimelineMoment } from "./lib/timeline/types";
 import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
 import type { CreatorEnergyId } from "./lib/creator-energy/types";
+import type { OutputLanguageId } from "./lib/languages/types";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -48,6 +50,7 @@ export default function Home() {
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
   const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("auto");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
@@ -85,7 +88,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ youtubeUrl: targetUrl, energyIds: energies }),
+        body: JSON.stringify({ youtubeUrl: targetUrl, energyIds: energies, outputLanguage: selectedLanguage }),
       });
 
       const json: GenerateResponse = await res.json().catch(() => {
@@ -111,7 +114,7 @@ export default function Home() {
       setPhase("error");
       setError(message);
     }
-  }, [tryFinish]);
+  }, [tryFinish, selectedLanguage]);
 
   const handleGenerate = useCallback(async () => {
     if (phase === "loading") return;
@@ -206,6 +209,12 @@ export default function Home() {
 
         {/* Top bar */}
         <div className="relative mb-14 flex w-full max-w-2xl items-center justify-center sm:mb-16">
+          {/* Credits — left side, separated from logo */}
+          <div className="absolute left-0">
+            <CreditBadge balance={creditsRemaining} />
+          </div>
+
+          {/* Logo — center */}
           <div className="flex items-center gap-2.5">
             <Image
               src="/logo.png"
@@ -218,8 +227,9 @@ export default function Home() {
               VIRNIX
             </p>
           </div>
+
+          {/* Auth + theme — right side */}
           <div className="absolute right-0 flex items-center gap-2">
-            <CreditBadge balance={creditsRemaining} />
             <AuthButton />
             <ThemeToggle />
           </div>
@@ -236,6 +246,8 @@ export default function Home() {
           error={phase === "idle" ? error : null}
           selectedEnergies={selectedEnergies}
           onEnergyChange={setSelectedEnergies}
+          selectedLanguage={selectedLanguage}
+          onLanguageChange={setSelectedLanguage}
         />
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
@@ -276,6 +288,8 @@ function HeroCard({
   error,
   selectedEnergies,
   onEnergyChange,
+  selectedLanguage,
+  onLanguageChange,
 }: {
   phase: Phase;
   url: string;
@@ -287,6 +301,8 @@ function HeroCard({
   error: string | null;
   selectedEnergies: CreatorEnergyId[];
   onEnergyChange: (ids: CreatorEnergyId[]) => void;
+  selectedLanguage: OutputLanguageId;
+  onLanguageChange: (id: OutputLanguageId) => void;
 }) {
   const trimmedUrl = url.trim();
   const isValidUrl = trimmedUrl.length > 0 && isValidYouTubeUrl(trimmedUrl);
@@ -400,6 +416,10 @@ function HeroCard({
 
         {phase === "idle" && (
           <CreatorEnergySelector selectedIds={selectedEnergies} onChange={onEnergyChange} />
+        )}
+
+        {phase === "idle" && (
+          <LanguageSelector selectedId={selectedLanguage} onChange={onLanguageChange} />
         )}
 
         <p className="mt-4 text-[12px]">{hintText}</p>

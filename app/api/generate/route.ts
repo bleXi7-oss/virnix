@@ -5,6 +5,8 @@ import type { GenerateResponse } from "../../lib/types/generation";
 import { isValidYouTubeUrl } from "../../lib/youtube";
 import { isValidEnergyId } from "../../lib/creator-energy/options";
 import type { CreatorEnergyId } from "../../lib/creator-energy/types";
+import { isValidLanguageId } from "../../lib/languages/options";
+import type { OutputLanguageId } from "../../lib/languages/types";
 import { isEnabled } from "../../lib/flags";
 import { createClient } from "../../lib/auth/supabase-server";
 import { calculateCreditsForGeneration } from "../../lib/credits/calculateCredits";
@@ -38,6 +40,10 @@ export async function POST(req: NextRequest) {
 
   const rawEnergyIds = Array.isArray(body.energyIds) ? body.energyIds : [];
   const energyIds: CreatorEnergyId[] = rawEnergyIds.filter(isValidEnergyId);
+
+  // Validate output language against allowlist — unknown values fall back to "auto".
+  const rawLang = body.outputLanguage;
+  const outputLanguage: OutputLanguageId = isValidLanguageId(rawLang) ? rawLang : "auto";
 
   // ─── Real AI: auth + credit check + deduction ────────────────────────────────
   // In mock mode, skip auth and credits — dev workflow without Supabase configured.
@@ -117,7 +123,7 @@ export async function POST(req: NextRequest) {
     // Run generation with the pre-fetched transcript to avoid a double fetch.
     let data: Awaited<ReturnType<typeof generate>>;
     try {
-      data = await generate({ youtubeUrl: body.youtubeUrl, energyIds }, transcriptResult);
+      data = await generate({ youtubeUrl: body.youtubeUrl, energyIds, outputLanguage }, transcriptResult);
     } catch (err) {
       // Credits are NOT deducted when generation fails.
       console.error("[virnix] /api/generate error:", err instanceof Error ? err.message : err);
@@ -153,7 +159,7 @@ export async function POST(req: NextRequest) {
 
   // ─── Mock mode: no auth, no credits ──────────────────────────────────────────
   try {
-    const data = await generate({ youtubeUrl: body.youtubeUrl, energyIds });
+    const data = await generate({ youtubeUrl: body.youtubeUrl, energyIds, outputLanguage });
     return NextResponse.json({ ok: true, data } satisfies GenerateResponse);
   } catch (err) {
     console.error("[virnix] /api/generate unhandled error:", err instanceof Error ? err.message : err);

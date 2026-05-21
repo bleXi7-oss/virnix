@@ -3,10 +3,12 @@ import type { AIDiagnostics } from "../ai/diagnostics";
 import type { TimelineMoment } from "../timeline/types";
 import type { TranscriptQualityReport } from "../timeline/transcript-quality";
 import type { CreatorEnergyId } from "../creator-energy/types";
+import type { OutputLanguageId } from "../languages/types";
 
 export interface GenerateRequest {
   youtubeUrl: string;
   energyIds?: CreatorEnergyId[];
+  outputLanguage?: OutputLanguageId;
 }
 
 export interface GenerateResult {
