@@ -34,7 +34,7 @@ function SectionDivider({ label }: { label: string }) {
   return (
     <div className="mb-6 flex items-center gap-4">
       <div className="h-px flex-1 bg-linear-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
-      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
         {label}
       </span>
       <div className="h-px flex-1 bg-linear-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
@@ -57,7 +57,7 @@ export default function TranscriptQualityCard({ report }: Props) {
           <p className={`text-[17px] font-semibold tracking-tight ${config.labelColor}`}>
             {config.label}
           </p>
-          <p className="mt-0.5 text-[12px] text-zinc-400 dark:text-zinc-600">
+          <p className="mt-0.5 text-[12px] text-zinc-400 dark:text-zinc-500">
             {config.sublabel}
           </p>
           {/* Slim presence bar */}
@@ -67,14 +67,14 @@ export default function TranscriptQualityCard({ report }: Props) {
         </div>
 
         {/* Summary — the most important element */}
-        <p className="mb-5 text-[14px] leading-[1.7] text-zinc-600 dark:text-zinc-400">
+        <p className="mb-5 text-[14px] leading-[1.7] text-zinc-600 dark:text-zinc-300">
           {summary}
         </p>
 
         {/* Strongest signals */}
         {strongestSignals.length > 0 && (
           <div className="mb-5">
-            <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600">
+            <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
               Strongest signals
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -92,7 +92,7 @@ export default function TranscriptQualityCard({ report }: Props) {
 
         {/* Weakness — only for medium/low, honest */}
         {weaknesses.length > 0 && (
-          <p className="mb-5 text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600">
+          <p className="mb-5 text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-500">
             ↳ {weaknesses[0]}
           </p>
         )}
@@ -100,11 +100,11 @@ export default function TranscriptQualityCard({ report }: Props) {
         {/* Platform fit */}
         {creatorFit.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-zinc-400 dark:text-zinc-600">Best fit:</span>
+            <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Best fit:</span>
             {creatorFit.map((platform) => (
               <span
                 key={platform}
-                className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-500"
+                className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-400"
               >
                 {platform}
               </span>

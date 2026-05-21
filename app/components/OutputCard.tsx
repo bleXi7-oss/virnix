@@ -57,7 +57,7 @@ function OutputCard({
     >
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
             {card.platform}
           </span>
           <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
@@ -69,13 +69,13 @@ function OutputCard({
         </span>
       </div>
 
-      <p className="flex-1 whitespace-pre-line text-[13px] leading-[1.65] text-zinc-600 dark:text-zinc-400">
+      <p className="flex-1 whitespace-pre-line text-[13px] leading-[1.65] text-zinc-600 dark:text-zinc-300">
         {card.content}
       </p>
 
       <div className="mt-5 flex items-center gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800/40">
         <PlatformIcon type={card.iconType} />
-        <span className="text-[10px] text-zinc-400 dark:text-zinc-700">
+        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
           {card.charCount}
         </span>
         <div className="ml-auto">

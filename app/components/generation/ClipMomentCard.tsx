@@ -81,7 +81,7 @@ function ConfidenceDot({ score }: { score: number }) {
       aria-label={label}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
-      <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{label}</span>
+      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{label}</span>
     </span>
   );
 }
@@ -101,7 +101,7 @@ export default function ClipMomentCard({ moment, rank }: Props) {
     >
       {/* Meta row */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
+        <span className="font-mono text-[11px] font-semibold text-zinc-400 dark:text-zinc-400">
           {moment.startTime}–{moment.endTime}
         </span>
         <span
@@ -118,7 +118,7 @@ export default function ClipMomentCard({ moment, rank }: Props) {
       </p>
 
       {/* Why it works */}
-      <p className="mb-3.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-500">
+      <p className="mb-3.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
         {moment.whyItWorks}
       </p>
 
@@ -127,7 +127,7 @@ export default function ClipMomentCard({ moment, rank }: Props) {
         {moment.platformFit.slice(0, 3).map((p) => (
           <span
             key={p}
-            className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-600"
+            className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-400"
           >
             {PLATFORM_LABELS[p] ?? p}
           </span>
@@ -135,7 +135,7 @@ export default function ClipMomentCard({ moment, rank }: Props) {
       </div>
 
       {moment.sourceTextPreview && (
-        <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-700 line-clamp-2">
+        <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2">
           &ldquo;{moment.sourceTextPreview}&rdquo;
         </p>
       )}
