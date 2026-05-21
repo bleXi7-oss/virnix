@@ -100,15 +100,25 @@ for (const id of nonAutoIds) {
   }
 }
 
-// ─── 5. Croatian no-mix warning ───────────────────────────────────────────────
+// ─── 5. Croatian no-mix + Latin-script enforcement ────────────────────────────
 
-header("5. Croatian no-mix warning");
+header("5. Croatian no-mix warning + Latin-script enforcement");
 
 const hrCtx = formatLanguageContext("hr");
 assertPass(
   hrCtx.toLowerCase().includes("serbian") || hrCtx.toLowerCase().includes("bosnian"),
   "Croatian context warns against mixing with Serbian/Bosnian",
   "Croatian context is MISSING no-mix warning for Serbian/Bosnian"
+);
+assertPass(
+  hrCtx.toLowerCase().includes("latin"),
+  "Croatian context specifies Latin script",
+  "Croatian context does NOT mention Latin script — model may emit Cyrillic"
+);
+assertPass(
+  hrCtx.toLowerCase().includes("cyrillic"),
+  "Croatian context explicitly forbids Cyrillic",
+  "Croatian context does NOT mention Cyrillic — model may emit Cyrillic"
 );
 info(`Croatian nativeNote: "${getLanguageById("hr").nativeNote}"`);
 

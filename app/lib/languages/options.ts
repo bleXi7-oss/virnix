@@ -28,7 +28,7 @@ export const OUTPUT_LANGUAGES: ReadonlyArray<OutputLanguage> = [
     label: "Croatian",
     promptName: "Croatian",
     nativeNote:
-      "Use natural Croatian creator and social media phrasing. Do not mix Croatian with Serbian or Bosnian.",
+      "Write in Croatian using Latin script only. Do not use Cyrillic. Use natural Croatian creator and social media phrasing. Do not mix Croatian with Serbian or Bosnian.",
   },
   {
     id: "sr-latn",
