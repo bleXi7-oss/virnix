@@ -30,17 +30,12 @@ function header(title: string): void {
 }
 function pass(msg: string): void { console.log(`  ✓ ${msg}`); }
 function fail(msg: string): void { console.log(`  ✗ ${msg}`); failCount++; }
-function warn(msg: string): void { console.log(`  ⚠ ${msg}`); warnCount++; }
 function info(msg: string): void { console.log(`    ${msg}`); }
 
 let failCount = 0;
-let warnCount = 0;
 
 function assertPass(cond: boolean, ok: string, bad: string): void {
   if (cond) pass(ok); else fail(bad);
-}
-function assertWarn(cond: boolean, ok: string, bad: string): void {
-  if (cond) pass(ok); else warn(bad);
 }
 
 // ─── Expected language pack (LANG-A) ─────────────────────────────────────────
@@ -153,18 +148,21 @@ info(`Bosnian nativeNote: "${getLanguageById("bs").nativeNote}"`);
 
 // ─── Bonus: Slovenian note present ────────────────────────────────────────────
 
-header("7b. Slovenian note check");
+header("7b. Slovenian no-mix warning");
 
 const slLang = getLanguageById("sl");
+assertPass(
+  !!slLang.nativeNote,
+  "Slovenian has nativeNote",
+  "Slovenian is MISSING nativeNote"
+);
 if (slLang.nativeNote) {
-  pass(`Slovenian has nativeNote: "${slLang.nativeNote}"`);
-  assertWarn(
+  assertPass(
     slLang.nativeNote.toLowerCase().includes("croatian") || slLang.nativeNote.toLowerCase().includes("serbian"),
     "Slovenian nativeNote warns against mixing with Croatian/Serbian",
-    "Slovenian nativeNote has no explicit no-mix warning — P2 (lower risk, different language family)"
+    "Slovenian nativeNote is MISSING no-mix warning for Croatian/Serbian"
   );
-} else {
-  warn(`Slovenian has no nativeNote — P2`);
+  info(`Slovenian nativeNote: "${slLang.nativeNote}"`);
 }
 
 // ─── 8. Allowlist validation ──────────────────────────────────────────────────
@@ -278,12 +276,10 @@ info("Priority hierarchy confirmed: language > Creator Energy > variation profil
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
 console.log("\n" + "─".repeat(55));
-if (failCount === 0 && warnCount === 0) {
+if (failCount === 0) {
   console.log(`✅ ALL CHECKS PASS — 0 failures, 0 warnings`);
-} else if (failCount === 0) {
-  console.log(`✅ ${warnCount} warning(s), 0 failures — safe to proceed`);
 } else {
-  console.log(`❌ ${failCount} FAILURE(S), ${warnCount} warning(s)`);
+  console.log(`❌ ${failCount} FAILURE(S)`);
 }
 console.log("─".repeat(55));
 

@@ -21,7 +21,7 @@ export const OUTPUT_LANGUAGES: ReadonlyArray<OutputLanguage> = [
     id: "sl",
     label: "Slovenian",
     promptName: "Slovenian",
-    nativeNote: "Use natural Slovenian creator and social media phrasing.",
+    nativeNote: "Use natural Slovenian creator and social media phrasing. Do not mix Slovenian with Croatian, Serbian, or Bosnian.",
   },
   {
     id: "hr",

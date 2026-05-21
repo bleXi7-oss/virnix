@@ -32,7 +32,7 @@
 |----|-------|-------|
 | auto | Auto | No injection — keeps transcript language |
 | en | English | |
-| sl | Slovenian | Regional note: use natural Slovenian creator phrasing |
+| sl | Slovenian | Regional note: use natural Slovenian phrasing, no-mix with Croatian/Serbian/Bosnian |
 | hr | Croatian | Regional note: no-mix with Serbian or Bosnian |
 | sr-latn | Serbian Latin | Latin script only, no Cyrillic, no-mix note |
 | bs | Bosnian | Regional note: no-mix with Serbian or Croatian |
