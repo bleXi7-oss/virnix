@@ -12,8 +12,10 @@ import {
   validateCoreOutput,
   coerceCoreOutput,
   extractAdvancedOutput,
+  coerceBestAngle,
   type CoreAIOutput,
   type AdvancedAIOutput,
+  type BestAngle,
 } from "./schemas";
 import { isEnabled } from "../flags";
 
@@ -131,19 +133,22 @@ export function parseAnthropicResponse(text: string): ParseOutcome {
     coercionUsed = true;
   }
 
+  const raw = parsed as Record<string, unknown>;
   const core = coerceCoreOutput(parsed);
   const advanced = isEnabled("advanced_outputs")
     ? extractAdvancedOutput(parsed)
     : {};
+  const bestAngle = coerceBestAngle(raw.best_angle) ?? undefined;
 
-  return { result: buildResult(core, advanced), parseRepaired, coercionUsed };
+  return { result: buildResult(core, advanced, bestAngle), parseRepaired, coercionUsed };
 }
 
 // ─── Result builder ───────────────────────────────────────────────────────────
 
 function buildResult(
   core: CoreAIOutput,
-  advanced: Partial<AdvancedAIOutput> = {}
+  advanced: Partial<AdvancedAIOutput> = {},
+  bestAngle?: BestAngle
 ): GenerateResult {
   const cards: OutputCardData[] = [
     {
@@ -225,5 +230,5 @@ function buildResult(
     });
   }
 
-  return { cards, generatedAt: new Date().toISOString() };
+  return { cards, generatedAt: new Date().toISOString(), bestAngle };
 }

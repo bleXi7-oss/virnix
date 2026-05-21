@@ -6,13 +6,14 @@ import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
 import { LOADING_STEPS } from "./lib/outputCards";
 import type { OutputCardData } from "./lib/outputCards";
-import type { GenerateResponse } from "./lib/types/generation";
+import type { GenerateResponse, BestAngle } from "./lib/types/generation";
 import { isValidYouTubeUrl } from "./lib/youtube";
 import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import DebugPanel from "./components/DebugPanel";
 import ClipGuide from "./components/generation/ClipGuide";
 import TranscriptQualityCard from "./components/generation/TranscriptQualityCard";
+import UseThisFirstCard from "./components/generation/UseThisFirstCard";
 import CreatorEnergySelector from "./components/CreatorEnergySelector";
 import LanguageSelector from "./components/LanguageSelector";
 import dynamic from "next/dynamic";
@@ -52,6 +53,7 @@ export default function Home() {
   const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("auto");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -102,6 +104,7 @@ export default function Home() {
       setDiagnostics(json.data.diagnostics ?? null);
       setTimelineMoments(json.data.timelineMoments ?? null);
       setTranscriptQuality(json.data.transcriptQuality ?? null);
+      setBestAngle(json.data.bestAngle ?? null);
       track("generation_completed", {
         duration_ms: Date.now() - genStartRef.current,
         card_count: json.data.cards.length,
@@ -158,6 +161,7 @@ export default function Home() {
     setDiagnostics(null);
     setTimelineMoments(null);
     setTranscriptQuality(null);
+    setBestAngle(null);
   }, []);
 
   function handleUrlChange(val: string) {
@@ -256,6 +260,9 @@ export default function Home() {
           <>
             {transcriptQuality && (
               <TranscriptQualityCard report={transcriptQuality} />
+            )}
+            {bestAngle && (
+              <UseThisFirstCard bestAngle={bestAngle} />
             )}
             {timelineMoments && timelineMoments.length > 0 && (
               <ClipGuide moments={timelineMoments} />

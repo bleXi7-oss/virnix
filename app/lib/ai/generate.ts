@@ -162,6 +162,7 @@ async function realGenerate(
   return {
     cards: finalCards,
     generatedAt: result.generatedAt,
+    bestAngle: result.bestAngle,
     diagnostics,
     timelineMoments: timelineMoments?.length ? timelineMoments : undefined,
     transcriptQuality: transcriptQuality ?? undefined,

@@ -4,6 +4,9 @@ import type { TimelineMoment } from "../timeline/types";
 import type { TranscriptQualityReport } from "../timeline/transcript-quality";
 import type { CreatorEnergyId } from "../creator-energy/types";
 import type { OutputLanguageId } from "../languages/types";
+import type { BestAngle } from "../ai/schemas";
+
+export type { BestAngle };
 
 export interface GenerateRequest {
   youtubeUrl: string;
@@ -14,6 +17,7 @@ export interface GenerateRequest {
 export interface GenerateResult {
   cards: OutputCardData[];
   generatedAt: string;
+  bestAngle?: BestAngle;
   diagnostics?: AIDiagnostics;
   timelineMoments?: TimelineMoment[];
   transcriptQuality?: TranscriptQualityReport;

@@ -130,6 +130,15 @@ ${list(YOUTUBE_TITLE_RULES)}
 Output cleanup — apply to all platforms:
 ${list(CLEANUP_RULES)}
 
+best_angle — Use This First:
+Identify the single strongest hook this transcript can support.
+hook: most potent 1-2 sentence hook (~60 chars), grounded in specific transcript content — no invented data
+why: 1-2 sentences — what specifically makes this hook work, referencing the actual content
+caution: one honest limitation — what to avoid overclaiming; do not promise virality or invent outcomes
+best_platform: single platform where this hook lands hardest
+hook_variants: 5 distinct angles on the same core content — each differs in emotional entry point, grounded in transcript
+All best_angle text in the same language as all other output. Every variant must differ from the others.
+
 Return only the JSON object, nothing else.`;
 }
 
@@ -210,6 +219,15 @@ No SEO filler: 'In conclusion', 'It goes without saying'.
 
 Output cleanup — apply to all platforms:
 ${list(CLEANUP_RULES)}
+
+best_angle — Use This First:
+Identify the single strongest hook this transcript can support.
+hook: most potent 1-2 sentence hook (~60 chars), grounded in specific transcript content — no invented data
+why: 1-2 sentences — what specifically makes this hook work, referencing the actual content
+caution: one honest limitation — what to avoid overclaiming; do not promise virality or invent outcomes
+best_platform: single platform where this hook lands hardest
+hook_variants: 5 distinct angles on the same core content — each differs in emotional entry point, grounded in transcript
+All best_angle text in the same language as all other output. Every variant must differ from the others.
 
 Return only the JSON object, nothing else.`;
 }

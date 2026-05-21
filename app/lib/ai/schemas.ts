@@ -2,6 +2,54 @@
 // Each schema describes the exact shape the AI provider should return.
 // Validators + coercers guard against missing/malformed fields without throwing.
 
+// ─── Best Angle schema (Use This First layer) ──────────────────────────────────
+
+export interface BestAngleVariants {
+  curiosity: string;   // opens a question the reader wants answered
+  contrarian: string;  // challenges what the audience currently believes
+  tactical: string;    // leads with a specific action or data point
+  reflective: string;  // speaks to identity or meaning shift
+  punchy: string;      // ultra-short, nothing wasted
+}
+
+export interface BestAngle {
+  hook: string;          // strongest hook, ~60 chars, in output language
+  why: string;           // 1-2 sentences why it works, in output language
+  caution: string;       // 1 sentence risk/limitation, in output language
+  best_platform: string; // "TikTok / Reels" | "LinkedIn" | "Twitter / X" | "Instagram"
+  hook_variants: BestAngleVariants;
+}
+
+// Returns null if hook or why is empty — card is hidden rather than partially rendered.
+export function coerceBestAngle(raw: unknown): BestAngle | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const obj = raw as Record<string, unknown>;
+  const str = (val: unknown): string =>
+    typeof val === "string" && val.trim() ? val.trim() : "";
+
+  const hook = str(obj.hook);
+  const why = str(obj.why);
+  if (!hook || !why) return null;
+
+  const caution = str(obj.caution);
+  const best_platform = str(obj.best_platform) || "TikTok / Reels";
+
+  const v =
+    typeof obj.hook_variants === "object" && obj.hook_variants !== null
+      ? (obj.hook_variants as Record<string, unknown>)
+      : {};
+
+  const hook_variants: BestAngleVariants = {
+    curiosity:  str(v.curiosity)  || hook,
+    contrarian: str(v.contrarian) || hook,
+    tactical:   str(v.tactical)   || hook,
+    reflective: str(v.reflective) || hook,
+    punchy:     str(v.punchy)     || hook,
+  };
+
+  return { hook, why, caution, best_platform, hook_variants };
+}
+
 // ─── Core platform schemas (always generated) ─────────────────────────────────
 
 export interface TikTokSchema {
@@ -69,6 +117,19 @@ export type FullAIOutput = CoreAIOutput & Partial<AdvancedAIOutput>;
 // ─── JSON schema strings (injected into system prompt) ────────────────────────
 
 export const CORE_OUTPUT_SCHEMA = `{
+  "best_angle": {
+    "hook": "<strongest hook from this transcript, ~60 chars, in the output language>",
+    "why": "<1-2 sentences why this hook works for this specific content, in the output language>",
+    "caution": "<1 sentence potential limitation or what to watch for, in the output language>",
+    "best_platform": "<TikTok / Reels | LinkedIn | Twitter / X | Instagram>",
+    "hook_variants": {
+      "curiosity":  "<curiosity-driven hook, ~60 chars, in the output language>",
+      "contrarian": "<assumption-challenging hook, ~60 chars, in the output language>",
+      "tactical":   "<action or data-led hook, ~60 chars, in the output language>",
+      "reflective": "<identity or meaning-driven hook, ~60 chars, in the output language>",
+      "punchy":     "<ultra-short punchy hook, ~30 chars, in the output language>"
+    }
+  },
   "tiktok":    { "content": "<60-sec hook script, ~300 chars>" },
   "twitter":   { "content": "<8-tweet thread numbered 1/ through 8/, ~2000 chars>" },
   "linkedin":  { "content": "<professional post with line breaks, ~600 chars>" },
@@ -77,6 +138,19 @@ export const CORE_OUTPUT_SCHEMA = `{
 }`;
 
 export const ADVANCED_OUTPUT_SCHEMA = `{
+  "best_angle": {
+    "hook": "<strongest hook from this transcript, ~60 chars, in the output language>",
+    "why": "<1-2 sentences why this hook works for this specific content, in the output language>",
+    "caution": "<1 sentence potential limitation or what to watch for, in the output language>",
+    "best_platform": "<TikTok / Reels | LinkedIn | Twitter / X | Instagram>",
+    "hook_variants": {
+      "curiosity":  "<curiosity-driven hook, ~60 chars, in the output language>",
+      "contrarian": "<assumption-challenging hook, ~60 chars, in the output language>",
+      "tactical":   "<action or data-led hook, ~60 chars, in the output language>",
+      "reflective": "<identity or meaning-driven hook, ~60 chars, in the output language>",
+      "punchy":     "<ultra-short punchy hook, ~30 chars, in the output language>"
+    }
+  },
   "tiktok":     { "content": "<60-sec hook script, ~300 chars>" },
   "tiktok_alt": { "content": "<alternate hook with different emotional angle, ~300 chars>" },
   "twitter":    { "content": "<8-tweet thread numbered 1/ through 8/, ~2000 chars>" },
