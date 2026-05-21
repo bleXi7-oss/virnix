@@ -1744,3 +1744,57 @@ Prerequisites:
 1. Run `docs/credits/SQL.md` in Supabase (if not yet done)
 2. Test end-to-end credits flow (sign in → generate → deduction → badge)
 3. Optionally test LANG-A with real AI: select Slovenian, generate from English podcast, verify native output
+
+---
+
+## Phase 42 — Language Selection QA (LANG-QA-A, 2026-05-21)
+
+**Commit:** `f61ed9b`
+
+### What Was Done
+
+Static audit of LANG-A. No production code changed.
+
+**New: `scripts/qa/language-audit.ts`**
+
+12-section audit script, zero API calls, zero cost:
+1. Language options list completeness (11 IDs)
+2. `formatLanguageContext("auto")` returns `""` — guaranteed no-op
+3. All non-auto languages return non-empty context
+4. Core directives present in all non-auto languages ("Write all outputs natively", "Do not literally translate English viral hook formulas", "Priority: Output language is mandatory")
+5. Croatian no-mix warning (Serbian/Bosnian)
+6. Serbian Latin: Latin script explicit, Cyrillic explicitly forbidden, no-mix warning
+7. Bosnian no-mix warning (Serbian/Croatian)
+8. `isValidLanguageId` allowlist — 11 valid IDs pass, 17 invalid inputs rejected (wrong case, unknown IDs, non-strings, empty string, future language codes)
+9. Auto mode = zero prompt change (formatLanguageContext("auto") === "")
+10. Explicit language injects verbatim into GENERATION PROFILE
+11. Language context appears after energy context (correct priority order)
+12. Priority hierarchy: language mandatory > Creator Energy creative steering > variation profile secondary
+
+### Results
+
+- language-audit.ts: ✅ 0 failures · 1 P2 warning
+- opener-audit.ts: ✅ ALL CHECKS PASS (0 failures)
+- creator-energy-audit.ts: ✅ ALL CHECKS PASS (0 failures, 0 warnings)
+- Lint: ✅ clean
+- Build: ✅ clean (8 routes)
+- Supabase: ✅ reachable
+
+**P2 Warning:** Slovenian `nativeNote` has no explicit no-mix warning for Croatian/Serbian. Lower risk than BCS languages (different branch, less cross-contamination risk). Not a blocker.
+
+**Real AI tests:** Not run — static QA sufficient. BILLING-A prerequisite (SQL.md) not yet confirmed run.
+
+### What Was NOT Changed
+
+- No production code modified
+- Credits logic, Supabase, auth, billing: untouched
+- Language module, UI, prompt injection: unchanged from LANG-A
+
+### Validation Status at End of Phase
+
+- Lint: ✅ clean
+- Build: ✅ clean
+- language-audit.ts: ✅ 0 failures
+- All prior QA scripts: ✅ regression-clean
+
+### Safe to Proceed to BILLING-A: YES
