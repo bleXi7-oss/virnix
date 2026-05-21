@@ -63,6 +63,13 @@ The algorithm does not reward volume. It rewards retention and saves.
 If someone saves your post, the system treats it as high-value signal.
 Specificity beats polish. Raw and useful beats beautiful and vague. Every single time.`;
 
+// ─── Config ───────────────────────────────────────────────────────────────────
+// LANG_REAL_TIMEOUT_MS — per-attempt API timeout (default 90s)
+// LANG_REAL_ONLY       — comma-separated language IDs to run (e.g. "sl,sr-latn,hr")
+//                        Omit or leave empty to run all cases.
+
+const CALL_TIMEOUT_MS = parseInt(process.env.LANG_REAL_TIMEOUT_MS ?? "90000", 10);
+
 // ─── Test cases ───────────────────────────────────────────────────────────────
 
 interface TestCase {
@@ -71,7 +78,7 @@ interface TestCase {
   label: string;
 }
 
-const TEST_CASES: TestCase[] = [
+const ALL_TEST_CASES: TestCase[] = [
   { name: "auto",     language: "auto",     label: "Auto (English baseline)" },
   { name: "sl",       language: "sl",       label: "Slovenian"               },
   { name: "hr",       language: "hr",       label: "Croatian"                },
@@ -79,6 +86,11 @@ const TEST_CASES: TestCase[] = [
   { name: "de",       language: "de",       label: "German"                  },
   { name: "bs",       language: "bs",       label: "Bosnian"                 },
 ];
+
+const onlyFilter = process.env.LANG_REAL_ONLY?.split(",").map(s => s.trim()).filter(Boolean) ?? [];
+const TEST_CASES: TestCase[] = onlyFilter.length > 0
+  ? ALL_TEST_CASES.filter(tc => onlyFilter.includes(tc.name))
+  : ALL_TEST_CASES;
 
 // ─── Output shape ─────────────────────────────────────────────────────────────
 
@@ -170,10 +182,10 @@ async function runOne(tc: TestCase): Promise<TestResult> {
   const estTokens = estimateTokens(SYSTEM_PROMPT + userPrompt);
   const { estimatedUSD } = estimateCost(estTokens, 2048);
 
-  console.log(`  running: ${tc.name.padEnd(10)} [${tc.label}]  ~${estTokens} tok  ~$${estimatedUSD.toFixed(4)}`);
+  console.log(`  running: ${tc.name.padEnd(10)} [${tc.label}]  ~${estTokens} tok  ~$${estimatedUSD.toFixed(4)}  timeout=${CALL_TIMEOUT_MS / 1000}s`);
 
   try {
-    const { text } = await getProvider().complete({ system: SYSTEM_PROMPT, user: userPrompt, maxTokens: 2048 });
+    const { text } = await getProvider().complete({ system: SYSTEM_PROMPT, user: userPrompt, maxTokens: 2048, timeoutMs: CALL_TIMEOUT_MS });
     const { result } = parseAnthropicResponse(text);
     const cards = result.cards;
 
@@ -283,7 +295,10 @@ async function main(): Promise<void> {
   const { estimatedUSD: costPer } = estimateCost(sampleTok, 2048);
   const total = costPer * TEST_CASES.length;
   console.log(`Calls: ${TEST_CASES.length}  ×  ~${sampleTok} tok  ≈  $${costPer.toFixed(4)} each  ≈  $${total.toFixed(3)} total`);
-  console.log(`Transcript: English creator/business, ~110 words\n`);
+  console.log(`Transcript: English creator/business, ~110 words`);
+  console.log(`Timeout: ${CALL_TIMEOUT_MS / 1000}s per attempt  (override: LANG_REAL_TIMEOUT_MS)`);
+  if (onlyFilter.length > 0) console.log(`Filter: only [${onlyFilter.join(", ")}]  (override: LANG_REAL_ONLY)`);
+  console.log();
 
   header("Running generations");
   const results: TestResult[] = [];

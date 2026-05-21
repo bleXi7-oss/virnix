@@ -14,6 +14,7 @@ export interface CompletionParams {
   user: string;
   maxTokens?: number;
   model?: string;
+  timeoutMs?: number; // per-request override; defaults to TIMEOUT_MS (30s)
 }
 
 // Richer return type — carries retry count and stop_reason for diagnostics.
@@ -65,6 +66,7 @@ class AnthropicProvider implements AIProvider {
     user,
     maxTokens = ANTHROPIC_DEFAULT_MAX_TOKENS,
     model = ANTHROPIC_DEFAULT_MODEL,
+    timeoutMs = TIMEOUT_MS,
   }: CompletionParams): Promise<CompletionResult> {
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -83,7 +85,7 @@ class AnthropicProvider implements AIProvider {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -142,7 +144,7 @@ class AnthropicProvider implements AIProvider {
 
         // AbortController fires when the timeout is hit
         if (err instanceof Error && err.name === "AbortError") {
-          const timeoutErr = new Error(`Anthropic request timed out after ${TIMEOUT_MS / 1000}s`);
+          const timeoutErr = new Error(`Anthropic request timed out after ${timeoutMs / 1000}s`);
           lastError = timeoutErr;
           console.warn(`[virnix] Request timed out on attempt ${attempt + 1}`);
           continue; // retry on timeout
