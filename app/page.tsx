@@ -336,7 +336,7 @@ function HeroCard({
   } else {
     hintText = (
       <span className="text-zinc-400 dark:text-zinc-700">
-        No account required · Works with any captioned YouTube video
+        Free beta · Sign in required · Works with captioned YouTube videos
       </span>
     );
   }

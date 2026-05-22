@@ -1,6 +1,6 @@
 # Virnix Beta — Launch Checklist
 
-**Phase:** FREE-BETA-A (last updated)
+**Phase:** TRANSCRIPT-FIX-A (last updated)
 **Date:** 2026-05-22
 **Format:** Check each item before sending first user invite
 
@@ -15,7 +15,12 @@ The following items were verified by static code inspection and production endpo
 - `GET https://virnix.pro/` → HTTP 200 ✅
 - `GET https://virnix.pro/api/credits` (unauthenticated) → HTTP 401 `{"error":"Not authenticated"}` ✅
 
-**Code changes made in FREE-BETA-A:**
+**Code changes made in TRANSCRIPT-FIX-A (2026-05-22):**
+- `app/lib/ai/transcript.ts` — Custom InnerTube fetcher with `?prettyPrint=false` + English caption preference + better errors
+- `app/page.tsx` — Hint text updated: "No account required" → "Free beta · Sign in required"
+- `scripts/test-transcript.mjs` — URL parsing + transcript tests, all passing
+
+**Code changes made in FREE-BETA-A (2026-05-22):**
 - `app/api/generate/route.ts` — 402 credit error now distinguishes 0-credits vs. insufficient-credits; 500 after generation failure now says "Nothing was charged"
 - `app/page.tsx` — Beta privacy notice added below platform list in idle state
 
@@ -25,7 +30,7 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 
 ## A. Product Readiness
 
-- [ ] Real AI generation confirmed working on production (virnix.pro), not just localhost — MANUAL
+- [ ] Real AI generation confirmed working on production (virnix.pro) — MANUAL (TRANSCRIPT-FIX-A deployed; try Simon Sinek sample button)
 - [ ] Auth flow tested end-to-end on production: sign in with email → magic link → session active → sign out — MANUAL
 - [ ] Generation works when signed in on production — MANUAL
 - [x] Generation returns 401 when NOT signed in (code-verified: route checks `supabase.auth.getUser()`)
@@ -78,7 +83,7 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 ## D. UX Readiness
 
 - [ ] Landing page copy clearly says what Virnix does (not a video editor)
-- [ ] URL input has a clear placeholder or hint ("Paste a YouTube URL to get started")
+- [x] URL input hint text is accurate: "Free beta · Sign in required · Works with captioned YouTube videos" (updated TRANSCRIPT-FIX-A)
 - [ ] An example URL or demo link is available for first-time users
 - [ ] Loading state is visible and informative (not just a blank screen)
 - [ ] Error states are human-readable (not "Error 500" or "Something went wrong")

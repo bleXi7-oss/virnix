@@ -4,6 +4,39 @@ Chronological log of completed development phases.
 
 ---
 
+## Phase 48 — TRANSCRIPT-FIX-A (2026-05-22)
+
+**Commit:** TBD (this phase)
+**Goal:** Fix YouTube transcript reliability for production (Vercel)
+
+### Root Cause
+YouTube's InnerTube API requires `?prettyPrint=false` in the URL. The custom fetcher added in this phase was missing it, causing 400 errors and falling back to HTML scraping (which fails on cloud IPs). Additionally, the package was returning Arabic captions instead of English for sample videos.
+
+### What Changed
+- `app/lib/ai/transcript.ts` — custom InnerTube fetcher (`fetchViaInnerTubeDirect`) with correct URL and full Android client context; English caption preference; better error classification
+- `app/page.tsx` — hint text: "No account required" → "Free beta · Sign in required"
+- `scripts/test-transcript.mjs` — rewritten: URL parsing (13 cases), package fallback tests, enhanced InnerTube tests
+
+### Validation
+- Lint: ✅ | Build: ✅ | URL parsing: 13/13 | Transcript tests: all passed | AI calls: 0
+
+---
+
+## Phase 47 — FREE-BETA-A.1 (2026-05-22)
+
+**Commit:** `833b22e`
+**Goal:** Verify 4 beta launch blockers remotely; document manual steps for Miha
+
+### Critical Finding
+Production was confirmed in MOCK MODE: unauthenticated POST to `/api/generate` returned HTTP 200 with `"provider":"mock"`. Required fix: set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` in Vercel → Redeploy.
+
+### What Changed
+- `app/api/health/supabase/route.ts` — added `dbReachable` field (queries `user_credits?limit=0` with anon key)
+- `docs/beta/FREE_BETA_A1_BLOCKER_VERIFICATION.md` — NEW: per-blocker analysis with manual steps
+- `docs/beta/BETA_LAUNCH_CHECKLIST.md` — Blocker 2 marked CONFIRMED FAILING
+
+---
+
 ## Phase 0 — Foundation (pre-2026-05-19)
 
 **Commits up to:** `62cfc8c`
