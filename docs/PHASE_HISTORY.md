@@ -1798,3 +1798,122 @@ Static audit of LANG-A. No production code changed.
 - All prior QA scripts: ✅ regression-clean
 
 ### Safe to Proceed to BILLING-A: YES
+
+---
+
+## Phase 43 — Output Wow Upgrade / Use This First Layer (QUALITY-C, 2026-05-22)
+
+**Commit:** `daeb5fe`
+
+### What Was Built
+
+**Updated: `app/lib/ai/schemas.ts`**
+- `BestAngle` and `BestAngleVariants` interfaces
+- `coerceBestAngle()` — returns null if hook/why missing; no partial renders
+- `CORE_OUTPUT_SCHEMA` and `ADVANCED_OUTPUT_SCHEMA` both include `best_angle` field
+
+**Updated: `app/lib/types/generation.ts`**
+- `bestAngle?: BestAngle` added to `GenerateResult`
+
+**Updated: `app/lib/ai/parser.ts`**
+- Extracts `best_angle` from parsed JSON in `parseAnthropicResponse()`
+- `buildResult()` accepts optional `bestAngle?: BestAngle`, includes in result
+
+**Updated: `app/lib/prompts/index.ts`**
+- `best_angle` instructions added to both `buildPrompt` and `buildAdvancedPrompt`
+- Grounded rules: no virality guarantees, no invented statistics, all text in output language
+
+**Updated: `app/lib/ai/generate.ts`**
+- `bestAngle: result.bestAngle` threaded through to returned `GenerateResult`
+
+**Updated: `app/lib/ai/mock.ts`**
+- `MOCK_BEST_ANGLE` constant with realistic creator content
+- Mock mode surfaces the card immediately (no real AI needed)
+
+**New: `app/components/generation/UseThisFirstCard.tsx`**
+- Premium card rendered above ClipGuide in phase=done
+- Shows: best hook (large), best platform badge, why it works, caution, 5 labeled hook variants
+- Each variant has an inline copy button
+- Hidden when AI omits `best_angle` or hook/why are empty
+
+**Updated: `app/page.tsx`**
+- `bestAngle` state + `setBestAngle` from API response
+- `UseThisFirstCard` rendered between TranscriptQualityCard and ClipGuide
+
+### Hook Variants
+
+5 labeled angles on the same core content:
+- **Curiosity** — opens a question the reader wants answered
+- **Contrarian** — challenges what the audience currently believes
+- **Tactical** — leads with a specific action or data point
+- **Reflective** — speaks to identity or meaning shift
+- **Punchy** — ultra-short, nothing wasted
+
+Variant labels are English UI labels; body text respects the selected output language.
+
+### Design Decisions
+- Card is hidden (not shown with empty state) when AI omits `best_angle`
+- Coercion falls back to primary hook for missing variants — never crashes
+- No fake virality claims — prompt explicitly forbids "guaranteed viral" language
+- Creator Energy influences the best angle direction via the existing energy context
+
+### Validation Status at End of Phase
+- Lint: ✅ clean (0 warnings)
+- Build: ✅ clean (TypeScript, Turbopack)
+- Mock mode: ✅ MOCK_BEST_ANGLE renders correctly
+- Real AI: requires live API test (see FREE-BETA-A)
+
+---
+
+## Phase 44 — Controlled Free Beta Strategy (FREE-BETA-STRATEGY-A, 2026-05-22)
+
+**Commit:** (see below — docs only)
+
+### What Was Done
+
+Docs-only phase. No runtime code changed.
+
+Created `docs/beta/` folder with 7 strategic planning documents:
+
+| File | Contents |
+|------|---------|
+| `FREE_BETA_STRATEGY.md` | Executive summary, 7/14-day plan, success/failure criteria, daily routine for Miha and Claude |
+| `COST_CONTROL_POLICY.md` | €100 budget, cost scenarios (20–300 users), kill switches, danger zones, what to log |
+| `BETA_RISK_REGISTER.md` | 20-item risk table (probability, impact, warning sign, mitigation, decision trigger) |
+| `BETA_LAUNCH_CHECKLIST.md` | 10-section checkbox checklist — must-haves before first invite |
+| `MARKETING_TEST_PLAN.md` | First 50-user acquisition plan, 5 DM templates, 5 X posts, 3 LinkedIn posts, 3 Reddit posts, 3 TikTok scripts, objection handling, headline alternatives |
+| `FOUNDER_OPERATING_SYSTEM.md` | How Miha runs the beta — daily checks, decision framework, what Claude can do alone, what requires Miha's input |
+| `ARCHITECTURE_BETA_GUARDRAILS.md` | Module boundary rules, what not to build during beta, feature flags documented, expected future phases |
+
+### Strategic Decisions Documented
+
+- **Start with 20 users, not 50 or 100** — qualitative signal before scale
+- **3 free credits** per user (already built in CREDITS-A)
+- **10-minute max** video (already enforced)
+- **Creator Energy unlocked** for all beta users (key differentiator)
+- **Best Angle visible** on all real AI output (QUALITY-C)
+- **AI cost for 20 users × 3 credits**: ~€3 (well within €100 budget)
+- **Critical blocker**: Supabase SQL must be run before any user invite
+
+### Top 5 Risks Identified
+1. Credits SQL not applied → unlimited free generation
+2. No one converts → existential signal failure
+3. Product misunderstood as video editor → messaging problem
+4. Bad first impression / low quality → smoke test required before invite
+5. Missing terms/privacy notice → must exist before public URL shared
+
+### What Was NOT Changed
+- No app runtime code
+- No AI prompts
+- No Supabase schema
+- No Stripe/billing
+- No new environment variables
+
+### Validation Status
+- Lint: ✅ clean (docs only)
+- Build: ✅ not required (docs only)
+- No secrets touched
+- No live AI scripts run
+
+### Next: FREE-BETA-A
+Production readiness confirmation: SQL verification, real AI smoke test on virnix.pro, credits end-to-end test, privacy notice, error message improvements.
