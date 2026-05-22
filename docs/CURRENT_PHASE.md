@@ -1,11 +1,12 @@
-# Current Phase — TRANSCRIPT-FIX-B
+# Current Phase — TRANSCRIPT-FIX-C
 
 Phase started: 2026-05-22
-Status: complete — diagnostic tooling added, awaiting Miha's production diagnostic run
+Status: complete — 4-client InnerTube fallback added, awaiting Miha's production multi-client diagnostic
 
 ---
 
 ## Previous phases (abbreviated)
+- TRANSCRIPT-FIX-B (2026-05-22) — diagnostic tooling added, `[virnix-transcript]` logging, `/api/debug/transcript` endpoint, commit `71491a8` — complete
 - TRANSCRIPT-FIX-A (2026-05-22) — InnerTube `?prettyPrint=false` fix, English captions, commit `b11d7ce` — complete but production still failed
 - FREE-BETA-A.1 (2026-05-22) — Blocker verification, health endpoint DB check, commit `833b22e` — complete
 - FREE-BETA-A (2026-05-22) — Production readiness, error UX, privacy notice, commit `562f468` — complete
@@ -18,30 +19,29 @@ Status: complete — diagnostic tooling added, awaiting Miha's production diagno
 
 ---
 
-## What Was Done in TRANSCRIPT-FIX-B
+## What Was Done in TRANSCRIPT-FIX-C
 
 ### Problem
-TRANSCRIPT-FIX-A passed all local tests but production still returned:
-HTTP 422 — "This video doesn't have captions or a readable transcript."
+TRANSCRIPT-FIX-B added diagnostic tooling. Miha ran the production diagnostic and confirmed:
+- `playabilityStatus: "LOGIN_REQUIRED"` from ANDROID InnerTube client on Vercel
+- `captionTrackCount: 0` — YouTube returns no caption tracks under LOGIN_REQUIRED
+- `youtube-transcript` package also fails on Vercel cloud IPs (HTML scraping gets different YouTube page)
+- The `innertubeAttempts` array only showed 1 attempt (ANDROID) — no fallback clients
 
-### Root cause (suspected, not yet confirmed)
-Vercel cloud IPs behave differently with YouTube's InnerTube API. The ANDROID InnerTube client likely returns either 0 caption tracks (LOGIN_REQUIRED) or HTTP error from datacenter IPs. The `youtube-transcript` package fallback also fails on cloud IPs (HTML scraping gets a different YouTube page without inline JSON).
+### Root Cause (Confirmed)
+YouTube's InnerTube API returns `LOGIN_REQUIRED` to the ANDROID client from Vercel datacenter IPs. This is not a video-specific issue — it affects all videos. Only residential/home IPs get `OK` from the ANDROID client.
 
-### What changed
+### What Changed
 
-**`app/lib/ai/transcript.ts`** — Added diagnostic infrastructure:
-- `tryInnerTubeClient()` helper (extracted from `fetchViaInnerTubeDirect`) — runs one InnerTube client attempt, returns full diagnostics
-- `TranscriptDiagnosis` interface — structured result type
-- `diagnoseTranscript()` export — runs all InnerTube clients + package fallback and returns diagnostics without transcript text
-- Production path now logs every step to Vercel Function Logs with `[virnix-transcript]` prefix
+**`app/lib/ai/transcript.ts`** — Expanded InnerTube client list:
+- `INNERTUBE_CLIENTS` now has 4 clients: `WEB`, `ANDROID`, `WEB_EMBEDDED_PLAYER`, `TVHTML5_SIMPLY_EMBEDDED_PLAYER`
+- WEB_EMBEDDED_PLAYER and TVHTML5_SIMPLY_EMBEDDED_PLAYER include `thirdParty.embedUrl` in context
+- `TranscriptDiagnosis` interface and `InnerTubeAttemptResult` now include `selectedTrackKind` and `xmlHttpStatus` fields
+- `diagnoseTranscript()` returns all 4 attempts in `innertubeAttempts`
+- `fetchViaInnerTubeDirect()` log line includes `kind=` field
+- Comment updated to list all 4 clients
 
-**`app/api/debug/transcript/route.ts`** (NEW) — Auth-gated diagnostic GET endpoint:
-```
-GET /api/debug/transcript?url=YOUTUBE_URL
-```
-Returns structured JSON with InnerTube attempt details. Requires authentication. Never returns transcript text or secrets.
-
-**`scripts/test-transcript.mjs`** — Updated to read sample video IDs from `app/page.tsx` at runtime, warns if test/UI diverge.
+**`scripts/test-transcript.mjs`** — Updated to mirror all 4 InnerTube clients
 
 ---
 
@@ -49,17 +49,17 @@ Returns structured JSON with InnerTube attempt details. Requires authentication.
 
 - Lint: ✅ clean
 - Build: ✅ clean (Turbopack, TypeScript, all routes)
-- `/api/debug/transcript` visible in build output as Dynamic route
 - URL parsing tests: ✅ 13/13
 - Package fallback tests: ✅ 4/4
 - ANDROID InnerTube: ✅ working locally (HTTP 200, 354 segs for Simon Sinek)
+- Other clients: ⚠️ UNPLAYABLE/ERROR locally (normal — cloud IP behavior is different and unknown)
 - Real AI calls: 0 (zero cost)
 
 ---
 
 ## Next Recommended Phase
 
-**FREE-BETA-A.3B — Miha runs one production transcript diagnostic test**
+**FREE-BETA-A.3C — Miha runs production multi-client transcript diagnostic**
 
 Not an engineering phase. Miha:
 1. Waits for Vercel to deploy (~2 min after push)
@@ -67,6 +67,6 @@ Not an engineering phase. Miha:
 3. Opens in browser (while signed in):
    `https://virnix.pro/api/debug/transcript?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Du4ZoJKF_VuA`
 4. Copies the full JSON response and reports it here
-5. Claude reads the response and knows exactly what to fix next
+5. Claude reads the response — which now shows all 4 InnerTube attempts — and knows exactly what to fix or confirm next
 
-See `docs/beta/TRANSCRIPT_FIX_B_REPORT.md` for full details, interpretation guide, and expected responses.
+See `docs/beta/TRANSCRIPT_FIX_C_REPORT.md` for full interpretation guide.

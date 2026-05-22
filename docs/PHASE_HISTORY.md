@@ -4,13 +4,30 @@ Chronological log of completed development phases.
 
 ---
 
-## Phase 49 — TRANSCRIPT-FIX-B (2026-05-22)
+## Phase 50 — TRANSCRIPT-FIX-C (2026-05-22)
 
 **Commit:** TBD (this phase)
+**Goal:** Fix Vercel transcript failure by adding multi-client InnerTube fallback
+
+### Root Cause (Confirmed via production diagnostic)
+YouTube returns `playabilityStatus=LOGIN_REQUIRED` to the ANDROID InnerTube client from Vercel datacenter IPs. `youtube-transcript` package also fails (HTML scraping gets a different page on cloud IPs). Only 1 client (ANDROID) was in the fallback list.
+
+### What Changed
+- `app/lib/ai/transcript.ts` — `INNERTUBE_CLIENTS` expanded from 1 to 4: `WEB`, `ANDROID`, `WEB_EMBEDDED_PLAYER`, `TVHTML5_SIMPLY_EMBEDDED_PLAYER`. Added `selectedTrackKind` and `xmlHttpStatus` fields to diagnostics. WEB_EMBEDDED and TVHTML5_SIMPLY_EMBEDDED include `thirdParty.embedUrl` in context.
+- `scripts/test-transcript.mjs` — Updated to mirror all 4 clients
+
+### Validation
+- Lint: ✅ | Build: ✅ | URL parsing: 13/13 | Package fallback: 4/4 | ANDROID local: ✅ 354 segs | AI calls: 0
+
+---
+
+## Phase 49 — TRANSCRIPT-FIX-B (2026-05-22)
+
+**Commit:** `71491a8`
 **Goal:** Diagnose why TRANSCRIPT-FIX-A passed locally but production still failed
 
 ### Root Cause
-Not yet confirmed — requires Miha to run `/api/debug/transcript` on virnix.pro. Hypotheses: ANDROID InnerTube client returns 0 caption tracks (`LOGIN_REQUIRED` or empty) on Vercel cloud IPs; or caption XML fetch fails from Vercel IPs.
+Confirmed via Miha's production diagnostic: ANDROID InnerTube client returns `LOGIN_REQUIRED` (0 tracks) from Vercel datacenter IPs. `youtube-transcript` package also fails on cloud IPs.
 
 ### What Changed
 - `app/lib/ai/transcript.ts` — added `TranscriptDiagnosis` interface, `diagnoseTranscript()` export, `tryInnerTubeClient()` helper, comprehensive `[virnix-transcript]` logging in production path

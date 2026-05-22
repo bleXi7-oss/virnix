@@ -18,6 +18,8 @@ export interface TranscriptDiagnosis {
     playabilityStatus: string | null;
     captionTrackCount: number;
     selectedLang: string | null;
+    selectedTrackKind: string | null;
+    xmlHttpStatus: number | null;
     xmlSegmentCount: number | null;
     error: string | null;
   }>;
@@ -31,6 +33,7 @@ export interface TranscriptDiagnosis {
 // ─── InnerTube clients ────────────────────────────────────────────────────────
 // prettyPrint=false is required — YouTube returns 400 without it.
 // Clients are tried in order; first to return caption segments wins.
+// WEB is first: least likely to get LOGIN_REQUIRED from datacenter IPs.
 const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
 
 interface InnerTubeClient {
@@ -40,6 +43,27 @@ interface InnerTubeClient {
 }
 
 const INNERTUBE_CLIENTS: InnerTubeClient[] = [
+  {
+    name: "WEB",
+    context: {
+      client: {
+        clientName: "WEB",
+        clientVersion: "2.20240726.00.00",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "X-YouTube-Client-Name": "1",
+      "X-YouTube-Client-Version": "2.20240726.00.00",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
+    },
+  },
   {
     name: "ANDROID",
     context: {
@@ -58,13 +82,61 @@ const INNERTUBE_CLIENTS: InnerTubeClient[] = [
       "X-YouTube-Client-Version": "20.10.38",
     },
   },
+  {
+    name: "WEB_EMBEDDED_PLAYER",
+    context: {
+      client: {
+        clientName: "WEB_EMBEDDED_PLAYER",
+        clientVersion: "1.20240726.00.00",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+      thirdParty: {
+        embedUrl: "https://www.youtube.com/",
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "X-YouTube-Client-Name": "56",
+      "X-YouTube-Client-Version": "1.20240726.00.00",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/embed/",
+    },
+  },
+  {
+    name: "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+    context: {
+      client: {
+        clientName: "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+        clientVersion: "2.0",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+      thirdParty: {
+        embedUrl: "https://www.youtube.com/",
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/5.0 TV Safari/538.1",
+      "X-YouTube-Client-Name": "85",
+      "X-YouTube-Client-Version": "2.0",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
+    },
+  },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function selectTrack(
-  tracks: Array<{ languageCode?: string; baseUrl?: string }>
-): { languageCode?: string; baseUrl?: string } | null {
+  tracks: Array<{ languageCode?: string; baseUrl?: string; kind?: string }>
+): { languageCode?: string; baseUrl?: string; kind?: string } | null {
   if (tracks.length === 0) return null;
   return (
     tracks.find((t) => t.languageCode === "en") ??
@@ -120,6 +192,8 @@ interface InnerTubeAttemptResult {
   playabilityStatus: string | null;
   captionTrackCount: number;
   selectedLang: string | null;
+  selectedTrackKind: string | null;
+  xmlHttpStatus: number | null;
   xmlSegmentCount: number | null;
   error: string | null;
 }
@@ -134,6 +208,8 @@ async function tryInnerTubeClient(
     playabilityStatus: null,
     captionTrackCount: 0,
     selectedLang: null,
+    selectedTrackKind: null,
+    xmlHttpStatus: null,
     xmlSegmentCount: null,
     error: null,
   };
@@ -163,7 +239,7 @@ async function tryInnerTubeClient(
 
     const captions = data?.captions as Record<string, unknown> | undefined;
     const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
-    const tracks = (renderer?.captionTracks as Array<{ languageCode?: string; baseUrl?: string }>) ?? [];
+    const tracks = (renderer?.captionTracks as Array<{ languageCode?: string; baseUrl?: string; kind?: string }>) ?? [];
     r.captionTrackCount = tracks.length;
 
     const track = selectTrack(tracks);
@@ -173,6 +249,7 @@ async function tryInnerTubeClient(
     }
 
     r.selectedLang = track.languageCode ?? null;
+    r.selectedTrackKind = track.kind ?? null;
 
     const captionUrl = new URL(track.baseUrl);
     if (!captionUrl.hostname.endsWith(".youtube.com")) {
@@ -181,6 +258,7 @@ async function tryInnerTubeClient(
     }
 
     const xmlResp = await fetch(track.baseUrl);
+    r.xmlHttpStatus = xmlResp.status;
     r.xmlSegmentCount = 0;
     if (!xmlResp.ok) {
       r.error = `xml_${xmlResp.status}`;
@@ -211,7 +289,7 @@ async function fetchViaInnerTubeDirect(videoId: string): Promise<RawSegment[] | 
   for (const client of INNERTUBE_CLIENTS) {
     const r = await tryInnerTubeClient(videoId, client);
     console.log(
-      `[virnix-transcript] ${client.name} status=${r.httpStatus ?? "?"} playability=${r.playabilityStatus ?? "?"} tracks=${r.captionTrackCount} lang=${r.selectedLang ?? "-"} xmlSegs=${r.xmlSegmentCount ?? "-"} err=${r.error ?? "ok"}`
+      `[virnix-transcript] ${client.name} status=${r.httpStatus ?? "?"} playability=${r.playabilityStatus ?? "?"} tracks=${r.captionTrackCount} lang=${r.selectedLang ?? "-"} kind=${r.selectedTrackKind ?? "-"} xmlSegs=${r.xmlSegmentCount ?? "-"} err=${r.error ?? "ok"}`
     );
     if (r.segments) return r.segments;
   }
@@ -245,7 +323,7 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     throw new Error("Please paste a valid YouTube link.");
   }
 
-  // 1. Enhanced InnerTube — tries ANDROID, IOS, TVHTML5 in order.
+  // 1. Enhanced InnerTube — tries WEB, ANDROID, WEB_EMBEDDED_PLAYER, TVHTML5_SIMPLY_EMBEDDED_PLAYER in order.
   const directSegments = await fetchViaInnerTubeDirect(videoId);
   if (directSegments && directSegments.length > 0) {
     console.log(`[virnix-transcript] success via InnerTube segments=${directSegments.length}`);
@@ -318,6 +396,8 @@ export async function diagnoseTranscript(youtubeUrl: string): Promise<Transcript
       playabilityStatus: r.playabilityStatus,
       captionTrackCount: r.captionTrackCount,
       selectedLang: r.selectedLang,
+      selectedTrackKind: r.selectedTrackKind,
+      xmlHttpStatus: r.xmlHttpStatus,
       xmlSegmentCount: r.xmlSegmentCount,
       error: r.error,
     });

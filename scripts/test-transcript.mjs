@@ -1,4 +1,4 @@
-// Transcript + URL parsing smoke test — TRANSCRIPT-FIX-B
+// Transcript + URL parsing smoke test — TRANSCRIPT-FIX-C
 // Run with: node scripts/test-transcript.mjs
 //
 // Zero-cost: does NOT call Anthropic. Fetches YouTube captions only.
@@ -133,17 +133,35 @@ for (const { label, id, lang, expectWork } of TRANSCRIPT_CASES) {
   }
 }
 
-// ─── Enhanced InnerTube path — all three clients ──────────────────────────────
-// Mirrors the INNERTUBE_CLIENTS in app/lib/ai/transcript.ts
-// prettyPrint=false is required — YouTube returns 400 without it.
-
-// prettyPrint=false is required — YouTube returns 400 without it.
+// ─── Enhanced InnerTube path — all clients ────────────────────────────────────
 // Mirrors INNERTUBE_CLIENTS in app/lib/ai/transcript.ts — keep in sync.
+// prettyPrint=false is required — YouTube returns 400 without it.
 const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
 
 const CLIENTS = [
   {
-    name: "ANDROID 20.10.38",
+    name: "WEB",
+    context: {
+      client: {
+        clientName: "WEB",
+        clientVersion: "2.20240726.00.00",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "X-YouTube-Client-Name": "1",
+      "X-YouTube-Client-Version": "2.20240726.00.00",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
+    },
+  },
+  {
+    name: "ANDROID",
     context: {
       client: {
         clientName: "ANDROID",
@@ -158,6 +176,54 @@ const CLIENTS = [
       "User-Agent": "com.google.android.youtube/20.10.38 (Linux; U; Android 14)",
       "X-YouTube-Client-Name": "3",
       "X-YouTube-Client-Version": "20.10.38",
+    },
+  },
+  {
+    name: "WEB_EMBEDDED_PLAYER",
+    context: {
+      client: {
+        clientName: "WEB_EMBEDDED_PLAYER",
+        clientVersion: "1.20240726.00.00",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+      thirdParty: {
+        embedUrl: "https://www.youtube.com/",
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      "X-YouTube-Client-Name": "56",
+      "X-YouTube-Client-Version": "1.20240726.00.00",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/embed/",
+    },
+  },
+  {
+    name: "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+    context: {
+      client: {
+        clientName: "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+        clientVersion: "2.0",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+      thirdParty: {
+        embedUrl: "https://www.youtube.com/",
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (SMART-TV; Linux; Tizen 5.0) AppleWebKit/538.1 (KHTML, like Gecko) Version/5.0 TV Safari/538.1",
+      "X-YouTube-Client-Name": "85",
+      "X-YouTube-Client-Version": "2.0",
+      "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
     },
   },
 ];
@@ -192,7 +258,7 @@ function parseXml(xml) {
   return results;
 }
 
-console.log("\n=== Enhanced InnerTube Path (all 3 clients) ===");
+console.log("\n=== Enhanced InnerTube Path (all 4 clients) ===");
 for (const { label, id, expectWork } of TRANSCRIPT_CASES.slice(0, 3)) {
   console.log(`\n  [${label}] id=${id}`);
   for (const client of CLIENTS) {
