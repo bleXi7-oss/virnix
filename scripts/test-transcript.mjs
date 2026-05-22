@@ -1,10 +1,35 @@
-// Transcript + URL parsing smoke test — TRANSCRIPT-FIX-A
+// Transcript + URL parsing smoke test — TRANSCRIPT-FIX-B
 // Run with: node scripts/test-transcript.mjs
 //
 // Zero-cost: does NOT call Anthropic. Fetches YouTube captions only.
 // Safe to run repeatedly; no credits consumed.
 
 import { YoutubeTranscript } from "youtube-transcript";
+import { readFileSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ─── Read sample URLs directly from page.tsx (keeps script in sync with UI) ──
+
+const pageSource = readFileSync(resolve(__dirname, "../app/page.tsx"), "utf-8");
+const exampleMatches = [
+  ...pageSource.matchAll(
+    /\{\s*label:\s*"([^"]+)",\s*url:\s*"https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"[^}]*\}/g
+  ),
+];
+const SAMPLES_FROM_PAGE = exampleMatches.map((m) => ({ label: m[1], id: m[2] }));
+
+console.log("=== Sample URLs from app/page.tsx ===");
+if (SAMPLES_FROM_PAGE.length === 0) {
+  console.log("  WARNING: could not extract EXAMPLES from page.tsx — check regex");
+} else {
+  for (const { label, id } of SAMPLES_FROM_PAGE) {
+    console.log(`  ${label} → ${id}`);
+  }
+}
+console.log();
 
 // ─── URL parsing tests ────────────────────────────────────────────────────────
 
@@ -43,7 +68,8 @@ const URL_CASES = [
 ];
 
 console.log("=== URL Parsing ===");
-let urlPass = 0, urlFail = 0;
+let urlPass = 0,
+  urlFail = 0;
 for (const { url, expect } of URL_CASES) {
   const got = getVideoId(url);
   const ok = got === expect;
@@ -56,19 +82,29 @@ for (const { url, expect } of URL_CASES) {
 }
 console.log(`  ${urlPass}/${URL_CASES.length} passed${urlFail > 0 ? ` — ${urlFail} FAILED` : ""}\n`);
 
-// ─── Transcript fetch tests ───────────────────────────────────────────────────
-// These use the REAL youtube-transcript package (no AI).
-// Videos verified to have English captions.
+// ─── Transcript fetch tests (package fallback path) ───────────────────────────
 
 const TRANSCRIPT_CASES = [
   // Verified working — English captions, famous talks
   { label: "Simon Sinek TEDx (18 min)", id: "u4ZoJKF_VuA", lang: "en", expectWork: true },
   { label: "Steve Jobs Stanford (15 min)", id: "UF8uR6Z6KLc", lang: "en", expectWork: true },
-  // Short video — known to work (first YouTube video, auto-captions)
+  // Short video — known to work
   { label: "Me at the zoo (short, auto-captions)", id: "jNQXAC9IVRw", lang: undefined, expectWork: true },
-  // Known failures — no captions (expected to fail)
+  // Known failure — no captions
   { label: "Rick Astley — captions disabled", id: "dQw4w9WgXcW", lang: undefined, expectWork: false },
 ];
+
+// Verify page.tsx samples match test cases
+const pageIds = new Set(SAMPLES_FROM_PAGE.map((s) => s.id));
+const mismatched = TRANSCRIPT_CASES.filter(
+  (c) => c.expectWork && !pageIds.has(c.id) && pageIds.size > 0
+);
+if (mismatched.length > 0) {
+  console.log(
+    "  NOTE: page.tsx EXAMPLES and test script use different video IDs:",
+    mismatched.map((c) => c.id)
+  );
+}
 
 console.log("=== Transcript Fetch (package fallback path) ===");
 for (const { label, id, lang, expectWork } of TRANSCRIPT_CASES) {
@@ -80,7 +116,11 @@ for (const { label, id, lang, expectWork } of TRANSCRIPT_CASES) {
       const outcome = !expectWork ? "✓ (expected failure)" : "✗ empty result";
       console.log(outcome);
     } else {
-      const text = segments.map(s => s.text).join(" ").replace(/\s+/g, " ").trim();
+      const text = segments
+        .map((s) => s.text)
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
       const langGot = segments[0]?.lang ?? "?";
       const outcome = expectWork ? "✓" : "✗ (expected to fail but got result)";
       console.log(`${outcome}  ${segments.length} segs, lang=${langGot}, ${text.length} chars`);
@@ -93,22 +133,42 @@ for (const { label, id, lang, expectWork } of TRANSCRIPT_CASES) {
   }
 }
 
-// ─── Enhanced InnerTube path test ─────────────────────────────────────────────
-// Mirrors the logic in app/lib/ai/transcript.ts
+// ─── Enhanced InnerTube path — all three clients ──────────────────────────────
+// Mirrors the INNERTUBE_CLIENTS in app/lib/ai/transcript.ts
+// prettyPrint=false is required — YouTube returns 400 without it.
 
-// prettyPrint=false is required — YouTube returns 400 without it
+// prettyPrint=false is required — YouTube returns 400 without it.
+// Mirrors INNERTUBE_CLIENTS in app/lib/ai/transcript.ts — keep in sync.
 const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+
 const CLIENTS = [
   {
     name: "ANDROID 20.10.38",
-    context: { client: { clientName: "ANDROID", clientVersion: "20.10.38", hl: "en", gl: "US", utcOffsetMinutes: 0 } },
-    headers: { "Content-Type": "application/json", "User-Agent": "com.google.android.youtube/20.10.38 (Linux; U; Android 14)", "X-YouTube-Client-Name": "3", "X-YouTube-Client-Version": "20.10.38" },
+    context: {
+      client: {
+        clientName: "ANDROID",
+        clientVersion: "20.10.38",
+        hl: "en",
+        gl: "US",
+        utcOffsetMinutes: 0,
+      },
+    },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "com.google.android.youtube/20.10.38 (Linux; U; Android 14)",
+      "X-YouTube-Client-Name": "3",
+      "X-YouTube-Client-Version": "20.10.38",
+    },
   },
 ];
 
 function selectTrack(tracks) {
   if (!tracks?.length) return null;
-  return tracks.find(t => t.languageCode === "en") ?? tracks.find(t => t.languageCode?.startsWith("en")) ?? tracks[0];
+  return (
+    tracks.find((t) => t.languageCode === "en") ??
+    tracks.find((t) => t.languageCode?.startsWith("en")) ??
+    tracks[0]
+  );
 }
 
 function parseXml(xml) {
@@ -116,7 +176,11 @@ function parseXml(xml) {
   const pRegex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
   let m;
   while ((m = pRegex.exec(xml)) !== null) {
-    const text = m[3].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&#39;/g, "'").trim();
+    const text = m[3]
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;/g, "'")
+      .trim();
     if (text) results.push({ text, duration: parseInt(m[2]), offset: parseInt(m[1]) });
   }
   if (results.length > 0) return results;
@@ -128,39 +192,66 @@ function parseXml(xml) {
   return results;
 }
 
-console.log("\n=== Enhanced InnerTube Path ===");
+console.log("\n=== Enhanced InnerTube Path (all 3 clients) ===");
 for (const { label, id, expectWork } of TRANSCRIPT_CASES.slice(0, 3)) {
-  process.stdout.write(`  ${label} (${id})... `);
-  let found = false;
+  console.log(`\n  [${label}] id=${id}`);
   for (const client of CLIENTS) {
+    process.stdout.write(`    ${client.name}: `);
     try {
       const resp = await fetch(INNERTUBE_URL, {
         method: "POST",
         headers: client.headers,
-        body: JSON.stringify({ context: client.context, videoId: id, contentCheckOk: true, racyCheckOk: true }),
+        body: JSON.stringify({
+          context: client.context,
+          videoId: id,
+          contentCheckOk: true,
+          racyCheckOk: true,
+        }),
       });
-      if (!resp.ok) continue;
+      if (!resp.ok) {
+        console.log(`HTTP ${resp.status}`);
+        continue;
+      }
       const data = await resp.json();
-      const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+      const playability = data?.playabilityStatus?.status ?? "?";
+      const tracks =
+        data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
       const track = selectTrack(tracks);
-      if (!track?.baseUrl) continue;
+      if (!track?.baseUrl) {
+        console.log(`HTTP 200 playability=${playability} tracks=${tracks.length} no_usable_track`);
+        continue;
+      }
       const xmlResp = await fetch(track.baseUrl);
-      if (!xmlResp.ok) continue;
+      if (!xmlResp.ok) {
+        console.log(
+          `HTTP 200 playability=${playability} tracks=${tracks.length} lang=${track.languageCode} xml_fetch=${xmlResp.status}`
+        );
+        continue;
+      }
       const segments = parseXml(await xmlResp.text());
       if (segments.length > 0) {
-        const text = segments.map(s => s.text).join(" ").slice(0, 80);
+        const preview = segments
+          .map((s) => s.text)
+          .join(" ")
+          .slice(0, 60);
         const outcome = expectWork ? "✓" : "✗ (expected failure)";
-        console.log(`${outcome} via ${client.name}: ${segments.length} segs — "${text}..."`);
-        found = true;
-        break;
+        console.log(
+          `${outcome} HTTP 200 playability=${playability} tracks=${tracks.length} lang=${track.languageCode} segs=${segments.length} "${preview}..."`
+        );
+      } else {
+        console.log(
+          `HTTP 200 playability=${playability} tracks=${tracks.length} lang=${track.languageCode} empty_segments`
+        );
       }
-    } catch { continue; }
-  }
-  if (!found) {
-    const outcome = !expectWork ? "✓ (expected failure)" : "✗ no caption data from any client";
-    console.log(outcome);
+    } catch (err) {
+      console.log(`exception: ${err.message.slice(0, 80)}`);
+    }
   }
 }
 
-console.log("\nDone. If all ✓: transcript fetching is working locally.");
-console.log("Vercel behavior may differ due to cloud IP differences with YouTube.");
+console.log(
+  "\nDone. If all ✓: transcript fetching is working locally with at least one client."
+);
+console.log(
+  "Production behavior may differ. Run /api/debug/transcript on virnix.pro to see Vercel-side results."
+);

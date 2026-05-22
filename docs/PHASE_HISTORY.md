@@ -4,9 +4,27 @@ Chronological log of completed development phases.
 
 ---
 
-## Phase 48 — TRANSCRIPT-FIX-A (2026-05-22)
+## Phase 49 — TRANSCRIPT-FIX-B (2026-05-22)
 
 **Commit:** TBD (this phase)
+**Goal:** Diagnose why TRANSCRIPT-FIX-A passed locally but production still failed
+
+### Root Cause
+Not yet confirmed — requires Miha to run `/api/debug/transcript` on virnix.pro. Hypotheses: ANDROID InnerTube client returns 0 caption tracks (`LOGIN_REQUIRED` or empty) on Vercel cloud IPs; or caption XML fetch fails from Vercel IPs.
+
+### What Changed
+- `app/lib/ai/transcript.ts` — added `TranscriptDiagnosis` interface, `diagnoseTranscript()` export, `tryInnerTubeClient()` helper, comprehensive `[virnix-transcript]` logging in production path
+- `app/api/debug/transcript/route.ts` — NEW auth-gated endpoint; call signed in as `GET /api/debug/transcript?url=YOUTUBE_URL` to get structured diagnostic JSON (no secrets, no transcript text)
+- `scripts/test-transcript.mjs` — now reads sample URLs from `app/page.tsx` at runtime to ensure test/UI parity; ANDROID confirmed working locally (HTTP 200, 354 segs)
+
+### Validation
+- Lint: ✅ | Build: ✅ | `/api/debug/transcript` route visible in build | URL parsing: 13/13 | Transcript tests: all passed | AI calls: 0
+
+---
+
+## Phase 48 — TRANSCRIPT-FIX-A (2026-05-22)
+
+**Commit:** `b11d7ce`
 **Goal:** Fix YouTube transcript reliability for production (Vercel)
 
 ### Root Cause

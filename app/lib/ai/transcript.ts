@@ -9,16 +9,39 @@ export interface TranscriptResult {
   durationSec: number;
 }
 
-// ─── Enhanced InnerTube fetcher ───────────────────────────────────────────────
-// The youtube-transcript package's InnerTube context is minimal and can fail on
-// cloud server IPs (Vercel). This fetcher tries two clients with full context
-// before falling back to the package's own logic.
+export interface TranscriptDiagnosis {
+  videoId: string | null;
+  urlType: string;
+  innertubeAttempts: Array<{
+    clientName: string;
+    httpStatus: number | null;
+    playabilityStatus: string | null;
+    captionTrackCount: number;
+    selectedLang: string | null;
+    xmlSegmentCount: number | null;
+    error: string | null;
+  }>;
+  innertubeSucceeded: boolean;
+  packageFallbackError: string | null;
+  totalSegmentCount: number | null;
+  ok: boolean;
+  friendlyError: string | null;
+}
 
-// prettyPrint=false is required — YouTube returns 400 without it
+// ─── InnerTube clients ────────────────────────────────────────────────────────
+// prettyPrint=false is required — YouTube returns 400 without it.
+// Clients are tried in order; first to return caption segments wins.
 const INNERTUBE_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
 
-const INNERTUBE_CLIENTS = [
+interface InnerTubeClient {
+  name: string;
+  context: object;
+  headers: Record<string, string>;
+}
+
+const INNERTUBE_CLIENTS: InnerTubeClient[] = [
   {
+    name: "ANDROID",
     context: {
       client: {
         clientName: "ANDROID",
@@ -35,9 +58,10 @@ const INNERTUBE_CLIENTS = [
       "X-YouTube-Client-Version": "20.10.38",
     },
   },
-] as const;
+];
 
-// Prefers English (exact, then prefix), falls back to first available track.
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function selectTrack(
   tracks: Array<{ languageCode?: string; baseUrl?: string }>
 ): { languageCode?: string; baseUrl?: string } | null {
@@ -65,11 +89,9 @@ function decodeXmlEntities(s: string): string {
     );
 }
 
-// Handles both srv3 (<p t="ms" d="ms">) and classic (<text start="s" dur="s">) XML.
 function parseTranscriptXml(xml: string): RawSegment[] {
   const results: RawSegment[] = [];
-
-  // srv3 format
+  // srv3 format: <p t="ms" d="ms">
   const pRegex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
   let m: RegExpExecArray | null;
   while ((m = pRegex.exec(xml)) !== null) {
@@ -79,8 +101,7 @@ function parseTranscriptXml(xml: string): RawSegment[] {
     }
   }
   if (results.length > 0) return results;
-
-  // Classic format
+  // Classic format: <text start="s" dur="s">
   const classicRegex = /<text start="([^"]*)" dur="([^"]*)">([^<]*)<\/text>/g;
   while ((m = classicRegex.exec(xml)) !== null) {
     const text = decodeXmlEntities(m[3]).trim();
@@ -91,44 +112,115 @@ function parseTranscriptXml(xml: string): RawSegment[] {
   return results;
 }
 
-async function fetchViaInnerTubeDirect(videoId: string): Promise<RawSegment[] | null> {
-  for (const client of INNERTUBE_CLIENTS) {
-    try {
-      const resp = await fetch(INNERTUBE_URL, {
-        method: "POST",
-        headers: client.headers as Record<string, string>,
-        body: JSON.stringify({
-          context: client.context,
-          videoId,
-          contentCheckOk: true,
-          racyCheckOk: true,
-        }),
-      });
-      if (!resp.ok) continue;
+// ─── InnerTube attempt (single client) ───────────────────────────────────────
 
-      const data = await resp.json();
-      const tracks: Array<{ languageCode?: string; baseUrl?: string }> =
-        data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+interface InnerTubeAttemptResult {
+  segments: RawSegment[] | null;
+  httpStatus: number | null;
+  playabilityStatus: string | null;
+  captionTrackCount: number;
+  selectedLang: string | null;
+  xmlSegmentCount: number | null;
+  error: string | null;
+}
 
-      const track = selectTrack(tracks);
-      if (!track?.baseUrl) continue;
+async function tryInnerTubeClient(
+  videoId: string,
+  client: InnerTubeClient
+): Promise<InnerTubeAttemptResult> {
+  const r: InnerTubeAttemptResult = {
+    segments: null,
+    httpStatus: null,
+    playabilityStatus: null,
+    captionTrackCount: 0,
+    selectedLang: null,
+    xmlSegmentCount: null,
+    error: null,
+  };
 
-      const captionUrl = new URL(track.baseUrl);
-      if (!captionUrl.hostname.endsWith(".youtube.com")) continue;
+  try {
+    const resp = await fetch(INNERTUBE_URL, {
+      method: "POST",
+      headers: client.headers,
+      body: JSON.stringify({
+        context: client.context,
+        videoId,
+        contentCheckOk: true,
+        racyCheckOk: true,
+      }),
+    });
 
-      const xmlResp = await fetch(track.baseUrl);
-      if (!xmlResp.ok) continue;
+    r.httpStatus = resp.status;
 
-      const segments = parseTranscriptXml(await xmlResp.text());
-      if (segments.length > 0) return segments;
-    } catch {
-      continue;
+    if (!resp.ok) {
+      r.error = `http_${resp.status}`;
+      return r;
     }
+
+    const data = await resp.json() as Record<string, unknown>;
+    const ps = data?.playabilityStatus as Record<string, unknown> | undefined;
+    r.playabilityStatus = (ps?.status as string) ?? null;
+
+    const captions = data?.captions as Record<string, unknown> | undefined;
+    const renderer = captions?.playerCaptionsTracklistRenderer as Record<string, unknown> | undefined;
+    const tracks = (renderer?.captionTracks as Array<{ languageCode?: string; baseUrl?: string }>) ?? [];
+    r.captionTrackCount = tracks.length;
+
+    const track = selectTrack(tracks);
+    if (!track?.baseUrl) {
+      r.error = "no_usable_track";
+      return r;
+    }
+
+    r.selectedLang = track.languageCode ?? null;
+
+    const captionUrl = new URL(track.baseUrl);
+    if (!captionUrl.hostname.endsWith(".youtube.com")) {
+      r.error = "unsafe_url";
+      return r;
+    }
+
+    const xmlResp = await fetch(track.baseUrl);
+    r.xmlSegmentCount = 0;
+    if (!xmlResp.ok) {
+      r.error = `xml_${xmlResp.status}`;
+      return r;
+    }
+
+    const segments = parseTranscriptXml(await xmlResp.text());
+    r.xmlSegmentCount = segments.length;
+
+    if (segments.length === 0) {
+      r.error = "empty_segments";
+      return r;
+    }
+
+    r.segments = segments;
+    return r;
+  } catch (err) {
+    r.error = `exception:${err instanceof Error ? err.message.slice(0, 80) : "unknown"}`;
+    return r;
   }
+}
+
+// ─── InnerTube fetch (all clients) ───────────────────────────────────────────
+
+async function fetchViaInnerTubeDirect(videoId: string): Promise<RawSegment[] | null> {
+  console.log(`[virnix-transcript] InnerTube start videoId=${videoId}`);
+
+  for (const client of INNERTUBE_CLIENTS) {
+    const r = await tryInnerTubeClient(videoId, client);
+    console.log(
+      `[virnix-transcript] ${client.name} status=${r.httpStatus ?? "?"} playability=${r.playabilityStatus ?? "?"} tracks=${r.captionTrackCount} lang=${r.selectedLang ?? "-"} xmlSegs=${r.xmlSegmentCount ?? "-"} err=${r.error ?? "ok"}`
+    );
+    if (r.segments) return r.segments;
+  }
+
+  console.log(`[virnix-transcript] InnerTube all clients failed`);
   return null;
 }
 
-// ─── Duration calculation ─────────────────────────────────────────────────────
+// ─── Duration ─────────────────────────────────────────────────────────────────
 
 function computeDurationSeconds(segments: RawSegment[]): number {
   if (!segments || segments.length === 0) return 0;
@@ -153,16 +245,93 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     throw new Error("Please paste a valid YouTube link.");
   }
 
-  // 1. Enhanced InnerTube (better context for cloud IPs — tries ANDROID then WEB client).
+  // 1. Enhanced InnerTube — tries ANDROID, IOS, TVHTML5 in order.
   const directSegments = await fetchViaInnerTubeDirect(videoId);
   if (directSegments && directSegments.length > 0) {
+    console.log(`[virnix-transcript] success via InnerTube segments=${directSegments.length}`);
     return buildResult(directSegments);
   }
 
   // 2. Fallback: youtube-transcript package (InnerTube + HTML scraping).
-  //    Prefer English; if the language isn't available, retry without filter.
+  console.log(`[virnix-transcript] package fallback start videoId=${videoId}`);
   let segments: Awaited<ReturnType<typeof YoutubeTranscript.fetchTranscript>>;
   try {
+    try {
+      segments = await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
+      console.log(`[virnix-transcript] package returned segments=${segments.length}`);
+    } catch (langErr) {
+      const msg = langErr instanceof Error ? langErr.message.toLowerCase() : "";
+      console.log(`[virnix-transcript] package lang=en error: ${msg.slice(0, 120)}`);
+      if (msg.includes("no transcripts are available in") || msg.includes("available languages")) {
+        segments = await YoutubeTranscript.fetchTranscript(videoId);
+        console.log(`[virnix-transcript] package retry returned segments=${segments.length}`);
+      } else {
+        throw langErr;
+      }
+    }
+  } catch (err) {
+    const rawMsg = err instanceof Error ? err.message : "unknown";
+    console.log(`[virnix-transcript] package failed: ${rawMsg.slice(0, 200)}`);
+    throw new Error(toFriendlyError(err));
+  }
+
+  if (!segments || segments.length === 0) {
+    throw new Error("No transcript content found for this video.");
+  }
+
+  return buildResult(segments as unknown as RawSegment[]);
+}
+
+// Returns structured diagnostics without exposing full transcript text.
+// Used by /api/debug/transcript.
+export async function diagnoseTranscript(youtubeUrl: string): Promise<TranscriptDiagnosis> {
+  const videoId = getYouTubeVideoId(youtubeUrl);
+  const urlType = youtubeUrl.includes("/shorts/")
+    ? "shorts"
+    : youtubeUrl.includes("youtu.be/")
+    ? "youtu.be"
+    : youtubeUrl.includes("watch?")
+    ? "watch"
+    : "other";
+
+  const diag: TranscriptDiagnosis = {
+    videoId,
+    urlType,
+    innertubeAttempts: [],
+    innertubeSucceeded: false,
+    packageFallbackError: null,
+    totalSegmentCount: null,
+    ok: false,
+    friendlyError: null,
+  };
+
+  if (!videoId) {
+    diag.friendlyError = "Invalid YouTube URL";
+    return diag;
+  }
+
+  for (const client of INNERTUBE_CLIENTS) {
+    const r = await tryInnerTubeClient(videoId, client);
+    diag.innertubeAttempts.push({
+      clientName: client.name,
+      httpStatus: r.httpStatus,
+      playabilityStatus: r.playabilityStatus,
+      captionTrackCount: r.captionTrackCount,
+      selectedLang: r.selectedLang,
+      xmlSegmentCount: r.xmlSegmentCount,
+      error: r.error,
+    });
+    if (r.segments) {
+      diag.innertubeSucceeded = true;
+      diag.totalSegmentCount = r.segments.length;
+      diag.ok = true;
+      return diag;
+    }
+  }
+
+  // Package fallback
+  try {
+    let segments: Awaited<ReturnType<typeof YoutubeTranscript.fetchTranscript>>;
     try {
       segments = await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
     } catch (langErr) {
@@ -173,15 +342,20 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
         throw langErr;
       }
     }
+    if (segments && segments.length > 0) {
+      diag.totalSegmentCount = segments.length;
+      diag.ok = true;
+    } else {
+      diag.packageFallbackError = "empty_result";
+      diag.friendlyError = "No transcript content found.";
+    }
   } catch (err) {
-    throw new Error(toFriendlyError(err));
+    const rawMsg = err instanceof Error ? err.message : "unknown";
+    diag.packageFallbackError = rawMsg.slice(0, 200);
+    diag.friendlyError = toFriendlyError(err);
   }
 
-  if (!segments || segments.length === 0) {
-    throw new Error("No transcript content found for this video.");
-  }
-
-  return buildResult(segments as unknown as RawSegment[]);
+  return diag;
 }
 
 function buildResult(segments: RawSegment[]): TranscriptResult {

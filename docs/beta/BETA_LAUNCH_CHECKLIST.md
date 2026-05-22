@@ -1,6 +1,6 @@
 # Virnix Beta — Launch Checklist
 
-**Phase:** TRANSCRIPT-FIX-A (last updated)
+**Phase:** TRANSCRIPT-FIX-B (last updated)
 **Date:** 2026-05-22
 **Format:** Check each item before sending first user invite
 
@@ -14,6 +14,11 @@ The following items were verified by static code inspection and production endpo
 - `GET https://virnix.pro/api/health/supabase` → `{"status":"ok","authReachable":true}` ✅
 - `GET https://virnix.pro/` → HTTP 200 ✅
 - `GET https://virnix.pro/api/credits` (unauthenticated) → HTTP 401 `{"error":"Not authenticated"}` ✅
+
+**Code changes made in TRANSCRIPT-FIX-B (2026-05-22):**
+- `app/lib/ai/transcript.ts` — Added `diagnoseTranscript()` export, `tryInnerTubeClient()` helper, `TranscriptDiagnosis` type, `[virnix-transcript]` production logging
+- `app/api/debug/transcript/route.ts` — NEW auth-gated diagnostic endpoint: `GET /api/debug/transcript?url=YOUTUBE_URL`
+- `scripts/test-transcript.mjs` — Now reads sample URLs from `app/page.tsx` at runtime to ensure sync
 
 **Code changes made in TRANSCRIPT-FIX-A (2026-05-22):**
 - `app/lib/ai/transcript.ts` — Custom InnerTube fetcher with `?prettyPrint=false` + English caption preference + better errors
