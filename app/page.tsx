@@ -54,6 +54,8 @@ export default function Home() {
   const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("auto");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
+  const [pasteMode, setPasteMode] = useState(false);
+  const [manualTranscript, setManualTranscript] = useState("");
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -66,7 +68,7 @@ export default function Home() {
     }
   }, []);
 
-  const runGeneration = useCallback(async (targetUrl: string, energies: CreatorEnergyId[]) => {
+  const runGeneration = useCallback(async (targetUrl: string, energies: CreatorEnergyId[], transcript?: string) => {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -90,7 +92,12 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ youtubeUrl: targetUrl, energyIds: energies, outputLanguage: selectedLanguage }),
+        body: JSON.stringify({
+          ...(targetUrl ? { youtubeUrl: targetUrl } : {}),
+          energyIds: energies,
+          outputLanguage: selectedLanguage,
+          ...(transcript ? { transcript } : {}),
+        }),
       });
 
       const json: GenerateResponse = await res.json().catch(() => {
@@ -121,6 +128,18 @@ export default function Home() {
 
   const handleGenerate = useCallback(async () => {
     if (phase === "loading") return;
+
+    if (pasteMode) {
+      const trimmedPaste = manualTranscript.trim();
+      if (trimmedPaste.length > 50) {
+        track("generate_clicked", { url: "(paste)" });
+        await runGeneration("", selectedEnergies, trimmedPaste);
+        return;
+      }
+      setError("Paste your transcript in the box below, then click Generate.");
+      return;
+    }
+
     const trimmedUrl = url.trim();
     if (!trimmedUrl) {
       setError("Paste a YouTube URL above to get started.");
@@ -135,13 +154,14 @@ export default function Home() {
     }
     track("generate_clicked", { url: trimmedUrl });
     await runGeneration(trimmedUrl, selectedEnergies);
-  }, [phase, url, runGeneration, selectedEnergies]);
+  }, [phase, url, pasteMode, manualTranscript, runGeneration, selectedEnergies]);
 
   function handleExampleSelect(exampleUrl: string, exampleLabel: string) {
     if (phase === "loading") return;
     track("example_clicked", { label: exampleLabel, url: exampleUrl });
     setUrl(exampleUrl);
     setError(null);
+    setPasteMode(false);
     void runGeneration(exampleUrl, selectedEnergies);
   }
 
@@ -149,6 +169,7 @@ export default function Home() {
     if (phase === "loading") return;
     setUrl(pasted);
     setError(null);
+    setPasteMode(false);
     setTimeout(() => void runGeneration(pasted, selectedEnergies), 200);
   }
 
@@ -247,11 +268,15 @@ export default function Home() {
           onExampleSelect={handleExampleSelect}
           onPaste={handlePaste}
           onClearUrl={handleClearUrl}
-          error={phase === "idle" ? error : null}
+          error={phase === "idle" || phase === "error" ? error : null}
           selectedEnergies={selectedEnergies}
           onEnergyChange={setSelectedEnergies}
           selectedLanguage={selectedLanguage}
           onLanguageChange={setSelectedLanguage}
+          pasteMode={pasteMode}
+          onPasteModeToggle={() => setPasteMode((v) => !v)}
+          manualTranscript={manualTranscript}
+          onManualTranscriptChange={setManualTranscript}
         />
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
@@ -298,6 +323,10 @@ function HeroCard({
   onEnergyChange,
   selectedLanguage,
   onLanguageChange,
+  pasteMode,
+  onPasteModeToggle,
+  manualTranscript,
+  onManualTranscriptChange,
 }: {
   phase: Phase;
   url: string;
@@ -311,6 +340,10 @@ function HeroCard({
   onEnergyChange: (ids: CreatorEnergyId[]) => void;
   selectedLanguage: OutputLanguageId;
   onLanguageChange: (id: OutputLanguageId) => void;
+  pasteMode: boolean;
+  onPasteModeToggle: () => void;
+  manualTranscript: string;
+  onManualTranscriptChange: (text: string) => void;
 }) {
   const trimmedUrl = url.trim();
   const isValidUrl = trimmedUrl.length > 0 && isValidYouTubeUrl(trimmedUrl);
@@ -336,7 +369,7 @@ function HeroCard({
   } else {
     hintText = (
       <span className="text-zinc-400 dark:text-zinc-700">
-        Free beta · Sign in required · Works with captioned YouTube videos
+        Free beta · Sign in required · YouTube or paste transcript below
       </span>
     );
   }
@@ -421,6 +454,28 @@ function HeroCard({
         </div>
 
         {phase === "idle" && <ExamplesRow onSelect={onExampleSelect} currentUrl={url} />}
+
+        {/* Paste transcript fallback — visible in idle and error states */}
+        {(phase === "idle" || phase === "error") && (
+          <div className="mt-3">
+            <button
+              type="button"
+              onClick={onPasteModeToggle}
+              className="cursor-pointer text-[11px] text-zinc-400 underline-offset-2 hover:text-zinc-600 hover:underline dark:text-zinc-600 dark:hover:text-zinc-400"
+            >
+              {pasteMode ? "← Use YouTube URL instead" : "Video fails? Paste transcript manually"}
+            </button>
+            {pasteMode && (
+              <textarea
+                value={manualTranscript}
+                onChange={(e) => onManualTranscriptChange(e.target.value)}
+                placeholder="Paste transcript here — copy from YouTube's 'Show transcript' panel, then click Generate."
+                rows={5}
+                className="mt-2 w-full resize-none rounded-xl border border-zinc-200 bg-white/60 px-4 py-3 text-sm text-zinc-700 placeholder-zinc-400 outline-none focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-300 dark:placeholder-zinc-600 dark:focus:border-zinc-600"
+              />
+            )}
+          </div>
+        )}
 
         {phase === "idle" && (
           <CreatorEnergySelector selectedIds={selectedEnergies} onChange={onEnergyChange} />

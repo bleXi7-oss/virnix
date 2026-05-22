@@ -9,7 +9,7 @@ import type { BestAngle } from "../ai/schemas";
 export type { BestAngle };
 
 export interface GenerateRequest {
-  youtubeUrl: string;
+  youtubeUrl?: string;
   energyIds?: CreatorEnergyId[];
   outputLanguage?: OutputLanguageId;
 }

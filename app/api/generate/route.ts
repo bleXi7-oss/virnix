@@ -24,16 +24,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!body.youtubeUrl || typeof body.youtubeUrl !== "string") {
-    return NextResponse.json(
-      { ok: false, error: "youtubeUrl is required" } satisfies GenerateResponse,
-      { status: 400 }
-    );
+  // Manual transcript paste: skip YouTube fetch entirely when provided.
+  const MAX_PASTE_CHARS = 20000;
+  const manualTranscript =
+    typeof body.transcript === "string" && body.transcript.trim().length > 50
+      ? body.transcript.trim()
+      : null;
+
+  if (!manualTranscript) {
+    if (!body.youtubeUrl || typeof body.youtubeUrl !== "string") {
+      return NextResponse.json(
+        { ok: false, error: "youtubeUrl is required" } satisfies GenerateResponse,
+        { status: 400 }
+      );
+    }
+    if (!isValidYouTubeUrl(body.youtubeUrl)) {
+      return NextResponse.json(
+        { ok: false, error: "Please provide a valid YouTube URL" } satisfies GenerateResponse,
+        { status: 400 }
+      );
+    }
   }
 
-  if (!isValidYouTubeUrl(body.youtubeUrl)) {
+  if (manualTranscript && manualTranscript.length > MAX_PASTE_CHARS) {
     return NextResponse.json(
-      { ok: false, error: "Please provide a valid YouTube URL" } satisfies GenerateResponse,
+      { ok: false, error: "Transcript is too long. Paste a shorter excerpt (max ~20 minutes of speech)." } satisfies GenerateResponse,
       { status: 400 }
     );
   }
@@ -60,16 +75,25 @@ export async function POST(req: NextRequest) {
 
     // Fetch transcript first — needed for duration-based credit calculation.
     let transcriptResult: Awaited<ReturnType<typeof getTranscriptFull>>;
-    try {
-      transcriptResult = await getTranscriptFull(body.youtubeUrl);
-    } catch (err) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: err instanceof Error ? err.message : "Could not fetch transcript. The video may not have captions.",
-        } satisfies GenerateResponse,
-        { status: 422 }
-      );
+    if (manualTranscript) {
+      const wordCount = manualTranscript.split(/\s+/).filter(Boolean).length;
+      transcriptResult = {
+        transcript: manualTranscript,
+        timestampedTranscript: manualTranscript,
+        durationSec: Math.ceil((wordCount / 130) * 60),
+      };
+    } else {
+      try {
+        transcriptResult = await getTranscriptFull(body.youtubeUrl as string);
+      } catch (err) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: err instanceof Error ? err.message : "Could not fetch transcript. The video may not have captions.",
+          } satisfies GenerateResponse,
+          { status: 422 }
+        );
+      }
     }
 
     // Credit calculation is always server-side — never trust client-supplied values.
@@ -126,7 +150,7 @@ export async function POST(req: NextRequest) {
     // Run generation with the pre-fetched transcript to avoid a double fetch.
     let data: Awaited<ReturnType<typeof generate>>;
     try {
-      data = await generate({ youtubeUrl: body.youtubeUrl, energyIds, outputLanguage }, transcriptResult);
+      data = await generate({ youtubeUrl: body.youtubeUrl as string | undefined, energyIds, outputLanguage }, transcriptResult);
     } catch (err) {
       // Credits are NOT deducted when generation fails.
       console.error("[virnix] /api/generate error:", err instanceof Error ? err.message : err);
@@ -162,7 +186,7 @@ export async function POST(req: NextRequest) {
 
   // ─── Mock mode: no auth, no credits ──────────────────────────────────────────
   try {
-    const data = await generate({ youtubeUrl: body.youtubeUrl, energyIds, outputLanguage });
+    const data = await generate({ youtubeUrl: body.youtubeUrl as string | undefined, energyIds, outputLanguage });
     return NextResponse.json({ ok: true, data } satisfies GenerateResponse);
   } catch (err) {
     console.error("[virnix] /api/generate unhandled error:", err instanceof Error ? err.message : err);

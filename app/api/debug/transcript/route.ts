@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  // Restrict to admin email when ADMIN_EMAIL env var is set.
+  // If not set, any authenticated user may use the endpoint (acceptable for invited beta).
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail && user.email !== adminEmail) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
   const url = req.nextUrl.searchParams.get("url");
   if (!url) {
     return NextResponse.json(

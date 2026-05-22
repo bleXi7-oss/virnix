@@ -1,13 +1,14 @@
-# Current Phase — TRANSCRIPT-FIX-C
+# Current Phase — TRANSCRIPT-FIX-D
 
 Phase started: 2026-05-22
-Status: complete — 4-client InnerTube fallback added, awaiting Miha's production multi-client diagnostic
+Status: complete — manual transcript paste fallback implemented, Supadata.ai integration documented as next step
 
 ---
 
 ## Previous phases (abbreviated)
-- TRANSCRIPT-FIX-B (2026-05-22) — diagnostic tooling added, `[virnix-transcript]` logging, `/api/debug/transcript` endpoint, commit `71491a8` — complete
-- TRANSCRIPT-FIX-A (2026-05-22) — InnerTube `?prettyPrint=false` fix, English captions, commit `b11d7ce` — complete but production still failed
+- TRANSCRIPT-FIX-C (2026-05-22) — 4-client InnerTube fallback added, commit `713e0cf` — complete but all clients fail on Vercel
+- TRANSCRIPT-FIX-B (2026-05-22) — diagnostic tooling + `/api/debug/transcript`, commit `71491a8` — complete
+- TRANSCRIPT-FIX-A (2026-05-22) — InnerTube `?prettyPrint=false` fix, commit `b11d7ce` — complete but production still failed
 - FREE-BETA-A.1 (2026-05-22) — Blocker verification, health endpoint DB check, commit `833b22e` — complete
 - FREE-BETA-A (2026-05-22) — Production readiness, error UX, privacy notice, commit `562f468` — complete
 - FREE-BETA-OBSERVABILITY-A (2026-05-22) — Beta observability plan, 7 docs — complete
@@ -19,54 +20,45 @@ Status: complete — 4-client InnerTube fallback added, awaiting Miha's producti
 
 ---
 
-## What Was Done in TRANSCRIPT-FIX-C
+## What Was Done in TRANSCRIPT-FIX-D
 
 ### Problem
-TRANSCRIPT-FIX-B added diagnostic tooling. Miha ran the production diagnostic and confirmed:
-- `playabilityStatus: "LOGIN_REQUIRED"` from ANDROID InnerTube client on Vercel
-- `captionTrackCount: 0` — YouTube returns no caption tracks under LOGIN_REQUIRED
-- `youtube-transcript` package also fails on Vercel cloud IPs (HTML scraping gets different YouTube page)
-- The `innertubeAttempts` array only showed 1 attempt (ANDROID) — no fallback clients
+TRANSCRIPT-FIX-C confirmed: all 4 InnerTube clients (WEB, ANDROID, WEB_EMBEDDED_PLAYER, TVHTML5_SIMPLY_EMBEDDED_PLAYER) return LOGIN_REQUIRED or ERROR from Vercel datacenter IPs. The `youtube-transcript` package also fails. This is an IP-level restriction — no client configuration change will fix it.
 
-### Root Cause (Confirmed)
-YouTube's InnerTube API returns `LOGIN_REQUIRED` to the ANDROID client from Vercel datacenter IPs. This is not a video-specific issue — it affects all videos. Only residential/home IPs get `OK` from the ANDROID client.
+### Decision
+- **Primary fix (next phase):** integrate Supadata.ai as first-try transcript provider (works from any IP)
+- **Immediate fallback (this phase):** add manual transcript paste so beta users can still test AI generation
 
 ### What Changed
 
-**`app/lib/ai/transcript.ts`** — Expanded InnerTube client list:
-- `INNERTUBE_CLIENTS` now has 4 clients: `WEB`, `ANDROID`, `WEB_EMBEDDED_PLAYER`, `TVHTML5_SIMPLY_EMBEDDED_PLAYER`
-- WEB_EMBEDDED_PLAYER and TVHTML5_SIMPLY_EMBEDDED_PLAYER include `thirdParty.embedUrl` in context
-- `TranscriptDiagnosis` interface and `InnerTubeAttemptResult` now include `selectedTrackKind` and `xmlHttpStatus` fields
-- `diagnoseTranscript()` returns all 4 attempts in `innertubeAttempts`
-- `fetchViaInnerTubeDirect()` log line includes `kind=` field
-- Comment updated to list all 4 clients
+**`app/lib/types/generation.ts`** — `youtubeUrl` made optional
 
-**`scripts/test-transcript.mjs`** — Updated to mirror all 4 InnerTube clients
+**`app/lib/ai/generate.ts`** — non-null assertion on `req.youtubeUrl` (safe: route always passes preloaded transcript in real AI mode)
+
+**`app/api/generate/route.ts`** — accepts optional `transcript` field in body; if present and valid (>50 chars, ≤20,000 chars), skips YouTube fetch entirely and estimates durationSec from word count at 130 wpm. All credit logic unchanged.
+
+**`app/page.tsx`** — "Video fails? Paste transcript manually" toggle below URL input, visible in idle and error states. Textarea expands on click. Generate button uses pasted text when paste mode is active with sufficient content. Hint text updated.
+
+**`app/api/debug/transcript/route.ts`** — optional admin email guard via `ADMIN_EMAIL` env var.
 
 ---
 
 ## Validation
 
 - Lint: ✅ clean
-- Build: ✅ clean (Turbopack, TypeScript, all routes)
-- URL parsing tests: ✅ 13/13
-- Package fallback tests: ✅ 4/4
-- ANDROID InnerTube: ✅ working locally (HTTP 200, 354 segs for Simon Sinek)
-- Other clients: ⚠️ UNPLAYABLE/ERROR locally (normal — cloud IP behavior is different and unknown)
+- Build: ✅ clean (all routes compile)
 - Real AI calls: 0 (zero cost)
 
 ---
 
 ## Next Recommended Phase
 
-**FREE-BETA-A.3C — Miha runs production multi-client transcript diagnostic**
+**TRANSCRIPT-PROVIDER-A — Integrate Supadata.ai as primary transcript provider**
 
-Not an engineering phase. Miha:
-1. Waits for Vercel to deploy (~2 min after push)
-2. Signs in on virnix.pro
-3. Opens in browser (while signed in):
-   `https://virnix.pro/api/debug/transcript?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Du4ZoJKF_VuA`
-4. Copies the full JSON response and reports it here
-5. Claude reads the response — which now shows all 4 InnerTube attempts — and knows exactly what to fix or confirm next
+1. Miha signs up at supadata.ai, adds `SUPADATA_API_KEY` to Vercel environment variables
+2. Engineering session: add `fetchFromSupadata()` to `transcript.ts`, wire as first provider
+3. Deploy, run `/api/debug/transcript` on virnix.pro to confirm
+4. If confirmed: remove paste toggle or keep as permanent fallback
+5. Run full generation test → send first 5 invites
 
-See `docs/beta/TRANSCRIPT_FIX_C_REPORT.md` for full interpretation guide.
+See `docs/beta/TRANSCRIPT_FIX_D_PROVIDER_STRATEGY.md` for full decision matrix and integration spec.

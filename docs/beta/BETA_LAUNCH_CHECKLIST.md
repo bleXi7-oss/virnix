@@ -1,6 +1,6 @@
 # Virnix Beta — Launch Checklist
 
-**Phase:** TRANSCRIPT-FIX-C (last updated)
+**Phase:** TRANSCRIPT-FIX-D (last updated)
 **Date:** 2026-05-22
 **Format:** Check each item before sending first user invite
 
@@ -14,6 +14,12 @@ The following items were verified by static code inspection and production endpo
 - `GET https://virnix.pro/api/health/supabase` → `{"status":"ok","authReachable":true}` ✅
 - `GET https://virnix.pro/` → HTTP 200 ✅
 - `GET https://virnix.pro/api/credits` (unauthenticated) → HTTP 401 `{"error":"Not authenticated"}` ✅
+
+**Code changes made in TRANSCRIPT-FIX-D (2026-05-22):**
+- `app/api/generate/route.ts` — accepts optional `transcript` body field; manual paste path skips YouTube fetch, estimates duration from word count
+- `app/page.tsx` — paste transcript toggle + textarea in idle/error states; hint text updated
+- `app/api/debug/transcript/route.ts` — optional `ADMIN_EMAIL` env guard
+- `app/lib/types/generation.ts` — `youtubeUrl` optional in `GenerateRequest`
 
 **Code changes made in TRANSCRIPT-FIX-C (2026-05-22):**
 - `app/lib/ai/transcript.ts` — `INNERTUBE_CLIENTS` expanded to 4 clients: WEB, ANDROID, WEB_EMBEDDED_PLAYER, TVHTML5_SIMPLY_EMBEDDED_PLAYER; added `selectedTrackKind` + `xmlHttpStatus` to diagnostics

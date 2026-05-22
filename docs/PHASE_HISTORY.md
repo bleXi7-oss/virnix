@@ -4,6 +4,26 @@ Chronological log of completed development phases.
 
 ---
 
+## Phase 51 — TRANSCRIPT-FIX-D (2026-05-22)
+
+**Commit:** TBD (this phase)
+**Goal:** Unblock beta after all InnerTube clients confirmed failing on Vercel
+
+### Root Cause (Confirmed)
+All 4 InnerTube clients (WEB, ANDROID, WEB_EMBEDDED_PLAYER, TVHTML5_SIMPLY_EMBEDDED_PLAYER) return LOGIN_REQUIRED or ERROR from Vercel datacenter IPs. IP-level restriction — not fixable with client config changes. Supadata.ai integration documented as proper fix for next phase.
+
+### What Changed
+- `app/lib/types/generation.ts` — `youtubeUrl` made optional
+- `app/lib/ai/generate.ts` — non-null assertion on `req.youtubeUrl`
+- `app/api/generate/route.ts` — accepts `transcript` field; manual transcript path skips YouTube fetch, estimates durationSec from word count
+- `app/page.tsx` — paste transcript toggle + textarea in idle/error states; hint text updated
+- `app/api/debug/transcript/route.ts` — optional admin email guard via `ADMIN_EMAIL` env var
+
+### Validation
+- Lint: ✅ | Build: ✅ | AI calls: 0
+
+---
+
 ## Phase 50 — TRANSCRIPT-FIX-C (2026-05-22)
 
 **Commit:** TBD (this phase)

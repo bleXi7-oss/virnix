@@ -43,7 +43,7 @@ export async function generate(req: GenerateRequest, preloaded?: PreloadedTransc
     ({ transcript, timestampedTranscript } = preloaded);
   } else {
     try {
-      ({ transcript, timestampedTranscript } = await getTranscriptFull(req.youtubeUrl));
+      ({ transcript, timestampedTranscript } = await getTranscriptFull(req.youtubeUrl!));
     } catch (err) {
       console.error("[virnix] transcript fetch failed:", err instanceof Error ? err.message : err);
       // Fall back to mock cards — user sees output rather than an error screen
