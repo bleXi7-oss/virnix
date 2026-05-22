@@ -98,6 +98,22 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 
 ---
 
+## K. Observability Readiness
+
+See `docs/beta/BETA_OBSERVABILITY_PLAN.md` for full detail. Minimum before first invite:
+
+- [ ] **Privacy notice** visible on virnix.pro — at minimum one paragraph explaining transcript usage and what is stored (see Section 5 of observability plan for exact text)
+- [ ] **Supabase `user_credits` watching** — you can see new sign-ups and credit depletion daily
+- [ ] **Direct contact method** for every beta user — DM, email, or WhatsApp before sending invite
+- [ ] **BETA_LOG.md** created at `docs/beta/BETA_LOG.md` (blank file, write in it daily)
+- [ ] **Feedback collection method** confirmed — "reply to my DM" is acceptable; Tally form is better
+- [ ] **Founder note system** ready — even a text file with one line per user
+- [ ] [ Recommended ] `generation_logs` table created in Supabase (schema in observability plan Section 7)
+- [ ] [ Recommended ] Generation route logs to `generation_logs` after each attempt
+- [ ] [ Optional ] `generation_feedback` and `founder_beta_notes` tables created (Section 7)
+
+---
+
 ## G. Marketing Assets
 
 - [ ] Invite message written and ready (warm DM format — see MARKETING_TEST_PLAN.md)

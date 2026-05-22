@@ -154,6 +154,38 @@ If adding analytics:
 
 ---
 
+## Observability — What Is Allowed and What Is Not
+
+See `docs/beta/BETA_OBSERVABILITY_PLAN.md` for the full plan.
+
+### What you may log (safe metadata):
+- `user_id` (UUID — not email, not name)
+- `user_email` — only in `generation_logs` Supabase table (internal, service role only)
+- `youtube_url` — the URL submitted, not its content
+- `output_language`, `energy_ids` — request parameters
+- `generation_status` — `success` / `error` / `blocked_by_credits`
+- `error_category` — type of failure, not stack trace
+- `credits_used`, `credits_remaining` — server-computed values
+- `transcript_duration_sec`, `ai_elapsed_ms` — performance metadata
+- `best_angle_returned` — boolean only (did the field arrive, not its content)
+
+### What you must never log:
+- Transcript text (extracted or raw)
+- Generated output content (hooks, threads, posts, any AI-written text)
+- Session tokens, access tokens, refresh tokens
+- Full error stack traces in the database (log to Vercel console, not Supabase)
+- API keys of any kind
+- Any user PII beyond email (no name, location, device fingerprint)
+
+### Architecture rules for observability:
+- The `generation_logs` INSERT runs server-side only, inside the generate route
+- No client-facing endpoint exposes generation log data
+- RLS on `generation_logs` must allow service role only — no user-facing policies
+- Feedback tables (`generation_feedback`, `founder_beta_notes`) are internal — never exposed to the client
+- If an external analytics provider is added later, email must not be sent to it
+
+---
+
 ## Add Upload Support Later
 
 Audio/MP4 upload is planned for v0.5.x. During beta:

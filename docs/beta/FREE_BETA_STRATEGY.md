@@ -56,6 +56,10 @@ These questions cannot be answered by building more features. They require real 
 | Would anyone pay? | Ask directly: "Would you pay €20/month for this?" |
 | What breaks? | Error logs, transcript failures, credit edge cases |
 
+**Beta is for learning from identifiable people — not anonymous traffic.**
+
+Every user in the first wave should be reachable. You need to know who tried the product, what they did, and what they said. Anonymous usage data at 20 users is not useful — direct conversation is. The observability plan (`docs/beta/BETA_OBSERVABILITY_PLAN.md`) defines how to track this without building a full analytics product.
+
 ---
 
 ## What We Are NOT Testing

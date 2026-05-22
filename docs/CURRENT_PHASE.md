@@ -1,4 +1,4 @@
-# Current Phase — Free Beta Strategy (FREE-BETA-STRATEGY-A)
+# Current Phase — Beta Observability Plan (FREE-BETA-OBSERVABILITY-A)
 
 Phase started: 2026-05-22
 Status: complete — docs created, no runtime code changed
@@ -6,6 +6,7 @@ Status: complete — docs created, no runtime code changed
 ---
 
 ## Previous phases (abbreviated)
+- FREE-BETA-STRATEGY-A (2026-05-22) — Controlled beta strategy, 7 docs created, 20-user plan — complete
 - QUALITY-C (2026-05-22) — Use This First / Best Angle layer, hook variants, commit `daeb5fe` — complete
 - LANG-REAL-A-FIX (2026-05-21) — Multilingual smoke test re-run at 90s timeout, all 6 languages pass — complete
 - LANG-REAL-A (2026-05-21) — Real AI multilingual validation, Croatian Cyrillic P0 fixed — complete
@@ -17,7 +18,7 @@ Status: complete — docs created, no runtime code changed
 
 ---
 
-## What Changed in FREE-BETA-STRATEGY-A
+## What Changed in FREE-BETA-OBSERVABILITY-A
 
 Docs-only phase. No runtime code touched.
 
@@ -25,36 +26,26 @@ Docs-only phase. No runtime code touched.
 
 | File | Purpose |
 |------|---------|
-| `docs/beta/FREE_BETA_STRATEGY.md` | 7/14-day beta plan, success/failure criteria, user acquisition recommendation (start with 20) |
-| `docs/beta/COST_CONTROL_POLICY.md` | €100 budget breakdown, cost scenarios for 20–300 users, kill switches, danger zones |
-| `docs/beta/BETA_RISK_REGISTER.md` | 20-item risk table with probability, impact, early warning signs, mitigations |
-| `docs/beta/BETA_LAUNCH_CHECKLIST.md` | 10-section practical checklist — must-haves before first invite |
-| `docs/beta/MARKETING_TEST_PLAN.md` | Acquisition plan, 5 DM templates, 5 X posts, 3 LinkedIn drafts, 3 Reddit posts, 3 TikTok scripts, objection handling |
-| `docs/beta/FOUNDER_OPERATING_SYSTEM.md` | Daily routine, decision framework, how to avoid polish/feature addiction, Claude autonomy rules |
-| `docs/beta/ARCHITECTURE_BETA_GUARDRAILS.md` | Module boundaries, what not to build during beta, feature flag documentation, expected future phases |
+| `docs/beta/BETA_OBSERVABILITY_PLAN.md` | 10-section plan: what to track, feedback schema, privacy rules, DB tables, daily review, signal/noise framework |
+
+### Files Updated
+
+| File | What Was Added |
+|------|---------------|
+| `docs/beta/BETA_LAUNCH_CHECKLIST.md` | New Section K — Observability Readiness (9 checklist items) |
+| `docs/beta/FREE_BETA_STRATEGY.md` | Note that beta is for learning from identifiable people, not anonymous traffic |
+| `docs/beta/FOUNDER_OPERATING_SYSTEM.md` | Expanded daily check table, BETA_LOG.md write guidance, signal vs. noise section |
+| `docs/beta/ARCHITECTURE_BETA_GUARDRAILS.md` | New Observability section — allowed/prohibited logging, architecture constraints, RLS rule |
 
 ---
 
-## Strategic Recommendation
+## Key Observability Decisions
 
-- Start with **20 users** (not 50 or 100)
-- **3 free credits** per user (already built)
-- **10-minute max** video (already enforced)
-- **Creator Energy unlocked** for all beta users (showcase differentiator)
-- **Best Angle visible** on all real AI output (QUALITY-C live)
-- **AI cost for 20 users × 3 credits**: ~€3 — well within €100 budget
-
----
-
-## Critical Prerequisites Before First Invite
-
-1. Run `docs/credits/SQL.md` in Supabase (user_credits table + RPCs)
-2. Confirm real AI generation works on production (virnix.pro)
-3. Confirm credits deduct after generation
-4. Confirm auth works end-to-end on production
-5. Add simple privacy notice to landing page
-6. Add clear error message when credits are 0
-7. Write minimal terms of service (one paragraph is enough)
+- **generation_logs table** — Supabase, service-role only. Log user_id, email, URL, status, credits, elapsed_ms. Never log transcript text or AI output.
+- **No analytics provider** for first 20 users — Vercel logs + Supabase direct watching is sufficient.
+- **Privacy notice is a hard blocker** before any user invite. Exact text provided in BETA_OBSERVABILITY_PLAN.md Section 5.
+- **Feedback collection** can be a DM for first wave. Tally form is better but not required.
+- **Transcript and generated content must never be stored in any database or sent to analytics.**
 
 ---
 
@@ -62,7 +53,7 @@ Docs-only phase. No runtime code touched.
 
 - No app runtime code
 - No AI prompt changes
-- No Supabase schema changes
+- No Supabase schema changes (generation_logs table is optional, not yet applied)
 - No Stripe/billing
 - No new environment variables
 - No UI changes
@@ -74,15 +65,16 @@ Docs-only phase. No runtime code touched.
 **FREE-BETA-A** — Production readiness confirmation before first user invite.
 
 This is an engineering phase:
-1. Confirm Supabase SQL applied and verified
+1. Confirm Supabase SQL applied and verified (user_credits table + RPCs)
 2. Smoke test real AI generation on virnix.pro (not localhost)
 3. Confirm credits deduction end-to-end
 4. Confirm auth flow on production
 5. Add visible error message for 0-credit state
 6. Add visible error message for transcript fetch failure
-7. Add minimal privacy notice to landing page
-8. Run BETA_LAUNCH_CHECKLIST.md section A–C
-9. Commit any fixes, push
+7. Add minimal privacy notice to landing page (text provided in BETA_OBSERVABILITY_PLAN.md Section 5)
+8. [ Optional ] Apply generation_logs table SQL from BETA_OBSERVABILITY_PLAN.md Section 7
+9. Run BETA_LAUNCH_CHECKLIST.md sections A–C
+10. Commit any fixes, push
 
 Expected cost: €0–5 (a few real AI smoke test calls)
 Expected time: half a day

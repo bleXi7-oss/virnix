@@ -45,13 +45,40 @@ You will feel the urge to do these things. Resist them. The product is live and 
 
 | Check | Time | How |
 |-------|------|-----|
-| New sign-ups | 3 min | Supabase → Table editor → user_credits |
-| Credit usage | 2 min | Same table — check balance changes |
-| Vercel error rate | 3 min | Vercel dashboard → Functions → check for 500s |
-| Messages from beta users | 5 min | DMs, email, wherever they reach you |
+| New sign-ups | 2 min | Supabase → Table editor → `user_credits` (new rows = new users) |
+| Credit activity | 2 min | Same table — who used credits, who has 0 left |
+| Generation log review | 3 min | Supabase → `generation_logs` → sort by `created_at` desc (if table exists) |
+| Vercel error rate | 3 min | Vercel dashboard → Functions → filter `/api/generate` → check for 500s |
+| Messages from beta users | 3 min | DMs, email, wherever they reach you — respond within 4 hours |
 | Anthropic cost | 2 min | Anthropic dashboard — weekly is fine, daily during first 3 days |
 
 Total: ~15 minutes. Not more.
+
+**What to write in BETA_LOG.md each day:**
+- One sentence: what happened today (sign-ups, generations, anything surprising)
+- Any errors seen and what caused them
+- Any user feedback — exact words if possible, not paraphrase
+- Any changes made (with commit hash)
+
+---
+
+## Signal vs. Noise — How to Decide What to Act On
+
+**Signal — act on this:**
+- Same complaint or request from 3+ different users independently
+- A user stops using the product and explains why
+- A user says "I would pay if it did X"
+- A generation failure rate above 10% for a specific URL pattern, language, or energy type
+- A user compares Virnix to a specific competitor and names the exact gap
+
+**Noise — log it, don't act:**
+- One user asks for a feature nobody else has mentioned
+- A user tries once, never returns, gives a vague critique
+- Friends say "looks cool!" — that is politeness
+- A user wants video editing, auto-posting, or team features (wrong audience — note it but don't build)
+- A user asks about something you already know is coming
+
+**The rule:** One person saying something is interesting. Three people independently saying the same thing is a pattern. A pattern is signal. Anything less is noise — log it and move on.
 
 ---
 

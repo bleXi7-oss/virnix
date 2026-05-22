@@ -1915,5 +1915,59 @@ Created `docs/beta/` folder with 7 strategic planning documents:
 - No secrets touched
 - No live AI scripts run
 
+### Next: FREE-BETA-OBSERVABILITY-A
+Beta tracking, feedback collection, and founder review system — docs + optional Supabase tables.
+
+---
+
+## Phase 45 — Beta Observability Plan (FREE-BETA-OBSERVABILITY-A, 2026-05-22)
+
+**Commit:** (see below — docs only)
+
+### What Was Done
+
+Docs-only phase. No runtime code changed.
+
+Created `docs/beta/BETA_OBSERVABILITY_PLAN.md` — 10-section plan covering:
+
+| Section | Contents |
+|---------|---------|
+| Purpose | Why structured tracking matters at 20 users |
+| Minimum data to capture | 13 fields logged per generation attempt |
+| Feedback data | 6-field post-generation feedback schema |
+| Founder notes | Per-user tagging system (good_lead, bug_report, likely_paid_user, etc.) |
+| Privacy rules | Exact privacy notice text, hard constraints on what must never be logged |
+| Minimum implementation | Tier 1/2/3 observability stack; Tier 1+2 sufficient for 20 users |
+| Suggested DB tables | SQL schemas for `generation_logs`, `generation_feedback`, `founder_beta_notes` |
+| Daily review workflow | 15-min checklist by step |
+| Signal vs. noise framework | What to act on vs. log vs. ignore |
+| Required before first 20 users | Checklist — 9 items, 1 hard requirement (privacy notice) |
+
+Updated 4 existing beta docs:
+- `BETA_LAUNCH_CHECKLIST.md` — new Section K (Observability Readiness) with 9 items
+- `FREE_BETA_STRATEGY.md` — added note that beta is for learning from identifiable people, not anonymous traffic
+- `FOUNDER_OPERATING_SYSTEM.md` — expanded daily check table, added BETA_LOG.md guidance, added signal vs. noise section
+- `ARCHITECTURE_BETA_GUARDRAILS.md` — new Observability section with allowed/prohibited logging rules and architecture constraints
+
+### Key Decisions
+
+- **generation_logs table** — Supabase, service-role only, never exposed to client
+- **No client-facing analytics provider** for first 20 users — Vercel logs + Supabase watching is enough
+- **Transcript and output text must never be logged** — explicitly listed as hard prohibition
+- **Privacy notice is a hard blocker** before any user invite — exact text provided in the plan
+- **Feedback collection** can be as simple as "reply to my DM" for the first wave
+
+### What Was NOT Changed
+- No app runtime code
+- No AI prompts
+- No Supabase schema (tables are optional additions, not required)
+- No new environment variables
+
+### Validation Status
+- Lint: ✅ not required (docs only)
+- Build: ✅ not required (docs only)
+- No secrets touched
+- No live AI scripts run
+
 ### Next: FREE-BETA-A
 Production readiness confirmation: SQL verification, real AI smoke test on virnix.pro, credits end-to-end test, privacy notice, error message improvements.
