@@ -53,7 +53,7 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 - [ ] `ensure_user_credits()` function exists in Supabase → Database → Functions — MANUAL BLOCKER
 - [ ] `deduct_credits()` function exists in Supabase → database → Functions — MANUAL BLOCKER
 - [x] Verified: a user with 0 credits gets "You've used your free beta credits." (code-verified: route returns 402 with humanized message)
-- [ ] Verified: `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` is set in Vercel production environment — MANUAL
+- [ ] Verified: `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` is set in Vercel production environment — ❌ CONFIRMED FAILING (FREE-BETA-A.1): unauthenticated POST returned HTTP 200 with mock data; flag is missing or false in Vercel
 - [x] Know how to switch to mock mode: set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=false` in Vercel env → Redeploy (~3 min) (docs/beta/COST_CONTROL_POLICY.md)
 - [ ] Anthropic dashboard has been checked: billing alerts enabled or cost visible — MANUAL
 - [ ] Test generation on production: 1 call, check Anthropic dashboard, confirm ~€0.04–0.06 billed — MANUAL
@@ -118,7 +118,7 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 See `docs/beta/BETA_OBSERVABILITY_PLAN.md` for full detail. Minimum before first invite:
 
 - [x] **Privacy notice** visible on virnix.pro — beta notice added to landing page in FREE-BETA-A (`app/page.tsx`, `<BetaNotice>` component, renders in idle state below platform list)
-- [ ] **Supabase `user_credits` watching** — you can see new sign-ups and credit depletion daily — MANUAL
+- [ ] **Supabase `user_credits` watching** — you can see new sign-ups and credit depletion daily — MANUAL (also see /api/health/supabase `dbReachable` field added in FREE-BETA-A.1)
 - [ ] **Direct contact method** for every beta user — DM, email, or WhatsApp before sending invite
 - [ ] **BETA_LOG.md** created at `docs/beta/BETA_LOG.md` (blank file, write in it daily)
 - [ ] **Feedback collection method** confirmed — "reply to my DM" is acceptable; Tally form is better

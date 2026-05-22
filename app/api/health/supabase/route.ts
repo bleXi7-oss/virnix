@@ -20,6 +20,7 @@ export async function GET() {
         supabaseKeyPresent,
         dnsReachable: false,
         authReachable: false,
+        dbReachable: false,
         message: "Supabase env vars are missing",
         checkedAt,
       },
@@ -42,6 +43,7 @@ export async function GET() {
         supabaseHost: "",
         dnsReachable: false,
         authReachable: false,
+        dbReachable: false,
         message: "NEXT_PUBLIC_SUPABASE_URL is not a valid URL",
         checkedAt,
       },
@@ -55,6 +57,8 @@ export async function GET() {
 
   let dnsReachable = false;
   let authReachable = false;
+  let dbReachable = false;
+  let dbMessage: string | undefined;
   let message: string | undefined;
 
   try {
@@ -92,7 +96,42 @@ export async function GET() {
     }
   }
 
-  const ok = dnsReachable && authReachable;
+  // DB connectivity check: verify user_credits table exists by querying 0 rows.
+  // With RLS enabled, anon key returns empty array (not an error) when table exists.
+  // When table doesn't exist, Supabase returns a 404/400 with a "relation does not exist" error.
+  if (dnsReachable) {
+    try {
+      const dbController = new AbortController();
+      const dbTimeout = setTimeout(() => dbController.abort(), 8000);
+
+      const dbRes = await fetch(`${supabaseUrl}/rest/v1/user_credits?select=user_id&limit=0`, {
+        method: "GET",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          Accept: "application/json",
+        },
+        signal: dbController.signal,
+      });
+
+      clearTimeout(dbTimeout);
+
+      if (dbRes.ok) {
+        dbReachable = true;
+      } else {
+        const body = await dbRes.text().catch(() => "");
+        dbReachable = false;
+        dbMessage = body.includes("does not exist")
+          ? "user_credits table not found — run docs/credits/SQL.md in Supabase dashboard"
+          : `DB check returned HTTP ${dbRes.status}`;
+      }
+    } catch {
+      dbReachable = false;
+      dbMessage = "DB connectivity check timed out or failed";
+    }
+  }
+
+  const ok = dnsReachable && authReachable && dbReachable;
 
   return NextResponse.json(
     {
@@ -103,7 +142,9 @@ export async function GET() {
       supabaseHost,
       dnsReachable,
       authReachable,
+      dbReachable,
       ...(message ? { message } : {}),
+      ...(dbMessage ? { dbMessage } : {}),
       checkedAt,
     },
     { status: ok ? 200 : 503 }

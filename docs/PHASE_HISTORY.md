@@ -2032,3 +2032,63 @@ Code + docs phase. Lint ✅ Build ✅ Zero AI calls. €0.00 cost.
 
 ### Next: FREE-BETA-D (after Miha clears 4 blockers)
 Send first 5 controlled beta invites. Not an engineering phase — founder execution only.
+
+---
+
+## Phase 47 — Blocker Verification (FREE-BETA-A.1, 2026-05-22)
+
+**Commit:** (see below)
+
+### What Was Done
+
+Verification phase. Lint ✅ Build ✅ Zero AI calls. €0.00 cost.
+
+**Critical finding:**
+Production is running in MOCK MODE. Confirmed by unauthenticated POST to `/api/generate` which returned HTTP 200 with mock data (`"provider":"mock","elapsedMs":0,"fallbackUsed":true`). The `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION` flag is missing or set to `false` in Vercel production. Auth gate and credit system are bypassed on production.
+
+**Blocker status after this phase:**
+
+| Blocker | Status |
+|---------|--------|
+| 1. Supabase SQL applied | ⚠️ Cannot confirm — manual Supabase dashboard required |
+| 2. Real AI flag in Vercel | ❌ Confirmed failing — must be fixed before any invites |
+| 3. Live generation test | ⚠️ Manual required — needs blockers 1+2 cleared first |
+| 4. Auth magic link | ⚠️ Manual required — needs browser + email |
+
+**Code change:**
+
+`app/api/health/supabase/route.ts` — Added database connectivity check:
+- Queries `user_credits?select=user_id&limit=0` with anon key (read-only, zero cost)
+- New response field: `"dbReachable": true/false`
+- Allows remote verification of Supabase SQL application without dashboard access
+- Was planned as a future addition in `docs/credits/README.md`
+
+**Docs created:**
+
+`docs/beta/FREE_BETA_A1_BLOCKER_VERIFICATION.md` — Full blocker analysis:
+- Per-blocker: what was verified, what remains manual, exact steps for Miha, pass criteria
+- Step A: Fix Vercel flag (~10 min)
+- Step B: Verify Supabase SQL (~20 min)
+- Step C: Auth end-to-end test (~15 min)
+- Step D: One live generation test (~15 min)
+- Estimated total time for Miha to clear all 4: ~60 minutes
+
+**`BETA_LAUNCH_CHECKLIST.md`** updated — Blocker 2 marked as CONFIRMED FAILING.
+
+### What Was NOT Changed
+- No AI prompts
+- No credit logic
+- No auth logic
+- No Supabase schema
+- No new environment variables
+- No new dependencies
+
+### Validation Status
+- Lint: ✅ clean (exit 0)
+- Build: ✅ clean (TypeScript, Turbopack)
+- Real AI calls: 0
+- Estimated cost: €0.00
+- Endpoint checks: 1 (unauthenticated POST to generate — safe, zero cost, confirmed mock mode)
+
+### Next: FREE-BETA-A.2 — Miha manual production verification
+Miha works through 4-step checklist in FREE_BETA_A1_BLOCKER_VERIFICATION.md (~60 min). No engineering needed. After all 4 pass: FREE-BETA-D.
