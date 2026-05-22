@@ -1,6 +1,6 @@
 # Virnix Beta — Launch Checklist
 
-**Phase:** TRANSCRIPT-FIX-D (last updated)
+**Phase:** TRANSCRIPT-FIX-E (last updated)
 **Date:** 2026-05-22
 **Format:** Check each item before sending first user invite
 
@@ -14,6 +14,12 @@ The following items were verified by static code inspection and production endpo
 - `GET https://virnix.pro/api/health/supabase` → `{"status":"ok","authReachable":true}` ✅
 - `GET https://virnix.pro/` → HTTP 200 ✅
 - `GET https://virnix.pro/api/credits` (unauthenticated) → HTTP 401 `{"error":"Not authenticated"}` ✅
+
+**Code changes made in TRANSCRIPT-FIX-E (2026-05-22):**
+- `app/page.tsx` — fixed duplicate error display; paste mode toggle clears error state; ErrorPanel only renders when error non-null; paste hint for transcript errors
+- `app/lib/generation/chooseGenerationInput.ts` — new pure helper for input mode selection + validation
+- `app/api/generate/route.ts` — refactored to use `chooseGenerationInput`
+- `scripts/test-generation-input.mjs` — new; 38 zero-cost tests; all passing
 
 **Code changes made in TRANSCRIPT-FIX-D (2026-05-22):**
 - `app/api/generate/route.ts` — accepts optional `transcript` body field; manual paste path skips YouTube fetch, estimates duration from word count

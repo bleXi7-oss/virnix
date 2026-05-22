@@ -185,6 +185,16 @@ export default function Home() {
     setBestAngle(null);
   }, []);
 
+  // Entering paste mode from error state clears the error so ErrorPanel disappears
+  // and the user gets a clean idle context with the paste textarea visible.
+  const handlePasteModeToggle = useCallback(() => {
+    if (!pasteMode && phase === "error") {
+      setPhase("idle");
+      setError(null);
+    }
+    setPasteMode((v) => !v);
+  }, [pasteMode, phase]);
+
   function handleUrlChange(val: string) {
     setUrl(val);
     if (error && phase !== "loading") setError(null);
@@ -268,13 +278,13 @@ export default function Home() {
           onExampleSelect={handleExampleSelect}
           onPaste={handlePaste}
           onClearUrl={handleClearUrl}
-          error={phase === "idle" || phase === "error" ? error : null}
+          error={phase === "idle" ? error : null}
           selectedEnergies={selectedEnergies}
           onEnergyChange={setSelectedEnergies}
           selectedLanguage={selectedLanguage}
           onLanguageChange={setSelectedLanguage}
           pasteMode={pasteMode}
-          onPasteModeToggle={() => setPasteMode((v) => !v)}
+          onPasteModeToggle={handlePasteModeToggle}
           manualTranscript={manualTranscript}
           onManualTranscriptChange={setManualTranscript}
         />
@@ -299,7 +309,17 @@ export default function Home() {
           </>
         )}
 
-        {phase === "error" && <ErrorPanel message={error} onRetry={handleReset} />}
+        {phase === "error" && error && (
+          <ErrorPanel
+            message={error}
+            onRetry={handleReset}
+            hint={
+              !pasteMode && /transcript|caption/i.test(error)
+                ? "You can paste the transcript text directly — use the link above."
+                : undefined
+            }
+          />
+        )}
 
         {phase === "idle" && !error && <PlatformList />}
         {phase === "idle" && <BetaNotice />}
@@ -664,9 +684,11 @@ function OutputPanel({
 function ErrorPanel({
   message,
   onRetry,
+  hint,
 }: {
   message: string | null;
   onRetry: () => void;
+  hint?: string;
 }) {
   return (
     <div className="mt-8 w-full max-w-2xl animate-[fade-in_0.3s_ease_forwards]">
@@ -674,6 +696,9 @@ function ErrorPanel({
         <p className="text-sm text-red-600 dark:text-red-400">
           {message ?? "Something went wrong. Please try again."}
         </p>
+        {hint && (
+          <p className="mt-2 text-[12px] text-red-400 dark:text-red-500">{hint}</p>
+        )}
         <button
           onClick={onRetry}
           className="mt-3 cursor-pointer text-[12px] font-medium text-red-500 transition-colors hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"

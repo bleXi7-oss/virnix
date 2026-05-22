@@ -4,6 +4,25 @@ Chronological log of completed development phases.
 
 ---
 
+## Phase 52 — TRANSCRIPT-FIX-E (2026-05-22)
+
+**Commit:** TBD (this phase)
+**Goal:** Fix manual transcript fallback UX — duplicate error display and paste mode state confusion
+
+### Root Cause (Confirmed)
+API route was correct. UX bugs: (1) error rendered in both HeroCard hintText AND ErrorPanel simultaneously; (2) entering paste mode from error state left ErrorPanel visible alongside the textarea.
+
+### What Changed
+- `app/page.tsx` — HeroCard error only in idle phase; `handlePasteModeToggle` clears error/phase on entry from error state; ErrorPanel only renders when error non-null; paste hint in ErrorPanel for transcript errors; `hint` prop added to ErrorPanel
+- `app/lib/generation/chooseGenerationInput.ts` — new pure helper; transcript-priority logic + length + URL validation; explicit "too short" error instead of silent YouTube fallthrough
+- `app/api/generate/route.ts` — refactored to use `chooseGenerationInput`; removed `isValidYouTubeUrl` import
+- `scripts/test-generation-input.mjs` — new; 38 zero-cost assertions; all passing
+
+### Validation
+- Lint: ✅ | Build: ✅ | Tests: ✅ 38/38 | AI calls: 0 | Cost: €0.00
+
+---
+
 ## Phase 51 — TRANSCRIPT-FIX-D (2026-05-22)
 
 **Commit:** TBD (this phase)
