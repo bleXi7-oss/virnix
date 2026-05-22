@@ -1971,3 +1971,64 @@ Updated 4 existing beta docs:
 
 ### Next: FREE-BETA-A
 Production readiness confirmation: SQL verification, real AI smoke test on virnix.pro, credits end-to-end test, privacy notice, error message improvements.
+
+---
+
+## Phase 46 — Production Readiness Confirmation (FREE-BETA-A, 2026-05-22)
+
+**Commit:** (see below)
+
+### What Was Done
+
+Code + docs phase. Lint ✅ Build ✅ Zero AI calls. €0.00 cost.
+
+**Production endpoint checks (all passed):**
+- `GET virnix.pro/api/health/supabase` → `{"status":"ok","authReachable":true}`
+- `GET virnix.pro/` → HTTP 200
+- `GET virnix.pro/api/credits` (unauthenticated) → HTTP 401
+
+**Code changes:**
+
+`app/api/generate/route.ts` — 3 error message improvements:
+- 402 (balance=0): "You've used your free beta credits. Message Miha if you'd like more."
+- 402 (insufficient): "Not enough credits for this video (needs N, you have M). Try a shorter video."
+- 500 (generation fail): "Generation failed. Nothing was charged. Please try again."
+
+`app/page.tsx` — Beta privacy notice:
+- `BetaNotice` component added, renders in idle state below platform list
+- Text: "Beta: Virnix may review submitted content and feedback to improve the product. Don't submit private or confidential content."
+
+**Docs created:**
+
+`docs/beta/FREE_BETA_A_READINESS_REPORT.md` — full verification report:
+- 19 code-verified items
+- 3 production endpoint checks
+- 12 items marked as requiring manual verification
+- 4 hard blockers identified before first 5 invites
+- Final recommendation: NOT READY until Miha completes 4 manual checks
+
+**BETA_LAUNCH_CHECKLIST.md** updated — sections A, B, C, K marked with [x] for code-verified items.
+
+### 4 Manual Blockers (Miha must complete before first invite)
+
+1. Supabase SQL confirmed applied (`user_credits` + RPCs exist)
+2. `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` confirmed in Vercel production
+3. One live generation test passes on virnix.pro
+4. Auth end-to-end tested on production (magic link → session → credits shown)
+
+### What Was NOT Changed
+- No AI prompts
+- No credit logic
+- No auth logic
+- No Supabase schema
+- No new environment variables
+- No new dependencies
+
+### Validation Status
+- Lint: ✅ clean (exit 0)
+- Build: ✅ clean (TypeScript, Turbopack, 6 routes)
+- Real AI calls: 0
+- Estimated cost: €0.00
+
+### Next: FREE-BETA-D (after Miha clears 4 blockers)
+Send first 5 controlled beta invites. Not an engineering phase — founder execution only.

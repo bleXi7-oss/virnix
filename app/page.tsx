@@ -277,6 +277,7 @@ export default function Home() {
         {phase === "error" && <ErrorPanel message={error} onRetry={handleReset} />}
 
         {phase === "idle" && !error && <PlatformList />}
+        {phase === "idle" && <BetaNotice />}
       </div>
     </div>
   );
@@ -645,6 +646,17 @@ const PlatformList = memo(function PlatformList() {
     </div>
   );
 });
+
+// ─── BetaNotice ───────────────────────────────────────────────────────────────
+
+function BetaNotice() {
+  return (
+    <p className="mt-5 max-w-sm text-center text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-700">
+      Beta: Virnix may review submitted content and feedback to improve the product.
+      Don&apos;t submit private or confidential content.
+    </p>
+  );
+}
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 

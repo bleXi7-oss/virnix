@@ -109,10 +109,13 @@ export async function POST(req: NextRequest) {
     const currentBalance = (creditsRow as { balance: number }).balance;
 
     if (currentBalance < creditCost.total) {
+      const creditError = currentBalance === 0
+        ? "You've used your free beta credits. Message Miha if you'd like more."
+        : `Not enough credits for this video (needs ${creditCost.total}, you have ${currentBalance}). Try a shorter video.`;
       return NextResponse.json(
         {
           ok: false,
-          error: `Not enough credits. This generation requires ${creditCost.total} credit${creditCost.total !== 1 ? "s" : ""}.`,
+          error: creditError,
           creditsRequired: creditCost.total,
           creditsAvailable: currentBalance,
         } satisfies GenerateResponse,
@@ -128,7 +131,7 @@ export async function POST(req: NextRequest) {
       // Credits are NOT deducted when generation fails.
       console.error("[virnix] /api/generate error:", err instanceof Error ? err.message : err);
       return NextResponse.json(
-        { ok: false, error: "Something went wrong. Please try again." } satisfies GenerateResponse,
+        { ok: false, error: "Generation failed. Nothing was charged. Please try again." } satisfies GenerateResponse,
         { status: 500 }
       );
     }

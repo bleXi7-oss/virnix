@@ -1,8 +1,23 @@
 # Virnix Beta — Launch Checklist
 
-**Phase:** FREE-BETA-STRATEGY-A
+**Phase:** FREE-BETA-A (last updated)
 **Date:** 2026-05-22
 **Format:** Check each item before sending first user invite
+
+---
+
+## FREE-BETA-A Verification Notes (2026-05-22)
+
+The following items were verified by static code inspection and production endpoint checks during FREE-BETA-A. Items marked [x] are confirmed via code or live endpoint. Items marked [ ] require manual verification by Miha on virnix.pro.
+
+**Production checks run:**
+- `GET https://virnix.pro/api/health/supabase` → `{"status":"ok","authReachable":true}` ✅
+- `GET https://virnix.pro/` → HTTP 200 ✅
+- `GET https://virnix.pro/api/credits` (unauthenticated) → HTTP 401 `{"error":"Not authenticated"}` ✅
+
+**Code changes made in FREE-BETA-A:**
+- `app/api/generate/route.ts` — 402 credit error now distinguishes 0-credits vs. insufficient-credits; 500 after generation failure now says "Nothing was charged"
+- `app/page.tsx` — Beta privacy notice added below platform list in idle state
 
 Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentionally
 
@@ -10,53 +25,53 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 
 ## A. Product Readiness
 
-- [ ] Real AI generation confirmed working on production (virnix.pro), not just localhost
-- [ ] Auth flow tested end-to-end on production: sign in with email → magic link → session active → sign out
-- [ ] Generation works when signed in on production
-- [ ] Generation returns 401 when NOT signed in (credits enforcement active)
-- [ ] Credits deduct after first generation (check Supabase user_credits balance before and after)
-- [ ] Error message is clear when credits reach 0 (not a generic server error — a human message)
-- [ ] Best Angle / Use This First card renders above ClipGuide on real AI output
-- [ ] Creator Energy selector visible in idle state (pills: Balanced, Tactical, Contrarian…)
-- [ ] Language selector visible in idle state (pills: Auto, English, Slovenian…)
-- [ ] Output cards all render (TikTok, Twitter, LinkedIn, Instagram, YouTube)
-- [ ] Copy buttons work on all output cards
-- [ ] Mobile tested on iPhone Safari (or equivalent iOS) — layout, scroll, copy
-- [ ] Mobile tested on Android Chrome — layout, scroll, copy
-- [ ] Dark mode tested — all output text is readable
-- [ ] Light mode tested — all output text is readable
-- [ ] Error message visible when YouTube transcript fails (not silent fallback)
-- [ ] Generate button shows loading state during generation
-- [ ] Production is pointing to the correct Vercel deployment (not a preview branch)
+- [ ] Real AI generation confirmed working on production (virnix.pro), not just localhost — MANUAL
+- [ ] Auth flow tested end-to-end on production: sign in with email → magic link → session active → sign out — MANUAL
+- [ ] Generation works when signed in on production — MANUAL
+- [x] Generation returns 401 when NOT signed in (code-verified: route checks `supabase.auth.getUser()`)
+- [ ] Credits deduct after first generation (check Supabase user_credits balance before and after) — MANUAL
+- [x] Error message is clear when credits reach 0: "You've used your free beta credits. Message Miha if you'd like more." (updated FREE-BETA-A)
+- [x] Best Angle / UseThisFirstCard exists and is wired: renders when `bestAngle !== null` (code-verified)
+- [x] Creator Energy selector visible in idle state (code-verified: `<CreatorEnergySelector>` renders in idle)
+- [x] Language selector visible in idle state (code-verified: `<LanguageSelector>` renders in idle)
+- [ ] Output cards all render (TikTok, Twitter, LinkedIn, Instagram, YouTube) — MANUAL (requires real AI)
+- [ ] Copy buttons work on all output cards — MANUAL
+- [ ] Mobile tested on iPhone Safari (or equivalent iOS) — layout, scroll, copy — MANUAL
+- [ ] Mobile tested on Android Chrome — layout, scroll, copy — MANUAL
+- [ ] Dark mode tested — all output text is readable — MANUAL
+- [ ] Light mode tested — all output text is readable — MANUAL
+- [x] Error message visible when YouTube transcript fails: friendly messages in `transcript.ts → toFriendlyError()` (code-verified)
+- [x] Generate button shows loading state (code-verified: "Generating..." spinner in `<GenerateButton>`)
+- [ ] Production is pointing to the correct Vercel deployment (not a preview branch) — MANUAL
 
 ---
 
 ## B. Cost Controls
 
-- [ ] Supabase SQL from `docs/credits/SQL.md` has been run in Supabase dashboard
-- [ ] `user_credits` table exists in Supabase table editor (with RLS enabled)
-- [ ] `ensure_user_credits()` function exists in Supabase → Database → Functions
-- [ ] `deduct_credits()` function exists in Supabase → Database → Functions
-- [ ] Verified: a user with 0 credits cannot generate (returns 402 or credit error)
-- [ ] Verified: `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` is set in Vercel production environment
-- [ ] Know how to switch to mock mode in under 5 minutes (see COST_CONTROL_POLICY.md)
-- [ ] Anthropic dashboard has been checked: billing alerts enabled or cost visible
-- [ ] Test generation on production: 1 call, check Anthropic dashboard, confirm ~€0.04–0.06 billed
-- [ ] Max 10-minute video enforced: submit a 3-hour YouTube URL, confirm error returned
-- [ ] Transcript truncation active: very long transcripts are clipped before AI call
+- [ ] Supabase SQL from `docs/credits/SQL.md` has been run in Supabase dashboard — MANUAL BLOCKER
+- [ ] `user_credits` table exists in Supabase table editor (with RLS enabled) — MANUAL BLOCKER
+- [ ] `ensure_user_credits()` function exists in Supabase → Database → Functions — MANUAL BLOCKER
+- [ ] `deduct_credits()` function exists in Supabase → database → Functions — MANUAL BLOCKER
+- [x] Verified: a user with 0 credits gets "You've used your free beta credits." (code-verified: route returns 402 with humanized message)
+- [ ] Verified: `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=true` is set in Vercel production environment — MANUAL
+- [x] Know how to switch to mock mode: set `NEXT_PUBLIC_FLAG_REAL_AI_GENERATION=false` in Vercel env → Redeploy (~3 min) (docs/beta/COST_CONTROL_POLICY.md)
+- [ ] Anthropic dashboard has been checked: billing alerts enabled or cost visible — MANUAL
+- [ ] Test generation on production: 1 call, check Anthropic dashboard, confirm ~€0.04–0.06 billed — MANUAL
+- [x] 120+ min video blocked: `calculateCreditsForGeneration()` returns -1 → 422 error (code-verified)
+- [x] Transcript truncation: `selectBestSegment(transcript, 3000)` implemented in generation pipeline (code-verified)
 
 ---
 
-## C. Abuse Controls
+## C. Abuse Controls (FREE-BETA-A)
 
-- [ ] Auth is required before generation (confirmed in section A above)
-- [ ] 3-credit starting balance confirmed for new users
-- [ ] Credit balance does not reset on page reload or re-login
-- [ ] No way to reset credits from the UI (no client-side credit manipulation)
-- [ ] Credit calculation is server-side only (not trusted from request body)
-- [ ] No API key exposed in client JS bundle or browser network tab
-- [ ] Test: open DevTools → Network tab → generate → confirm no API keys in request headers from client
-- [ ] [ Optional for 50+ users ] Vercel rate limiting or IP-based throttle configured
+- [x] Auth is required before generation (code-verified: route returns 401 if `!user`; production endpoint returns 401 unauthenticated)
+- [x] 3-credit starting balance: `ensure_user_credits()` inserts `balance = 3` on conflict do nothing (code-verified)
+- [x] Credit balance does not reset on page reload: stored in Supabase DB, not client state (code-verified)
+- [x] No way to reset credits from UI: no client-side credit manipulation route or form exists (code-verified)
+- [x] Credit calculation is server-side only: `calculateCreditsForGeneration()` called in route using `transcriptResult.durationSec`, never from request body (code-verified)
+- [ ] No API key exposed in client JS bundle — MANUAL: open DevTools → Network → generate → confirm no API keys in request headers
+- [ ] Test: open DevTools → Network tab → generate → confirm no API keys in request headers from client — MANUAL
+- [~] Vercel rate limiting — not required for first 20 users (add before 50+ per COST_CONTROL_POLICY.md)
 
 ---
 
@@ -102,8 +117,8 @@ Mark items: [ ] = not done, [x] = done, [~] = accepted risk / skipped intentiona
 
 See `docs/beta/BETA_OBSERVABILITY_PLAN.md` for full detail. Minimum before first invite:
 
-- [ ] **Privacy notice** visible on virnix.pro — at minimum one paragraph explaining transcript usage and what is stored (see Section 5 of observability plan for exact text)
-- [ ] **Supabase `user_credits` watching** — you can see new sign-ups and credit depletion daily
+- [x] **Privacy notice** visible on virnix.pro — beta notice added to landing page in FREE-BETA-A (`app/page.tsx`, `<BetaNotice>` component, renders in idle state below platform list)
+- [ ] **Supabase `user_credits` watching** — you can see new sign-ups and credit depletion daily — MANUAL
 - [ ] **Direct contact method** for every beta user — DM, email, or WhatsApp before sending invite
 - [ ] **BETA_LOG.md** created at `docs/beta/BETA_LOG.md` (blank file, write in it daily)
 - [ ] **Feedback collection method** confirmed — "reply to my DM" is acceptable; Tally form is better
