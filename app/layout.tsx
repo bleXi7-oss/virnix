@@ -12,18 +12,18 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const META_TITLE = "Virnix — Turn 1 Podcast Into 30 Viral Posts";
+const META_TITLE = "Virnix — 1 video. Every platform. 60 seconds.";
 const META_DESCRIPTION =
-  "Paste any YouTube link and get TikTok hooks, X threads, LinkedIn posts, and Instagram captions in 60 seconds. No editing. No rewriting.";
+  "Paste any YouTube link and get TikTok hooks, X threads, LinkedIn posts, and Instagram captions — ready to post.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://virnix.com"),
+  metadataBase: new URL("https://virnix.pro"),
   title: META_TITLE,
   description: META_DESCRIPTION,
   openGraph: {
     title: META_TITLE,
     description: META_DESCRIPTION,
-    url: "https://virnix.com",
+    url: "https://virnix.pro",
     siteName: "Virnix",
     type: "website",
     locale: "en_US",

@@ -15,6 +15,8 @@ const PILL_IDLE =
 const PILL_ACTIVE =
   "border-zinc-400 bg-zinc-100 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
 
+const LAUNCH_IDS = new Set<OutputLanguageId>(["en", "sl", "hr", "sr-latn", "es", "pt"]);
+
 export default function LanguageSelector({ selectedId, onChange }: Props) {
   return (
     <div className="mt-4">
@@ -22,11 +24,10 @@ export default function LanguageSelector({ selectedId, onChange }: Props) {
         Write in
       </span>
       <div className="flex flex-wrap gap-2">
-        {OUTPUT_LANGUAGES.map((lang) => (
+        {OUTPUT_LANGUAGES.filter((lang) => LAUNCH_IDS.has(lang.id)).map((lang) => (
           <button
             key={lang.id}
             onClick={() => onChange(lang.id)}
-            title={lang.id === "auto" ? "Keep output in the same language as the transcript" : undefined}
             className={`${PILL_BASE} ${selectedId === lang.id ? PILL_ACTIVE : PILL_IDLE}`}
           >
             {lang.label}

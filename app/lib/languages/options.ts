@@ -32,7 +32,7 @@ export const OUTPUT_LANGUAGES: ReadonlyArray<OutputLanguage> = [
   },
   {
     id: "sr-latn",
-    label: "Serbian Latin",
+    label: "Serbian",
     promptName: "Serbian (Latin script)",
     nativeNote:
       "Write in Serbian using Latin script only. Do not use Cyrillic. Do not mix with Croatian or Bosnian.",

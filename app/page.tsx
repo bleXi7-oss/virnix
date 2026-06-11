@@ -338,7 +338,7 @@ export default function Home() {
         )}
 
         {phase === "idle" && !error && <PlatformList />}
-        {phase === "idle" && <BetaNotice />}
+        {phase === "idle" && <TrustNotice />}
       </div>
     </div>
   );
@@ -405,7 +405,7 @@ function HeroCard({
   } else {
     hintText = (
       <span className="text-zinc-400 dark:text-zinc-700">
-        Sign in required · YouTube or paste transcript below
+        3 free generations · Sign in required · YouTube or paste transcript below
       </span>
     );
   }
@@ -743,13 +743,12 @@ const PlatformList = memo(function PlatformList() {
   );
 });
 
-// ─── BetaNotice ───────────────────────────────────────────────────────────────
+// ─── TrustNotice ─────────────────────────────────────────────────────────────
 
-function BetaNotice() {
+function TrustNotice() {
   return (
     <p className="mt-5 max-w-sm text-center text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-700">
-      Beta: Virnix may review submitted content and feedback to improve the product.
-      Don&apos;t submit private or confidential content.
+      Don&apos;t submit private or confidential content. Virnix processes your input to generate content and improve reliability.
     </p>
   );
 }

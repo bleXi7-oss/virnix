@@ -32,9 +32,14 @@ export default function CreatorEnergySelector({ selectedIds, onChange }: Props) 
 
   return (
     <div className="mt-5">
-      <span className="mb-2.5 block text-[11px] text-zinc-400 dark:text-zinc-600">
-        Direction
-      </span>
+      <div className="mb-2.5">
+        <span className="block text-[11px] text-zinc-400 dark:text-zinc-600">
+          Direction
+        </span>
+        <span className="block text-[10px] text-zinc-400/60 dark:text-zinc-700">
+          Shapes the angle and tone of generated posts.
+        </span>
+      </div>
       <div className="flex flex-wrap gap-2">
         <button
           onClick={toggleBalanced}

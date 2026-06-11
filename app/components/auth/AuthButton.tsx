@@ -38,7 +38,7 @@ export default function AuthButton() {
         href="/login"
         className="flex h-7 items-center rounded-full border border-zinc-200 bg-zinc-100 px-3 text-[11px] font-medium text-zinc-500 transition-all hover:border-zinc-300 hover:bg-zinc-200 hover:text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
       >
-        Sign in
+        Sign in with email
       </Link>
     );
   }
