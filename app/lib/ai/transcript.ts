@@ -31,7 +31,7 @@ interface SupadataResponse {
   availableLangs?: string[];
 }
 
-const SUPADATA_URL = "https://api.supadata.ai/v1/youtube/transcript";
+const SUPADATA_URL = "https://api.supadata.ai/v1/transcript";
 const TIMEOUT_MS = 8_000;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     resp = await fetch(
       `${SUPADATA_URL}?url=${encodeURIComponent(youtubeUrl)}`,
       {
-        headers: { Authorization: `Bearer ${process.env.SUPADATA_API_KEY}` },
+        headers: { "x-api-key": process.env.SUPADATA_API_KEY ?? "" },
         signal: controller.signal,
       }
     );
@@ -147,7 +147,7 @@ export async function diagnoseTranscript(youtubeUrl: string): Promise<Transcript
     const resp = await fetch(
       `${SUPADATA_URL}?url=${encodeURIComponent(youtubeUrl)}`,
       {
-        headers: { Authorization: `Bearer ${process.env.SUPADATA_API_KEY}` },
+        headers: { "x-api-key": process.env.SUPADATA_API_KEY ?? "" },
         signal: controller.signal,
       }
     );
