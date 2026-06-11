@@ -54,7 +54,7 @@ export default function Home() {
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
   const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("auto");
+  const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("en");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
@@ -405,7 +405,7 @@ function HeroCard({
   } else {
     hintText = (
       <span className="text-zinc-400 dark:text-zinc-700">
-        Free beta · Sign in required · YouTube or paste transcript below
+        Sign in required · YouTube or paste transcript below
       </span>
     );
   }
@@ -441,9 +441,9 @@ function HeroCard({
 
         <div className="relative z-10">
         <h1 className="mb-5 text-[2.5rem] font-bold leading-[1.08] tracking-[-0.03em] md:text-[3.6rem]">
-          Turn 1 podcast into{" "}
-          <span className="text-zinc-500 dark:text-zinc-600">30 viral posts</span>{" "}
-          in 60 seconds.
+          1 video.{" "}
+          <span className="text-zinc-500 dark:text-zinc-600">Every platform.</span>{" "}
+          60 seconds.
         </h1>
 
         <p className="mb-9 max-w-sm text-[15px] leading-[1.75] text-zinc-500 dark:text-zinc-500 md:max-w-md">
