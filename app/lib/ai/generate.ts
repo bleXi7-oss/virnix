@@ -65,7 +65,7 @@ export async function generate(req: GenerateRequest, preloaded?: PreloadedTransc
     console.log(`[virnix] timeline: ${timelineMoments.length} moments detected`);
   }
 
-  return realGenerate(truncated, startMs, timelineMoments, req.energyIds ?? [], req.outputLanguage ?? "auto");
+  return realGenerate(truncated, startMs, timelineMoments, req.energyIds ?? [], req.outputLanguage ?? "en");
 }
 
 async function realGenerate(
@@ -73,7 +73,7 @@ async function realGenerate(
   startMs: number,
   timelineMoments: GenerateResult["timelineMoments"] = [],
   energyIds: CreatorEnergyId[] = [],
-  outputLanguage: OutputLanguageId = "auto"
+  outputLanguage: OutputLanguageId = "en"
 ): Promise<GenerateResult> {
   const useAdvanced = isEnabled("advanced_outputs");
   const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
@@ -132,12 +132,23 @@ async function realGenerate(
   // Guard: all 5 core platform cards empty means parse failed silently (truncation, brace
   // imbalance in content, or deep-scan recovering only best_angle). Throw so the route
   // returns "Generation failed. Nothing was charged." rather than showing empty cards.
-  const coreTotalChars = result.cards.slice(0, 5).reduce((sum, c) => sum + c.content.length, 0);
+  const corePlatformText = result.cards.slice(0, 5).map((c) => c.content).join(" ");
+  const coreTotalChars = corePlatformText.length;
   if (coreTotalChars < 20) {
     console.error(
       `[virnix] all-empty platform output — coreTotalChars=${coreTotalChars} parseRepaired=${parseRepaired} coercionUsed=${coercionUsed} stop=${stopReason}`
     );
     throw new Error("AI returned all-empty platform content");
+  }
+
+  // Language mismatch guard: if target is English but platform output is dominated by
+  // Arabic/RTL script (>30% of letter chars), the model ignored the language instruction.
+  // Fail without charging credits rather than showing non-English cards.
+  if (outputLanguage === "en" && isRtlDominated(corePlatformText)) {
+    console.error(
+      `[virnix] language-mismatch — platform content is non-English despite outputLanguage=en parseRepaired=${parseRepaired} coercionUsed=${coercionUsed} stop=${stopReason}`
+    );
+    throw new Error("Generated content did not match the target language. Please try again.");
   }
 
   // For advanced mode, score the alt hook/title candidates and keep the stronger ones
@@ -250,6 +261,23 @@ function extractContent(val: unknown): string | null {
     return typeof c === "string" && c.trim() ? c : null;
   }
   return null;
+}
+
+// ─── Language mismatch detection ─────────────────────────────────────────────
+// Conservative Arabic/RTL dominance check used by the language mismatch guard.
+// Returns true only when Arabic-script chars exceed 30% of all letter chars in the
+// combined platform content — well above what a single quoted phrase would produce.
+// Arabic Unicode blocks: main (0600-06FF), Supplement (0750-077F), Extended-A (08A0-08FF),
+// Presentation Forms A (FB50-FDFF), Presentation Forms B (FE70-FEFF).
+
+function isRtlDominated(text: string): boolean {
+  // Arabic blocks: main ؀-ۿ, Supplement ݐ-ݿ,
+  // Extended-A ࢠ-ࣿ, Presentation Forms A ﭐ-﷿,
+  // Presentation Forms B ﹰ-﻿.
+  const arabicChars = (text.match(/[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/g) ?? []).length;
+  const allLetterChars = (text.match(/[a-zA-Z؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/g) ?? []).length;
+  if (allLetterChars === 0) return false;
+  return arabicChars / allLetterChars > 0.30;
 }
 
 // ─── Fallback diagnostics ─────────────────────────────────────────────────────

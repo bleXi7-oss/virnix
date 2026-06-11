@@ -78,6 +78,14 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
 
   const data = (await resp.json()) as SupadataResponse;
 
+  if (data.lang) {
+    console.log(
+      `[virnix-transcript] supadata transcript-lang=${data.lang}${
+        data.availableLangs?.length ? ` availableLangs=${data.availableLangs.join(",")}` : ""
+      }`
+    );
+  }
+
   // Plain-text mode (text=true) returns content as a string.
   if (typeof data.content === "string") {
     const text = cleanText(data.content);
