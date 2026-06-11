@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
@@ -24,6 +24,9 @@ import type { TimelineMoment } from "./lib/timeline/types";
 import type { TranscriptQualityReport } from "./lib/timeline/transcript-quality";
 import type { CreatorEnergyId } from "./lib/creator-energy/types";
 import type { OutputLanguageId } from "./lib/languages/types";
+import type { User } from "@supabase/supabase-js";
+import { createClient } from "./lib/auth/supabase-client";
+import FeedbackWidget from "./components/generation/FeedbackWidget";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -56,6 +59,18 @@ export default function Home() {
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
   const [manualTranscript, setManualTranscript] = useState("");
+  const [user, setUser] = useState<User | null>(null);
+  const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
@@ -305,6 +320,7 @@ export default function Home() {
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />
             </ErrorBoundary>
+            <FeedbackWidget user={user} />
             <DebugPanel diagnostics={diagnostics} timelineMoments={timelineMoments} />
           </>
         )}
