@@ -2,13 +2,20 @@
 
 ## ⚠ MANUAL ACTION REQUIRED
 
-Run this SQL in the **Supabase dashboard → SQL Editor** before deploying CREDITS-A to production.
+Run this SQL in the **Supabase dashboard → SQL Editor** before deploying to production.
 
 Supabase dashboard → Project → SQL Editor → New query → paste → Run.
 
+> **STOP:** Do NOT trigger a Vercel redeploy until this SQL has been applied
+> and verified in the Supabase dashboard. The `generation_feedback` table must
+> exist before the feedback API route goes live.
+
 ---
 
-## Full migration (run once)
+## Full migration (safe to re-run)
+
+All statements are idempotent. Safe to run on a fresh database or against an
+existing schema — nothing will be duplicated or overwritten.
 
 ```sql
 -- ─── user_credits table ───────────────────────────────────────────────────────
@@ -20,15 +27,24 @@ create table if not exists public.user_credits (
   updated_at timestamptz not null default now()
 );
 
--- Enable Row Level Security
 alter table public.user_credits enable row level security;
 
--- Users can read their own credit row.
--- All writes go through SECURITY DEFINER RPCs — no direct DML policies.
-create policy "users_read_own_credits"
-  on public.user_credits
-  for select
-  using (auth.uid() = user_id);
+-- Policy: users can read their own credit row (safe to re-run)
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename  = 'user_credits'
+      and policyname = 'users_read_own_credits'
+  ) then
+    create policy "users_read_own_credits"
+      on public.user_credits
+      for select
+      using (auth.uid() = user_id);
+  end if;
+end
+$$;
 
 
 -- ─── RPC: ensure_user_credits ────────────────────────────────────────────────
@@ -95,24 +111,97 @@ end;
 $$;
 
 grant execute on function public.deduct_credits(integer) to authenticated;
+
+
+-- ─── generation_feedback table ───────────────────────────────────────────────
+-- Stores "Would you post any of this?" responses from authenticated users.
+-- Written by POST /api/feedback; read by analytics queries only.
+-- response CHECK is added separately (safe for both fresh and existing tables).
+
+create table if not exists public.generation_feedback (
+  id         uuid        primary key default gen_random_uuid(),
+  user_id    uuid        not null references auth.users(id) on delete cascade,
+  response   text        not null,
+  created_at timestamptz not null default now()
+);
+
+-- CHECK constraint: enforce allowed response values (safe to re-run)
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.generation_feedback'::regclass
+      and conname  = 'generation_feedback_response_check'
+  ) then
+    alter table public.generation_feedback
+      add constraint generation_feedback_response_check
+        check (response in ('yes', 'some', 'no'));
+  end if;
+end
+$$;
+
+alter table public.generation_feedback enable row level security;
+
+-- Policy: users can read their own feedback rows (safe to re-run)
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename  = 'generation_feedback'
+      and policyname = 'users_read_own_feedback'
+  ) then
+    create policy "users_read_own_feedback"
+      on public.generation_feedback
+      for select
+      using (auth.uid() = user_id);
+  end if;
+end
+$$;
+
+-- Policy: users can insert their own feedback rows (safe to re-run)
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename  = 'generation_feedback'
+      and policyname = 'users_insert_own_feedback'
+  ) then
+    create policy "users_insert_own_feedback"
+      on public.generation_feedback
+      for insert
+      with check (auth.uid() = user_id);
+  end if;
+end
+$$;
 ```
 
 ---
 
-## Verification
+## Verification checklist
 
-After running the SQL, verify in the Supabase dashboard:
+After running the SQL, confirm each item in the Supabase dashboard before triggering a Vercel redeploy.
 
-**Table editor → user_credits:**
-- Table exists with columns: `user_id`, `balance`, `created_at`, `updated_at`
-- RLS is enabled (lock icon visible)
+**Table editor → `user_credits`:**
+- [ ] Table exists with columns: `user_id`, `balance`, `created_at`, `updated_at`
+- [ ] RLS enabled (lock icon visible next to table name)
 
-**Authentication → Policies → user_credits:**
-- `users_read_own_credits` policy (SELECT, using `auth.uid() = user_id`) is listed
+**Table editor → `generation_feedback`:**
+- [ ] Table exists with columns: `id`, `user_id`, `response`, `created_at`
+- [ ] RLS enabled (lock icon visible next to table name)
+
+**Database → Policies (or Authentication → Policies):**
+- [ ] `users_read_own_credits` on `user_credits` — SELECT, `auth.uid() = user_id`
+- [ ] `users_read_own_feedback` on `generation_feedback` — SELECT, `auth.uid() = user_id`
+- [ ] `users_insert_own_feedback` on `generation_feedback` — INSERT, `auth.uid() = user_id`
+
+**Database → Constraints (Table editor → `generation_feedback` → Constraints tab):**
+- [ ] `generation_feedback_response_check` — CHECK `response in ('yes', 'some', 'no')`
 
 **Database → Functions:**
-- `ensure_user_credits()` — security definer, returns void
-- `deduct_credits(p_amount integer)` — security definer, returns integer
+- [ ] `ensure_user_credits()` — security definer, returns void
+- [ ] `deduct_credits(p_amount integer)` — security definer, returns integer
 
 ---
 
@@ -122,6 +211,7 @@ After running the SQL, verify in the Supabase dashboard:
 - Pro plan credit allocation (BILLING-A)
 - `credit_transactions` audit log (future — CREDITS-B)
 - Database connectivity check in `/api/health/supabase` (add `SELECT 1 FROM user_credits LIMIT 1` once this schema is confirmed working)
+- Indexes on `generation_feedback` — add when row count exceeds ~1,000 (see TODOS.md)
 
 ---
 
@@ -131,3 +221,4 @@ After running the SQL, verify in the Supabase dashboard:
 - No direct INSERT/UPDATE/DELETE policy is set on `user_credits`. All writes go through the RPCs. Authenticated users cannot modify their own balance directly.
 - `grant execute ... to authenticated` means only authenticated Supabase users can call these RPCs — anonymous callers are rejected.
 - The service role key is NOT required for CREDITS-A. The anon key + user session (cookies via `@supabase/ssr`) provides all the necessary auth context.
+- `generation_feedback` INSERT policy uses `with check` (not `using`) — correct for INSERT-only policies in PostgreSQL RLS.
