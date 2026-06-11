@@ -117,11 +117,15 @@ async function realGenerate(
 
   // TODO: add a circuit breaker once per-user cost tracking is implemented
   // TODO: tune maxTokens after production testing — monitor stop_reason=max_tokens in logs
+  const aiStartMs = Date.now();
   const { text, retryCount, stopReason } = await provider.complete({
     system: systemPrompt,
     user: userPrompt,
     maxTokens,
   });
+  console.log(
+    `[virnix] Anthropic elapsed=${Date.now() - aiStartMs}ms retries=${retryCount} stop=${stopReason ?? "end_turn"}`
+  );
 
   const { result, parseRepaired, coercionUsed } = parseAnthropicResponse(text);
 

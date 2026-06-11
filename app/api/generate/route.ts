@@ -12,6 +12,9 @@ import { createClient } from "../../lib/auth/supabase-server";
 import { calculateCreditsForGeneration } from "../../lib/credits/calculateCredits";
 import { deductCredits } from "../../lib/credits/server";
 
+// Vercel max function wall-clock time: Supadata (≤20s) + Anthropic (≤60s) + overhead.
+export const maxDuration = 120;
+
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
 

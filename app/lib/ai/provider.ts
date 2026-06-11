@@ -4,7 +4,7 @@
 // (or adding a second provider for A/B testing) requires zero changes outside this file.
 //
 // Current implementation: Anthropic via raw fetch — no SDK dependency.
-// Resilience: AbortController timeout (45s) + exponential backoff retry (max 2).
+// Resilience: AbortController timeout (60s) + exponential backoff retry (max 2).
 //
 // TODO: implement OpenAIProvider once quality comparison testing is ready.
 // TODO: add NEXT_PUBLIC_AI_PROVIDER env var to select provider at runtime.
@@ -14,7 +14,7 @@ export interface CompletionParams {
   user: string;
   maxTokens?: number;
   model?: string;
-  timeoutMs?: number; // per-request override; defaults to TIMEOUT_MS (30s)
+  timeoutMs?: number; // per-request override; defaults to TIMEOUT_MS (60s)
 }
 
 // Richer return type — carries retry count and stop_reason for diagnostics.
@@ -34,7 +34,7 @@ export interface AIProvider {
 // Sonnet 4.6: best quality/cost ratio for creator content generation (~5x cheaper than Opus, ~2x faster)
 const ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6";
 const ANTHROPIC_DEFAULT_MAX_TOKENS = 2048;
-const TIMEOUT_MS = 30_000;
+const TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
 
 // Response shape from https://api.anthropic.com/v1/messages
