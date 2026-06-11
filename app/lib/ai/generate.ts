@@ -104,9 +104,9 @@ async function realGenerate(
   const provider = getProvider();
 
   const estimatedInput = estimateTokens(systemPrompt + userPrompt);
-  // Core: 5 outputs ~900-1200 tokens actual; 2048 gives generous headroom.
+  // Core: 5 outputs + best_angle variants ~1400-1800 tokens actual; 3000 gives safe headroom.
   // Advanced: 8 outputs + 2 alts ~2000-2500 tokens actual; 3500 gives safe headroom.
-  const maxTokens = useAdvanced ? 3500 : 2048;
+  const maxTokens = useAdvanced ? 3500 : 3000;
   const { estimatedUSD } = estimateCost(estimatedInput, maxTokens);
 
   // Log cost estimate before calling — visible in Vercel Functions logs
@@ -128,6 +128,17 @@ async function realGenerate(
   );
 
   const { result, parseRepaired, coercionUsed } = parseAnthropicResponse(text);
+
+  // Guard: all 5 core platform cards empty means parse failed silently (truncation, brace
+  // imbalance in content, or deep-scan recovering only best_angle). Throw so the route
+  // returns "Generation failed. Nothing was charged." rather than showing empty cards.
+  const coreTotalChars = result.cards.slice(0, 5).reduce((sum, c) => sum + c.content.length, 0);
+  if (coreTotalChars < 20) {
+    console.error(
+      `[virnix] all-empty platform output — coreTotalChars=${coreTotalChars} parseRepaired=${parseRepaired} coercionUsed=${coercionUsed} stop=${stopReason}`
+    );
+    throw new Error("AI returned all-empty platform content");
+  }
 
   // For advanced mode, score the alt hook/title candidates and keep the stronger ones
   const finalCards = useAdvanced

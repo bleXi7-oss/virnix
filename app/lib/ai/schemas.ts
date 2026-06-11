@@ -174,12 +174,9 @@ const CORE_KEYS: (keyof CoreAIOutput)[] = [
 ];
 
 function hasContent(val: unknown): val is { content: string } {
-  return (
-    typeof val === "object" &&
-    val !== null &&
-    "content" in val &&
-    typeof (val as Record<string, unknown>).content === "string"
-  );
+  if (typeof val !== "object" || val === null) return false;
+  const content = (val as Record<string, unknown>).content;
+  return typeof content === "string" && content.trim().length > 0;
 }
 
 export function validateCoreOutput(raw: unknown): raw is CoreAIOutput {
