@@ -32,7 +32,7 @@ interface SupadataResponse {
 }
 
 const SUPADATA_URL = "https://api.supadata.ai/v1/transcript";
-const TIMEOUT_MS = 8_000;
+const TIMEOUT_MS = 20_000;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
