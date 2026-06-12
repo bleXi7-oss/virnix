@@ -11,6 +11,7 @@ import { isEnabled } from "../../lib/flags";
 import { createClient } from "../../lib/auth/supabase-server";
 import { calculateCreditsForGeneration } from "../../lib/credits/calculateCredits";
 import { deductCredits } from "../../lib/credits/server";
+import { fetchCreatorBrain } from "../../lib/generation/fetchCreatorBrain";
 
 // Vercel max function wall-clock time: Supadata (≤20s) + Anthropic (≤90s) + overhead.
 export const maxDuration = 120;
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+
+    // Fetch creator brain profile — soft-fails, never blocks generation.
+    const creatorBrain = await fetchCreatorBrain(supabase);
 
     // Fetch transcript — either use the manually pasted text or fetch from YouTube.
     let transcriptResult: Awaited<ReturnType<typeof getTranscriptFull>>;
@@ -134,7 +138,7 @@ export async function POST(req: NextRequest) {
     // Run generation with the pre-fetched transcript to avoid a double fetch.
     let data: Awaited<ReturnType<typeof generate>>;
     try {
-      data = await generate({ youtubeUrl: input.youtubeUrl, energyIds, outputLanguage }, transcriptResult);
+      data = await generate({ youtubeUrl: input.youtubeUrl, energyIds, outputLanguage, creatorBrain }, transcriptResult);
     } catch (err) {
       // Credits are NOT deducted when generation fails.
       console.error("[virnix] /api/generate error:", err instanceof Error ? err.message : err);

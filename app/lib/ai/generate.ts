@@ -13,6 +13,7 @@ import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
 import { formatEnergyContext } from "../creator-energy/prompt-context";
 import { formatLanguageContext } from "../languages/prompt-context";
+import { formatCreatorBrainContext } from "../creator-brain/prompt-context";
 import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt, evaluateTranscriptQuality } from "../timeline";
 
 // ─── To enable real AI generation ────────────────────────────────────────────
@@ -65,7 +66,12 @@ export async function generate(req: GenerateRequest, preloaded?: PreloadedTransc
     console.log(`[virnix] timeline: ${timelineMoments.length} moments detected`);
   }
 
-  return realGenerate(truncated, startMs, timelineMoments, req.energyIds ?? [], req.outputLanguage ?? "en");
+  const creatorBrainContext = formatCreatorBrainContext(req.creatorBrain ?? null);
+  if (req.creatorBrain && creatorBrainContext) {
+    console.log("[virnix] creator brain: profile injected");
+  }
+
+  return realGenerate(truncated, startMs, timelineMoments, req.energyIds ?? [], req.outputLanguage ?? "en", creatorBrainContext);
 }
 
 async function realGenerate(
@@ -73,7 +79,8 @@ async function realGenerate(
   startMs: number,
   timelineMoments: GenerateResult["timelineMoments"] = [],
   energyIds: CreatorEnergyId[] = [],
-  outputLanguage: OutputLanguageId = "en"
+  outputLanguage: OutputLanguageId = "en",
+  creatorBrainContext = ""
 ): Promise<GenerateResult> {
   const useAdvanced = isEnabled("advanced_outputs");
   const outputType: "core" | "advanced" = useAdvanced ? "advanced" : "core";
@@ -98,8 +105,8 @@ async function realGenerate(
   }
 
   const userPrompt = useAdvanced
-    ? buildAdvancedPrompt(transcript, timelineContext, energyContext, languageContext)
-    : buildPrompt(transcript, timelineContext, energyContext, languageContext);
+    ? buildAdvancedPrompt(transcript, timelineContext, energyContext, languageContext, creatorBrainContext)
+    : buildPrompt(transcript, timelineContext, energyContext, languageContext, creatorBrainContext);
 
   const provider = getProvider();
 

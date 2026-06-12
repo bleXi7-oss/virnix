@@ -5,6 +5,7 @@ import type { TranscriptQualityReport } from "../timeline/transcript-quality";
 import type { CreatorEnergyId } from "../creator-energy/types";
 import type { OutputLanguageId } from "../languages/types";
 import type { BestAngle } from "../ai/schemas";
+import type { CreatorBrainProfile } from "../creator-brain/types";
 
 export type { BestAngle };
 
@@ -12,6 +13,8 @@ export interface GenerateRequest {
   youtubeUrl?: string;
   energyIds?: CreatorEnergyId[];
   outputLanguage?: OutputLanguageId;
+  // Server-fetched after auth — never passed from the HTTP request body.
+  creatorBrain?: CreatorBrainProfile | null;
 }
 
 export interface GenerateResult {
