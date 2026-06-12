@@ -186,6 +186,29 @@ export async function POST(req: NextRequest) {
         );
 
         if (!safe) {
+          // If this was a "Try English" retry and is still unsafe, the English
+          // caption track could not be fetched. Return a plain error (no transcriptWarning)
+          // to prevent the warning panel from re-appearing with another Try English button.
+          if (preferTranscriptLang) {
+            if (generationAttemptId) {
+              await supabase.rpc("fail_generation_attempt", {
+                p_attempt_key: generationAttemptId,
+                p_status: "error",
+              }).then(({ error: e }) => {
+                if (e) console.warn("[virnix-idempotency] fail_generation_attempt(error):", e.message);
+              });
+            }
+            logCreditEvent({ attemptKey: generationAttemptId, status: "error", creditsCharged: 0, reason: "try_english_failed" });
+            return NextResponse.json(
+              {
+                ok: false,
+                error: "English captions could not be fetched. You can continue with approximate translation or paste the correct transcript.",
+                creditsUsed: 0,
+              } satisfies GenerateResponse,
+              { status: 200 },
+            );
+          }
+
           const availableLangs = transcriptResult.availableLangs ?? [];
           const hasEnglish = availableLangs.some(
             (l) => (normalizeLangCode(l) ?? "") === "en",

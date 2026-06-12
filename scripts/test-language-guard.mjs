@@ -52,14 +52,17 @@ function detectTranscriptScript(text) {
 
 function normalizeLangCode(code) {
   if (!code) return null;
-  return code.split("-")[0].toLowerCase();
+  return code.split(/[-_]/)[0].toLowerCase();
 }
+
+// Codes that mean "language undetermined" — treated same as absent metadata.
+const UNDETERMINED_CODES = new Set(["und", "zxx", "mis", "mul"]);
 
 function isTranscriptSafe(transcriptLang, outputLanguage, script) {
   if (outputLanguage === "auto") return true;
   const normalizedOutput = normalizeLangCode(outputLanguage);
   const normalizedTranscript = normalizeLangCode(transcriptLang);
-  if (!normalizedTranscript) {
+  if (!normalizedTranscript || UNDETERMINED_CODES.has(normalizedTranscript)) {
     return script === "latin_dominant" || script === "no_letters";
   }
   if (normalizedTranscript === normalizedOutput) return true;
@@ -293,6 +296,21 @@ assert(!isTranscriptSafe(null, "en", "cyrillic_dominant"), "no metadata + Cyrill
 assert(!isTranscriptSafe(null, "sl", "cjk_dominant"), "no metadata + CJK script → UNSAFE");
 assert(!isTranscriptSafe(null, "en", "mixed"), "no metadata + mixed → UNSAFE (can't confirm Latin-only)");
 
+console.log("\nisTranscriptSafe — underscore lang codes (Supadata en_US false-positive fix)");
+assert(isTranscriptSafe("en_US", "sl", "latin_dominant"), "en_US + sl → safe (underscore normalized to en)");
+assert(isTranscriptSafe("en_GB", "de", "latin_dominant"), "en_GB + de → safe (underscore normalized to en)");
+assert(isTranscriptSafe("en_US", "en", "latin_dominant"), "en_US + en → safe (same lang after normalization)");
+
+console.log("\nisTranscriptSafe — undetermined lang codes (und/zxx treated as no metadata)");
+assert(isTranscriptSafe("und", "sl", "latin_dominant"), "und + sl + Latin script → safe (undetermined treated as no-metadata)");
+assert(isTranscriptSafe("und", "en", "latin_dominant"), "und + en + Latin script → safe");
+assert(isTranscriptSafe("und", "sl", "no_letters"), "und + sl + no_letters → safe");
+assert(!isTranscriptSafe("und", "sl", "arabic_dominant"), "und + sl + Arabic script → UNSAFE (falls back to script heuristic)");
+assert(!isTranscriptSafe("und", "en", "cyrillic_dominant"), "und + en + Cyrillic script → UNSAFE");
+assert(!isTranscriptSafe("und", "sl", "cjk_dominant"), "und + sl + CJK script → UNSAFE");
+assert(isTranscriptSafe("zxx", "sl", "latin_dominant"), "zxx (no linguistic content) + Latin → safe");
+assert(isTranscriptSafe("mul", "sl", "latin_dominant"), "mul (multilingual) + Latin → safe (treat as undetermined)");
+
 // ─── UF8uR6Z6KLc regression — Steve Jobs Arabic auto-captions ────────────────
 
 const JOBS_ARABIC_SAMPLE =
@@ -309,6 +327,8 @@ assert(!isTranscriptSafe("ar", "en", "arabic_dominant"), "ar transcript + en out
 assert(isTranscriptSafe("ar", "auto", "arabic_dominant"), "ar transcript + auto output → safe (no guard)");
 // When user clicks 'Try English' and Supadata returns English:
 assert(isTranscriptSafe("en", "sl", "latin_dominant"), "after Try English: en transcript + sl output → safe");
+// When user clicks 'Try English' and Supadata still returns non-English (route.ts returns error not warning):
+assert(!isTranscriptSafe("ar", "sl", "arabic_dominant"), "Try English failed: still Arabic → still unsafe (route returns error, not warning)");
 
 // ─── shouldWarnTranscript — backward compat ───────────────────────────────────
 
@@ -345,6 +365,13 @@ assert(normalizeLangCode("zh-Hans") === "zh", "zh-Hans → zh");
 assert(normalizeLangCode("ar") === "ar", "ar → ar (no subtag)");
 assert(normalizeLangCode(null) === null, "null → null");
 assert(normalizeLangCode(undefined) === null, "undefined → null");
+
+console.log("\nnormalizeLangCode — underscore variants (Supadata may use en_US format)");
+assert(normalizeLangCode("en_US") === "en", "en_US (underscore) → en");
+assert(normalizeLangCode("en_GB") === "en", "en_GB (underscore) → en");
+assert(normalizeLangCode("pt_BR") === "pt", "pt_BR (underscore) → pt");
+assert(normalizeLangCode("zh_Hans") === "zh", "zh_Hans (underscore) → zh");
+assert(normalizeLangCode("sr_Latn") === "sr", "sr_Latn (underscore) → sr");
 
 // ─── shouldHideSourcePreview — Strongest Moments ─────────────────────────────
 

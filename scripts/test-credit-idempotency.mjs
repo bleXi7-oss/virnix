@@ -180,16 +180,19 @@ console.log("\n── Credit deduction order ───────────�
 console.log("\n── Transcript language safety (English source) ──────────────────");
 
 // Mirrors isTranscriptSafe logic for English → any output language.
+function normalizeLang(code) {
+  if (!code) return null;
+  return code.split(/[-_]/)[0].toLowerCase();
+}
+const UNDETERMINED = new Set(["und", "zxx", "mis", "mul"]);
 function isTranscriptSafe(transcriptLang, outputLanguage, script) {
   if (outputLanguage === "auto") return true;
-  const normalizedOutput = transcriptLang ? transcriptLang.split("-")[0].toLowerCase() : null;
-  const normalizedTranscript = outputLanguage ? outputLanguage.split("-")[0].toLowerCase() : null;
-  void normalizedOutput; // unused, mirrors real normalization
-  const nt = transcriptLang ? transcriptLang.split("-")[0].toLowerCase() : null;
-  if (!nt) {
+  const nt = normalizeLang(transcriptLang);
+  const no_ = normalizeLang(outputLanguage);
+  if (!nt || UNDETERMINED.has(nt)) {
     return script === "latin_dominant" || script === "no_letters";
   }
-  if (nt === normalizedTranscript) return true;
+  if (nt === no_) return true;
   if (nt === "en") return true;
   return false;
 }
@@ -197,8 +200,12 @@ function isTranscriptSafe(transcriptLang, outputLanguage, script) {
 assert("en → sl: safe (English source always ok)", isTranscriptSafe("en", "sl", "latin_dominant"), true);
 assert("en-US → sl: safe", isTranscriptSafe("en-US", "sl", "latin_dominant"), true);
 assert("en-GB → de: safe", isTranscriptSafe("en-GB", "de", "latin_dominant"), true);
+assert("en_US → sl: safe (underscore variant, false-positive fix)", isTranscriptSafe("en_US", "sl", "latin_dominant"), true);
+assert("en_GB → de: safe (underscore variant)", isTranscriptSafe("en_GB", "de", "latin_dominant"), true);
 assert("null + latin → sl: safe (no metadata, Latin script)", isTranscriptSafe(null, "sl", "latin_dominant"), true);
 assert("null + no_letters → sl: safe", isTranscriptSafe(null, "sl", "no_letters"), true);
+assert("und + latin → sl: safe (undetermined treated as no metadata)", isTranscriptSafe("und", "sl", "latin_dominant"), true);
+assert("und + arabic → sl: unsafe (undetermined, non-Latin script)", isTranscriptSafe("und", "sl", "arabic_dominant"), false);
 assert("ar → sl: unsafe (Arabic metadata)", isTranscriptSafe("ar", "sl", "arabic_dominant"), false);
 assert("tr → sl: unsafe (Turkish metadata, Latin script)", isTranscriptSafe("tr", "sl", "latin_dominant"), false);
 assert("fr → de: unsafe (French metadata, Latin script)", isTranscriptSafe("fr", "de", "latin_dominant"), false);

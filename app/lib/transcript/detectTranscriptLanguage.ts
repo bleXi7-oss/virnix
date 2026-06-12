@@ -47,12 +47,18 @@ export function detectTranscriptScript(text: string): TranscriptScript {
 }
 
 // ─── Language code normalization ──────────────────────────────────────────────
-// Strips subtag and lowercases. en-US → en, sl-SI → sl, sr-Latn → sr.
+// Strips subtag and lowercases. en-US → en, en_US → en, sl-SI → sl, sr-Latn → sr.
+// Handles both BCP 47 dash separator and the underscore variant some APIs return.
 
 export function normalizeLangCode(code: string | null | undefined): string | null {
   if (!code) return null;
-  return code.split("-")[0].toLowerCase();
+  return code.split(/[-_]/)[0].toLowerCase();
 }
+
+// Codes that mean "language could not be determined" — treat same as absent metadata.
+// "und" = undetermined (ISO 639-3), "zxx" = no linguistic content, "mis" = uncoded,
+// "mul" = multiple languages. Supadata returns "und" for some auto-generated tracks.
+const UNDETERMINED_CODES = new Set(["und", "zxx", "mis", "mul"]);
 
 // ─── Transcript safety check — metadata-first ────────────────────────────────
 //
@@ -62,7 +68,7 @@ export function normalizeLangCode(code: string | null | undefined): string | nul
 //   1. outputLanguage === "auto" → always safe (user accepts transcript language)
 //   2. Transcript lang matches output lang → safe
 //   3. Transcript lang is English → safe (translation to target is standard)
-//   4. No metadata available:
+//   4. No metadata or undetermined code (und/zxx/mis/mul):
 //      - Latin or no_letters script → safe (can't distinguish languages by script alone)
 //      - Non-Latin script → unsafe (Cyrillic/CJK/Arabic strongly suggests mismatch)
 //   5. Any other known language that differs from output → unsafe
@@ -77,8 +83,8 @@ export function isTranscriptSafe(
   const normalizedOutput = normalizeLangCode(outputLanguage);
   const normalizedTranscript = normalizeLangCode(transcriptLang);
 
-  if (!normalizedTranscript) {
-    // No metadata — fall back to script heuristics
+  if (!normalizedTranscript || UNDETERMINED_CODES.has(normalizedTranscript)) {
+    // No metadata or undetermined language — fall back to script heuristics
     return script === "latin_dominant" || script === "no_letters";
   }
 
