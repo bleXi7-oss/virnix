@@ -27,6 +27,7 @@ import type { OutputLanguageId } from "./lib/languages/types";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "./lib/auth/supabase-client";
 import FeedbackWidget from "./components/generation/FeedbackWidget";
+import CreatorBrainPanel from "./components/CreatorBrainPanel";
 
 type Phase = "idle" | "loading" | "done" | "error";
 
@@ -53,7 +54,17 @@ export default function Home() {
   const [diagnostics, setDiagnostics] = useState<AIDiagnostics | null>(null);
   const [timelineMoments, setTimelineMoments] = useState<TimelineMoment[] | null>(null);
   const [transcriptQuality, setTranscriptQuality] = useState<TranscriptQualityReport | null>(null);
-  const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>([]);
+  const [selectedEnergies, setSelectedEnergies] = useState<CreatorEnergyId[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("virnix:energies");
+      if (stored) {
+        const parsed: unknown = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed as CreatorEnergyId[];
+      }
+    } catch { /* ignore parse errors */ }
+    return [];
+  });
   const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("en");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
@@ -70,6 +81,11 @@ export default function Home() {
     });
     return () => subscription.unsubscribe();
   }, [supabase]);
+
+  // Persist Creator Energy selection across page reloads
+  useEffect(() => {
+    try { localStorage.setItem("virnix:energies", JSON.stringify(selectedEnergies)); } catch { /* ignore */ }
+  }, [selectedEnergies]);
 
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const animDoneRef = useRef(false);
@@ -302,6 +318,7 @@ export default function Home() {
           onPasteModeToggle={handlePasteModeToggle}
           manualTranscript={manualTranscript}
           onManualTranscriptChange={setManualTranscript}
+          user={user}
         />
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
@@ -363,6 +380,7 @@ function HeroCard({
   onPasteModeToggle,
   manualTranscript,
   onManualTranscriptChange,
+  user,
 }: {
   phase: Phase;
   url: string;
@@ -380,6 +398,7 @@ function HeroCard({
   onPasteModeToggle: () => void;
   manualTranscript: string;
   onManualTranscriptChange: (text: string) => void;
+  user: User | null;
 }) {
   const trimmedUrl = url.trim();
   const isValidUrl = trimmedUrl.length > 0 && isValidYouTubeUrl(trimmedUrl);
@@ -520,6 +539,8 @@ function HeroCard({
         {phase === "idle" && (
           <LanguageSelector selectedId={selectedLanguage} onChange={onLanguageChange} />
         )}
+
+        {phase === "idle" && <CreatorBrainPanel user={user} />}
 
         <p className="mt-4 text-[12px]">{hintText}</p>
         </div>

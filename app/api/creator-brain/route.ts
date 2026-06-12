@@ -22,9 +22,16 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "Failed to fetch profile" }, { status: 500 });
   }
 
+  if (!data) {
+    return NextResponse.json({ ok: true, data: null });
+  }
+
+  const row = data as CreatorBrainRow;
   return NextResponse.json({
     ok: true,
-    data: data ? mapRowToProfile(data as CreatorBrainRow) : null,
+    // writing_examples is included here for the UI only.
+    // mapRowToProfile intentionally excludes it from the generation pipeline.
+    data: { ...mapRowToProfile(row), writingExamples: row.writing_examples ?? undefined },
   });
 }
 
