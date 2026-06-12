@@ -375,7 +375,6 @@ export default function Home() {
           <div className="mt-6 w-full max-w-2xl">
             <TranscriptWarningPanel
               warning={transcriptWarning}
-              disabled={phase === "loading"}
               onTryEnglish={() => {
                 void runGeneration(pendingGenerationUrl, selectedEnergies, undefined, {
                   preferTranscriptLang: "en",
