@@ -38,5 +38,5 @@ export interface GenerateResult {
 }
 
 export type GenerateResponse =
-  | { ok: true; data: GenerateResult; creditsUsed?: number; creditsRemaining?: number; transcriptLang?: string; transcriptNote?: string }
-  | { ok: false; error: string; creditsRequired?: number; creditsAvailable?: number; transcriptWarning?: TranscriptWarning };
+  | { ok: true; data: GenerateResult; creditsUsed: number; creditsRemaining?: number; transcriptLang?: string; transcriptNote?: string }
+  | { ok: false; error: string; creditsUsed: number; creditsRequired?: number; creditsAvailable?: number; transcriptWarning?: TranscriptWarning };

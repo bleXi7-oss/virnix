@@ -24,6 +24,27 @@ import {
 // Vercel max function wall-clock time: Supadata (≤20s) + Anthropic (≤90s) + overhead.
 export const maxDuration = 120;
 
+// Credit observability — only safe metadata, never PII or content.
+function logCreditEvent(params: {
+  attemptKey: string | null;
+  status: "started" | "warning" | "error" | "success" | "duplicate";
+  creditsCharged: number;
+  balanceBefore?: number;
+  balanceAfter?: number;
+  reason?: string;
+}) {
+  const key = params.attemptKey ? params.attemptKey.slice(0, 8) : "no-key";
+  const parts = [
+    `[virnix-credit] attempt=${key}`,
+    `status=${params.status}`,
+    `charged=${params.creditsCharged}`,
+  ];
+  if (params.balanceBefore !== undefined) parts.push(`balance_before=${params.balanceBefore}`);
+  if (params.balanceAfter !== undefined) parts.push(`balance_after=${params.balanceAfter}`);
+  if (params.reason) parts.push(`reason="${params.reason}"`);
+  console.log(parts.join(" "));
+}
+
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
 
@@ -31,7 +52,7 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body" } satisfies GenerateResponse,
+      { ok: false, error: "Invalid JSON body", creditsUsed: 0 } satisfies GenerateResponse,
       { status: 400 }
     );
   }
@@ -41,7 +62,7 @@ export async function POST(req: NextRequest) {
   const input = chooseGenerationInput(body);
   if (input.error) {
     return NextResponse.json(
-      { ok: false, error: input.error.message } satisfies GenerateResponse,
+      { ok: false, error: input.error.message, creditsUsed: 0 } satisfies GenerateResponse,
       { status: input.error.status }
     );
   }
@@ -61,7 +82,7 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json(
-        { ok: false, error: "Sign in to generate content." } satisfies GenerateResponse,
+        { ok: false, error: "Sign in to generate content.", creditsUsed: 0 } satisfies GenerateResponse,
         { status: 401 }
       );
     }
@@ -75,6 +96,37 @@ export async function POST(req: NextRequest) {
     const confirmTranscriptWarning = body.confirmTranscriptWarning === true;
     const preferTranscriptLang =
       typeof body.preferTranscriptLang === "string" ? body.preferTranscriptLang : undefined;
+
+    // Idempotency key — client-generated UUID per generation attempt.
+    // Registered early so duplicate HTTP requests (double-click, network retry) are blocked
+    // before any expensive work. Soft-fails gracefully if the table hasn't been migrated yet.
+    const generationAttemptId =
+      typeof body.generationAttemptId === "string" && body.generationAttemptId.length > 0
+        ? body.generationAttemptId
+        : null;
+
+    if (generationAttemptId) {
+      const { data: attemptStatus, error: attemptError } = await supabase.rpc(
+        "start_generation_attempt",
+        { p_attempt_key: generationAttemptId },
+      );
+      if (attemptError) {
+        // Table not migrated yet — log and continue; client-side ref guard is the primary protection.
+        console.warn("[virnix-idempotency] start_generation_attempt unavailable:", attemptError.message);
+      } else if (attemptStatus === "in_progress") {
+        logCreditEvent({ attemptKey: generationAttemptId, status: "duplicate", creditsCharged: 0, reason: "in_progress" });
+        return NextResponse.json(
+          { ok: false, error: "This request is already in progress. Please wait.", creditsUsed: 0 } satisfies GenerateResponse,
+          { status: 409 },
+        );
+      } else if (attemptStatus === "completed") {
+        logCreditEvent({ attemptKey: generationAttemptId, status: "duplicate", creditsCharged: 0, reason: "already_completed" });
+        return NextResponse.json(
+          { ok: false, error: "This generation has already been completed.", creditsUsed: 0 } satisfies GenerateResponse,
+          { status: 409 },
+        );
+      }
+    }
 
     // Fetch transcript — either use the manually pasted text or fetch from YouTube.
     let transcriptResult: Awaited<ReturnType<typeof getTranscriptFull>>;
@@ -111,10 +163,12 @@ export async function POST(req: NextRequest) {
           preferTranscriptLang ? { lang: preferTranscriptLang } : undefined,
         );
       } catch (err) {
+        logCreditEvent({ attemptKey: generationAttemptId, status: "error", creditsCharged: 0, reason: "transcript_fetch_failed" });
         return NextResponse.json(
           {
             ok: false,
             error: err instanceof Error ? err.message : "Could not fetch transcript. The video may not have captions.",
+            creditsUsed: 0,
           } satisfies GenerateResponse,
           { status: 422 }
         );
@@ -126,6 +180,10 @@ export async function POST(req: NextRequest) {
       if (!confirmTranscriptWarning) {
         const script = detectTranscriptScript(transcriptResult.transcript);
         const safe = isTranscriptSafe(transcriptResult.supadataLang, outputLanguage, script);
+        // Always log guard evaluation so English false-positives are visible in Vercel logs.
+        console.log(
+          `[virnix-transcript-guard] lang=${transcriptResult.supadataLang ?? "?"} script=${script} outputLang=${outputLanguage} safe=${safe}`
+        );
 
         if (!safe) {
           const availableLangs = transcriptResult.availableLangs ?? [];
@@ -150,13 +208,20 @@ export async function POST(req: NextRequest) {
               : script === "mixed"
               ? ("non_latin" as const)
               : ("latin" as const);
-          console.log(
-            `[virnix-transcript-guard] lang=${transcriptResult.supadataLang ?? "?"} script=${script} outputLang=${outputLanguage}`
-          );
+          if (generationAttemptId) {
+            await supabase.rpc("fail_generation_attempt", {
+              p_attempt_key: generationAttemptId,
+              p_status: "warning",
+            }).then(({ error: e }) => {
+              if (e) console.warn("[virnix-idempotency] fail_generation_attempt(warning):", e.message);
+            });
+          }
+          logCreditEvent({ attemptKey: generationAttemptId, status: "warning", creditsCharged: 0, reason: "transcript_lang_mismatch" });
           return NextResponse.json(
             {
               ok: false,
               error: "Transcript language mismatch detected.",
+              creditsUsed: 0,
               transcriptWarning: {
                 transcriptLang: transcriptResult.supadataLang ?? null,
                 transcriptScript: scriptTag,
@@ -178,7 +243,7 @@ export async function POST(req: NextRequest) {
 
     if (creditCost.total === -1) {
       return NextResponse.json(
-        { ok: false, error: "Content over 120 minutes cannot be processed. Try a shorter video or clip." } satisfies GenerateResponse,
+        { ok: false, error: "Content over 120 minutes cannot be processed. Try a shorter video or clip.", creditsUsed: 0 } satisfies GenerateResponse,
         { status: 422 }
       );
     }
@@ -188,7 +253,7 @@ export async function POST(req: NextRequest) {
     if (ensureError) {
       console.error("[virnix] ensure_user_credits failed:", ensureError.message);
       return NextResponse.json(
-        { ok: false, error: "Something went wrong. Please try again." } satisfies GenerateResponse,
+        { ok: false, error: "Something went wrong. Please try again.", creditsUsed: 0 } satisfies GenerateResponse,
         { status: 500 }
       );
     }
@@ -201,7 +266,7 @@ export async function POST(req: NextRequest) {
     if (creditsError || !creditsRow) {
       console.error("[virnix] credits read failed:", creditsError?.message);
       return NextResponse.json(
-        { ok: false, error: "Something went wrong. Please try again." } satisfies GenerateResponse,
+        { ok: false, error: "Something went wrong. Please try again.", creditsUsed: 0 } satisfies GenerateResponse,
         { status: 500 }
       );
     }
@@ -212,10 +277,12 @@ export async function POST(req: NextRequest) {
       const creditError = currentBalance === 0
         ? "You've used your free beta credits. Message Miha if you'd like more."
         : `Not enough credits for this video (needs ${creditCost.total}, you have ${currentBalance}). Try a shorter video.`;
+      logCreditEvent({ attemptKey: generationAttemptId, status: "error", creditsCharged: 0, balanceBefore: currentBalance, reason: "insufficient_credits" });
       return NextResponse.json(
         {
           ok: false,
           error: creditError,
+          creditsUsed: 0,
           creditsRequired: creditCost.total,
           creditsAvailable: currentBalance,
         } satisfies GenerateResponse,
@@ -230,8 +297,17 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       // Credits are NOT deducted when generation fails.
       console.error("[virnix] /api/generate error:", err instanceof Error ? err.message : err);
+      if (generationAttemptId) {
+        await supabase.rpc("fail_generation_attempt", {
+          p_attempt_key: generationAttemptId,
+          p_status: "error",
+        }).then(({ error: e }) => {
+          if (e) console.warn("[virnix-idempotency] fail_generation_attempt(error):", e.message);
+        });
+      }
+      logCreditEvent({ attemptKey: generationAttemptId, status: "error", creditsCharged: 0, reason: "generation_failed" });
       return NextResponse.json(
-        { ok: false, error: "Generation failed. Nothing was charged. Please try again." } satisfies GenerateResponse,
+        { ok: false, error: "Generation failed. Nothing was charged. Please try again.", creditsUsed: 0 } satisfies GenerateResponse,
         { status: 500 }
       );
     }
@@ -244,8 +320,19 @@ export async function POST(req: NextRequest) {
         // Race condition: two simultaneous requests both passed the balance check.
         // Generation was served; log the anomaly but don't fail the response.
         console.warn("[virnix] deduct_credits returned -1 (race condition) — generation served, credits not deducted");
+        logCreditEvent({ attemptKey: generationAttemptId, status: "error", creditsCharged: 0, balanceBefore: currentBalance, reason: "deduct_race_condition" });
       } else {
         creditsRemaining = newBalance;
+        logCreditEvent({ attemptKey: generationAttemptId, status: "success", creditsCharged: creditCost.total, balanceBefore: currentBalance, balanceAfter: newBalance });
+        // Mark attempt as completed with exact credit cost — idempotency safety net.
+        if (generationAttemptId) {
+          await supabase.rpc("complete_generation_attempt", {
+            p_attempt_key: generationAttemptId,
+            p_credits_deducted: creditCost.total,
+          }).then(({ error: e }) => {
+            if (e) console.warn("[virnix-idempotency] complete_generation_attempt:", e.message);
+          });
+        }
       }
     } catch (deductErr) {
       // Deduction errors don't fail the response — the user already received their generation.
@@ -265,11 +352,11 @@ export async function POST(req: NextRequest) {
   // ─── Mock mode: no auth, no credits ──────────────────────────────────────────
   try {
     const data = await generate({ youtubeUrl: input.youtubeUrl, energyIds, outputLanguage });
-    return NextResponse.json({ ok: true, data } satisfies GenerateResponse);
+    return NextResponse.json({ ok: true, data, creditsUsed: 0 } satisfies GenerateResponse);
   } catch (err) {
     console.error("[virnix] /api/generate unhandled error:", err instanceof Error ? err.message : err);
     return NextResponse.json(
-      { ok: false, error: "Something went wrong. Please try again." } satisfies GenerateResponse,
+      { ok: false, error: "Something went wrong. Please try again.", creditsUsed: 0 } satisfies GenerateResponse,
       { status: 500 }
     );
   }

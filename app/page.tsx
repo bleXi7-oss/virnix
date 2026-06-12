@@ -68,6 +68,7 @@ export default function Home() {
   });
   const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("en");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  const [creditsUsedLastGen, setCreditsUsedLastGen] = useState<number | null>(null);
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
   const [transcriptWarning, setTranscriptWarning] = useState<TranscriptWarning | null>(null);
   const [pendingGenerationUrl, setPendingGenerationUrl] = useState<string>("");
@@ -96,6 +97,9 @@ export default function Home() {
   const animDoneRef = useRef(false);
   const apiResultRef = useRef<OutputCardData[] | null>(null);
   const genStartRef = useRef<number>(0);
+  // Synchronous in-flight guard — prevents duplicate requests from double-click,
+  // paste+Enter, or auto-paste racing with a manual trigger.
+  const inFlightRef = useRef(false);
 
   const tryFinish = useCallback(() => {
     if (animDoneRef.current && apiResultRef.current !== null) {
@@ -110,6 +114,17 @@ export default function Home() {
     transcript?: string,
     opts?: { preferTranscriptLang?: string; confirmTranscriptWarning?: boolean },
   ) => {
+    // Synchronous guard: prevents double-click, paste+Enter race, and any other
+    // scenario where two calls overlap before React commits the phase change.
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
+    // Unique key for this generation attempt — sent to the server for
+    // belt-and-suspenders idempotency (server ignores it gracefully if the
+    // generation_attempts table hasn't been migrated yet).
+    const generationAttemptId = crypto.randomUUID();
+
+    setCreditsUsedLastGen(null);
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -143,6 +158,7 @@ export default function Home() {
           ...(transcript ? { transcript } : {}),
           ...(opts?.confirmTranscriptWarning ? { confirmTranscriptWarning: true } : {}),
           ...(opts?.preferTranscriptLang ? { preferTranscriptLang: opts.preferTranscriptLang } : {}),
+          generationAttemptId,
         }),
       });
 
@@ -161,6 +177,7 @@ export default function Home() {
       if (!json.ok) throw new Error(json.error);
 
       apiResultRef.current = json.data.cards;
+      setCreditsUsedLastGen(json.creditsUsed);
       if (json.creditsRemaining !== undefined) setCreditsRemaining(json.creditsRemaining);
       setDiagnostics(json.data.diagnostics ?? null);
       setTimelineMoments(json.data.timelineMoments ?? null);
@@ -179,6 +196,8 @@ export default function Home() {
       timersRef.current.forEach(clearTimeout);
       setPhase("error");
       setError(message);
+    } finally {
+      inFlightRef.current = false;
     }
   }, [tryFinish, selectedLanguage]);
 
@@ -356,6 +375,7 @@ export default function Home() {
           <div className="mt-6 w-full max-w-2xl">
             <TranscriptWarningPanel
               warning={transcriptWarning}
+              disabled={phase === "loading"}
               onTryEnglish={() => {
                 void runGeneration(pendingGenerationUrl, selectedEnergies, undefined, {
                   preferTranscriptLang: "en",
@@ -402,6 +422,13 @@ export default function Home() {
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />
             </ErrorBoundary>
+            {creditsUsedLastGen !== null && (
+              <p className="mt-1 text-center text-[12px] text-zinc-400 dark:text-zinc-500">
+                {creditsUsedLastGen === 0
+                  ? "No credits used"
+                  : `${creditsUsedLastGen} credit${creditsUsedLastGen !== 1 ? "s" : ""} used${creditsRemaining !== null ? ` · ${creditsRemaining} remaining` : ""}`}
+              </p>
+            )}
             <FeedbackWidget user={user} />
             <DebugPanel diagnostics={diagnostics} timelineMoments={timelineMoments} />
           </>

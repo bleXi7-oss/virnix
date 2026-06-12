@@ -4,6 +4,7 @@ import type { TranscriptWarning } from "../../lib/types/generation";
 
 interface Props {
   warning: TranscriptWarning;
+  disabled?: boolean;
   onTryEnglish: () => void;
   onContinue: () => void;
   onPaste: () => void;
@@ -11,6 +12,7 @@ interface Props {
 
 export default function TranscriptWarningPanel({
   warning,
+  disabled = false,
   onTryEnglish,
   onContinue,
   onPaste,
@@ -37,20 +39,23 @@ export default function TranscriptWarningPanel({
         {warning.hasEnglish && (
           <button
             onClick={onTryEnglish}
-            className="w-full rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[13px] font-medium text-amber-800 transition hover:bg-amber-50 dark:border-amber-700/50 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            disabled={disabled}
+            className="w-full rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[13px] font-medium text-amber-800 transition hover:bg-amber-50 disabled:pointer-events-none disabled:opacity-50 dark:border-amber-700/50 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
           >
             Try English captions instead
           </button>
         )}
         <button
           onClick={onContinue}
-          className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500"
+          disabled={disabled}
+          className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-600 disabled:pointer-events-none disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
         >
           Continue with approximate translation
         </button>
         <button
           onClick={onPaste}
-          className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-[13px] font-medium text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          disabled={disabled}
+          className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-[13px] font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:pointer-events-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
         >
           Paste correct transcript instead
         </button>
