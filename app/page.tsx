@@ -6,7 +6,8 @@ import ThemeToggle from "./components/ThemeToggle";
 import OutputCard from "./components/OutputCard";
 import { LOADING_STEPS } from "./lib/outputCards";
 import type { OutputCardData } from "./lib/outputCards";
-import type { GenerateResponse, BestAngle } from "./lib/types/generation";
+import type { GenerateResponse, BestAngle, TranscriptWarning } from "./lib/types/generation";
+import TranscriptWarningPanel from "./components/generation/TranscriptWarningPanel";
 import { isValidYouTubeUrl } from "./lib/youtube";
 import { track } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -29,7 +30,7 @@ import { createClient } from "./lib/auth/supabase-client";
 import FeedbackWidget from "./components/generation/FeedbackWidget";
 import CreatorBrainPanel from "./components/CreatorBrainPanel";
 
-type Phase = "idle" | "loading" | "done" | "error";
+type Phase = "idle" | "loading" | "done" | "error" | "transcript_warning";
 
 const EXAMPLES = [
   { label: "Simon Sinek · TEDx", url: "https://www.youtube.com/watch?v=u4ZoJKF_VuA" },
@@ -68,6 +69,10 @@ export default function Home() {
   const [selectedLanguage, setSelectedLanguage] = useState<OutputLanguageId>("en");
   const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
   const [bestAngle, setBestAngle] = useState<BestAngle | null>(null);
+  const [transcriptWarning, setTranscriptWarning] = useState<TranscriptWarning | null>(null);
+  const [pendingGenerationUrl, setPendingGenerationUrl] = useState<string>("");
+  const [transcriptLang, setTranscriptLang] = useState<string | null>(null);
+  const [transcriptNote, setTranscriptNote] = useState<string | null>(null);
   const [pasteMode, setPasteMode] = useState(false);
   const [manualTranscript, setManualTranscript] = useState("");
   const [user, setUser] = useState<User | null>(null);
@@ -99,7 +104,12 @@ export default function Home() {
     }
   }, []);
 
-  const runGeneration = useCallback(async (targetUrl: string, energies: CreatorEnergyId[], transcript?: string) => {
+  const runGeneration = useCallback(async (
+    targetUrl: string,
+    energies: CreatorEnergyId[],
+    transcript?: string,
+    opts?: { preferTranscriptLang?: string; confirmTranscriptWarning?: boolean },
+  ) => {
     timersRef.current.forEach(clearTimeout);
     animDoneRef.current = false;
     apiResultRef.current = null;
@@ -108,6 +118,9 @@ export default function Home() {
     setStepIndex(0);
     setError(null);
     setCards([]);
+    setTranscriptWarning(null);
+    setTranscriptLang(null);
+    setTranscriptNote(null);
 
     timersRef.current = [
       setTimeout(() => setStepIndex(1), 750),
@@ -128,12 +141,22 @@ export default function Home() {
           energyIds: energies,
           outputLanguage: selectedLanguage,
           ...(transcript ? { transcript } : {}),
+          ...(opts?.confirmTranscriptWarning ? { confirmTranscriptWarning: true } : {}),
+          ...(opts?.preferTranscriptLang ? { preferTranscriptLang: opts.preferTranscriptLang } : {}),
         }),
       });
 
       const json: GenerateResponse = await res.json().catch(() => {
         throw new Error(`Server error ${res.status}`);
       });
+
+      if (!json.ok && json.transcriptWarning) {
+        timersRef.current.forEach(clearTimeout);
+        setTranscriptWarning(json.transcriptWarning);
+        setPendingGenerationUrl(targetUrl);
+        setPhase("transcript_warning");
+        return;
+      }
 
       if (!json.ok) throw new Error(json.error);
 
@@ -143,6 +166,8 @@ export default function Home() {
       setTimelineMoments(json.data.timelineMoments ?? null);
       setTranscriptQuality(json.data.transcriptQuality ?? null);
       setBestAngle(json.data.bestAngle ?? null);
+      setTranscriptLang(json.transcriptLang ?? null);
+      setTranscriptNote(json.transcriptNote ?? null);
       track("generation_completed", {
         duration_ms: Date.now() - genStartRef.current,
         card_count: json.data.cards.length,
@@ -214,6 +239,10 @@ export default function Home() {
     setTimelineMoments(null);
     setTranscriptQuality(null);
     setBestAngle(null);
+    setTranscriptWarning(null);
+    setPendingGenerationUrl("");
+    setTranscriptLang(null);
+    setTranscriptNote(null);
   }, []);
 
   // Entering paste mode from error state clears the error so ErrorPanel disappears
@@ -323,8 +352,40 @@ export default function Home() {
 
         {phase === "loading" && <LoadingPanel stepIndex={stepIndex} url={url} />}
 
+        {phase === "transcript_warning" && transcriptWarning && (
+          <div className="mt-6 w-full max-w-2xl">
+            <TranscriptWarningPanel
+              warning={transcriptWarning}
+              onTryEnglish={() => {
+                void runGeneration(pendingGenerationUrl, selectedEnergies, undefined, {
+                  preferTranscriptLang: "en",
+                });
+              }}
+              onContinue={() => {
+                void runGeneration(pendingGenerationUrl, selectedEnergies, undefined, {
+                  confirmTranscriptWarning: true,
+                });
+              }}
+              onPaste={() => {
+                setTranscriptWarning(null);
+                setPendingGenerationUrl("");
+                setPhase("idle");
+                setPasteMode(true);
+              }}
+            />
+          </div>
+        )}
+
         {phase === "done" && (
           <>
+            {transcriptNote && (
+              <div className="mt-6 w-full max-w-2xl rounded-xl border border-amber-300/60 bg-amber-50/80 px-5 py-3 dark:border-amber-700/40 dark:bg-amber-950/20">
+                <p className="text-[13px] leading-relaxed text-amber-900/80 dark:text-amber-300/80">
+                  <span className="mr-1.5" aria-hidden="true">⚠</span>
+                  {transcriptNote}
+                </p>
+              </div>
+            )}
             {transcriptQuality && (
               <TranscriptQualityCard report={transcriptQuality} />
             )}
@@ -332,7 +393,11 @@ export default function Home() {
               <UseThisFirstCard bestAngle={bestAngle} />
             )}
             {timelineMoments && timelineMoments.length > 0 && (
-              <ClipGuide moments={timelineMoments} />
+              <ClipGuide
+                moments={timelineMoments}
+                transcriptLang={transcriptLang}
+                outputLanguage={selectedLanguage}
+              />
             )}
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />

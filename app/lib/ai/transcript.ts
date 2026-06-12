@@ -6,6 +6,8 @@ export interface TranscriptResult {
   transcript: string;
   timestampedTranscript: string;
   durationSec: number;
+  supadataLang?: string;      // Language code Supadata returned for this track
+  availableLangs?: string[];  // Other caption tracks Supadata reported
 }
 
 export interface TranscriptDiagnosis {
@@ -36,7 +38,14 @@ const TIMEOUT_MS = 20_000;
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptResult> {
+// options.lang — BCP 47 language code to request a specific caption track from
+// Supadata (e.g. "en"). Supadata returns availableLangs in the response, so this
+// is only set when we know the target track exists. Falls back to default track
+// if the requested language is unavailable.
+export async function getTranscriptFull(
+  youtubeUrl: string,
+  options?: { lang?: string },
+): Promise<TranscriptResult> {
   const videoId = getYouTubeVideoId(youtubeUrl);
   if (!videoId) {
     throw new Error("Please paste a valid YouTube link.");
@@ -46,12 +55,13 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const t0 = Date.now();
 
-  console.log(`[virnix-transcript] supadata start url=${youtubeUrl}`);
+  const langParam = options?.lang ? `&lang=${encodeURIComponent(options.lang)}` : "";
+  console.log(`[virnix-transcript] supadata start url=${youtubeUrl}${options?.lang ? ` lang=${options.lang}` : ""}`);
 
   let resp: Response;
   try {
     resp = await fetch(
-      `${SUPADATA_URL}?url=${encodeURIComponent(youtubeUrl)}`,
+      `${SUPADATA_URL}?url=${encodeURIComponent(youtubeUrl)}${langParam}`,
       {
         headers: { "x-api-key": process.env.SUPADATA_API_KEY ?? "" },
         signal: controller.signal,
@@ -86,6 +96,11 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     );
   }
 
+  const langMeta = {
+    supadataLang: data.lang,
+    availableLangs: data.availableLangs,
+  };
+
   // Plain-text mode (text=true) returns content as a string.
   if (typeof data.content === "string") {
     const text = cleanText(data.content);
@@ -96,7 +111,7 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     const durationSec = Math.ceil((wordCount / 130) * 60);
     console.log(`[virnix-transcript] supadata ok chars=${text.length} elapsed=${elapsedMs}ms`);
-    return { transcript: text, timestampedTranscript: text, durationSec };
+    return { transcript: text, timestampedTranscript: text, durationSec, ...langMeta };
   }
 
   // Segment array mode (default).
@@ -119,7 +134,7 @@ export async function getTranscriptFull(youtubeUrl: string): Promise<TranscriptR
     `[virnix-transcript] supadata ok chars=${transcript.length} elapsed=${elapsedMs}ms`
   );
 
-  return { transcript, timestampedTranscript, durationSec };
+  return { transcript, timestampedTranscript, durationSec, ...langMeta };
 }
 
 export async function diagnoseTranscript(youtubeUrl: string): Promise<TranscriptDiagnosis> {

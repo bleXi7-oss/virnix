@@ -1,6 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { TimelineMoment, MomentType, PlatformFit } from "../../lib/timeline/types";
+import {
+  shouldHideSourcePreview,
+  getSourcePreviewLabel,
+} from "../../lib/transcript/detectTranscriptLanguage";
 
 const TYPE_META: Record<MomentType, { label: string; accent: string; badgeColor: string }> = {
   validation_hook: {
@@ -89,10 +94,19 @@ function ConfidenceDot({ score }: { score: number }) {
 interface Props {
   moment: TimelineMoment;
   rank: number;
+  transcriptLang?: string | null;
+  outputLanguage?: string | null;
 }
 
-export default function ClipMomentCard({ moment, rank }: Props) {
+export default function ClipMomentCard({ moment, rank, transcriptLang, outputLanguage }: Props) {
   const meta = TYPE_META[moment.momentType] ?? TYPE_META.educational_gem;
+  const [showSourcePreview, setShowSourcePreview] = useState(false);
+  const hideSource = !!moment.sourceTextPreview && shouldHideSourcePreview(
+    moment.sourceTextPreview,
+    transcriptLang,
+    outputLanguage,
+  );
+  const sourceLabel = getSourcePreviewLabel(transcriptLang);
 
   return (
     <div
@@ -135,9 +149,28 @@ export default function ClipMomentCard({ moment, rank }: Props) {
       </div>
 
       {moment.sourceTextPreview && (
-        <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2">
-          &ldquo;{moment.sourceTextPreview}&rdquo;
-        </p>
+        hideSource ? (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowSourcePreview((v) => !v)}
+              className="text-[11px] text-zinc-400 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-500"
+            >
+              {sourceLabel} {showSourcePreview ? "▲" : "▼"}
+            </button>
+            {showSourcePreview && (
+              <p
+                className="mt-1 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2"
+                dir="auto"
+              >
+                &ldquo;{moment.sourceTextPreview}&rdquo;
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2">
+            &ldquo;{moment.sourceTextPreview}&rdquo;
+          </p>
+        )
       )}
     </div>
   );

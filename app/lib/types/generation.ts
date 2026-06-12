@@ -7,6 +7,17 @@ import type { OutputLanguageId } from "../languages/types";
 import type { BestAngle } from "../ai/schemas";
 import type { CreatorBrainProfile } from "../creator-brain/types";
 
+// Returned before AI generation when the transcript language does not match the
+// selected output language. No credits are charged. The client shows a warning UI.
+export interface TranscriptWarning {
+  transcriptLang: string | null;       // Supadata lang code, e.g. "ar", "tr"
+  transcriptScript: "arabic" | "cyrillic" | "cjk" | "non_latin" | "latin" | "unknown";
+  selectedOutputLang: string;          // e.g. "sl"
+  availableLangs: string[];            // Caption tracks Supadata reported
+  hasEnglish: boolean;                 // Whether "en" is in availableLangs
+  warningCopy: string;                 // Human-readable warning for the UI
+}
+
 export type { BestAngle };
 
 export interface GenerateRequest {
@@ -27,5 +38,5 @@ export interface GenerateResult {
 }
 
 export type GenerateResponse =
-  | { ok: true; data: GenerateResult; creditsUsed?: number; creditsRemaining?: number }
-  | { ok: false; error: string; creditsRequired?: number; creditsAvailable?: number };
+  | { ok: true; data: GenerateResult; creditsUsed?: number; creditsRemaining?: number; transcriptLang?: string; transcriptNote?: string }
+  | { ok: false; error: string; creditsRequired?: number; creditsAvailable?: number; transcriptWarning?: TranscriptWarning };

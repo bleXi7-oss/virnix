@@ -5,13 +5,21 @@ import type { GenerateResponse } from "../../lib/types/generation";
 import { chooseGenerationInput } from "../../lib/generation/chooseGenerationInput";
 import { isValidEnergyId } from "../../lib/creator-energy/options";
 import type { CreatorEnergyId } from "../../lib/creator-energy/types";
-import { isValidLanguageId } from "../../lib/languages/options";
+import { isValidLanguageId, OUTPUT_LANGUAGES } from "../../lib/languages/options";
 import type { OutputLanguageId } from "../../lib/languages/types";
 import { isEnabled } from "../../lib/flags";
 import { createClient } from "../../lib/auth/supabase-server";
 import { calculateCreditsForGeneration } from "../../lib/credits/calculateCredits";
 import { deductCredits } from "../../lib/credits/server";
 import { fetchCreatorBrain } from "../../lib/generation/fetchCreatorBrain";
+import {
+  detectTranscriptScript,
+  isTranscriptSafe,
+  normalizeLangCode,
+  langCodeToName,
+  buildTranscriptWarningCopy,
+  buildPasteWarningCopy,
+} from "../../lib/transcript/detectTranscriptLanguage";
 
 // Vercel max function wall-clock time: Supadata (≤20s) + Anthropic (≤90s) + overhead.
 export const maxDuration = 120;
@@ -61,8 +69,17 @@ export async function POST(req: NextRequest) {
     // Fetch creator brain profile — soft-fails, never blocks generation.
     const creatorBrain = await fetchCreatorBrain(supabase);
 
+    // Transcript language guard flags — client sends confirmTranscriptWarning=true to
+    // bypass the guard after user confirmation, and preferTranscriptLang="en" to retry
+    // with a specific caption track (e.g. English) before confirmation.
+    const confirmTranscriptWarning = body.confirmTranscriptWarning === true;
+    const preferTranscriptLang =
+      typeof body.preferTranscriptLang === "string" ? body.preferTranscriptLang : undefined;
+
     // Fetch transcript — either use the manually pasted text or fetch from YouTube.
     let transcriptResult: Awaited<ReturnType<typeof getTranscriptFull>>;
+    let transcriptNote: string | undefined;
+
     if (input.transcript) {
       const wordCount = input.transcript.split(/\s+/).filter(Boolean).length;
       transcriptResult = {
@@ -70,9 +87,29 @@ export async function POST(req: NextRequest) {
         timestampedTranscript: input.transcript,
         durationSec: Math.ceil((wordCount / 130) * 60),
       };
+      // Non-blocking paste language heuristic — can't use metadata, script only.
+      // Never blocks generation; attaches a soft note to the success response.
+      if (outputLanguage !== "auto") {
+        const pasteScript = detectTranscriptScript(input.transcript);
+        if (
+          pasteScript === "arabic_dominant" ||
+          pasteScript === "cyrillic_dominant" ||
+          pasteScript === "cjk_dominant"
+        ) {
+          const outputLangLabel =
+            OUTPUT_LANGUAGES.find((l) => l.id === outputLanguage)?.label ?? outputLanguage;
+          transcriptNote = buildPasteWarningCopy(pasteScript, outputLangLabel);
+          console.log(
+            `[virnix-transcript-guard] paste script=${pasteScript} outputLang=${outputLanguage} (non-blocking)`
+          );
+        }
+      }
     } else {
       try {
-        transcriptResult = await getTranscriptFull(input.youtubeUrl as string);
+        transcriptResult = await getTranscriptFull(
+          input.youtubeUrl as string,
+          preferTranscriptLang ? { lang: preferTranscriptLang } : undefined,
+        );
       } catch (err) {
         return NextResponse.json(
           {
@@ -81,6 +118,57 @@ export async function POST(req: NextRequest) {
           } satisfies GenerateResponse,
           { status: 422 }
         );
+      }
+
+      // Transcript language guard — return a warning before charging credits or calling AI.
+      // Metadata-first: if Supadata reports a language, use it. Fall back to script detection.
+      // If confirmTranscriptWarning=true the user already acknowledged the mismatch.
+      if (!confirmTranscriptWarning) {
+        const script = detectTranscriptScript(transcriptResult.transcript);
+        const safe = isTranscriptSafe(transcriptResult.supadataLang, outputLanguage, script);
+
+        if (!safe) {
+          const availableLangs = transcriptResult.availableLangs ?? [];
+          const hasEnglish = availableLangs.some(
+            (l) => (normalizeLangCode(l) ?? "") === "en",
+          );
+          const transcriptLangName = langCodeToName(transcriptResult.supadataLang);
+          const outputLangLabel =
+            OUTPUT_LANGUAGES.find((l) => l.id === outputLanguage)?.label ?? outputLanguage;
+          const warningCopy = buildTranscriptWarningCopy(
+            transcriptLangName,
+            outputLangLabel,
+            hasEnglish,
+          );
+          const scriptTag =
+            script === "arabic_dominant"
+              ? ("arabic" as const)
+              : script === "cyrillic_dominant"
+              ? ("cyrillic" as const)
+              : script === "cjk_dominant"
+              ? ("cjk" as const)
+              : script === "mixed"
+              ? ("non_latin" as const)
+              : ("latin" as const);
+          console.log(
+            `[virnix-transcript-guard] lang=${transcriptResult.supadataLang ?? "?"} script=${script} outputLang=${outputLanguage}`
+          );
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "Transcript language mismatch detected.",
+              transcriptWarning: {
+                transcriptLang: transcriptResult.supadataLang ?? null,
+                transcriptScript: scriptTag,
+                selectedOutputLang: outputLanguage,
+                availableLangs,
+                hasEnglish,
+                warningCopy,
+              },
+            } satisfies GenerateResponse,
+            { status: 200 },
+          );
+        }
       }
     }
 
@@ -169,6 +257,8 @@ export async function POST(req: NextRequest) {
       data,
       creditsUsed: creditCost.total,
       ...(creditsRemaining !== undefined ? { creditsRemaining } : {}),
+      ...(transcriptResult.supadataLang ? { transcriptLang: transcriptResult.supadataLang } : {}),
+      ...(transcriptNote ? { transcriptNote } : {}),
     } satisfies GenerateResponse);
   }
 

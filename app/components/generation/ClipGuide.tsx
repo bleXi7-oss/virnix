@@ -5,9 +5,11 @@ import ClipMomentCard from "./ClipMomentCard";
 
 interface Props {
   moments: TimelineMoment[];
+  transcriptLang?: string | null;
+  outputLanguage?: string | null;
 }
 
-export default function ClipGuide({ moments }: Props) {
+export default function ClipGuide({ moments, transcriptLang, outputLanguage }: Props) {
   if (!moments || moments.length === 0) return null;
 
   const top3 = moments.slice(0, 3);
@@ -30,7 +32,12 @@ export default function ClipGuide({ moments }: Props) {
             {i > 0 && (
               <div className="my-6 h-px bg-zinc-100 dark:bg-zinc-800/60" />
             )}
-            <ClipMomentCard moment={moment} rank={i} />
+            <ClipMomentCard
+              moment={moment}
+              rank={i}
+              transcriptLang={transcriptLang}
+              outputLanguage={outputLanguage}
+            />
           </div>
         ))}
       </div>
