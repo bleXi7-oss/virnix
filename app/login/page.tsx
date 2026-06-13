@@ -87,6 +87,7 @@ export default function LoginPage() {
             src="/banner.png"
             alt=""
             fill
+            priority
             sizes="100vw"
             className="object-cover object-[center_25%] opacity-[0.14]"
           />

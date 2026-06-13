@@ -28,6 +28,7 @@ export default function LanguageSelector({ selectedId, onChange }: Props) {
           <button
             key={lang.id}
             onClick={() => onChange(lang.id)}
+            aria-pressed={selectedId === lang.id}
             className={`${PILL_BASE} ${selectedId === lang.id ? PILL_ACTIVE : PILL_IDLE}`}
           >
             {lang.label}

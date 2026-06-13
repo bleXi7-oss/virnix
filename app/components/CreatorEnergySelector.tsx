@@ -44,6 +44,7 @@ export default function CreatorEnergySelector({ selectedIds, onChange }: Props) 
         <button
           onClick={toggleBalanced}
           title="Let Virnix pick the best angle automatically"
+          aria-pressed={isBalanced}
           className={`${PILL_BASE} ${isBalanced ? PILL_ACTIVE : PILL_IDLE}`}
         >
           Balanced
@@ -55,6 +56,7 @@ export default function CreatorEnergySelector({ selectedIds, onChange }: Props) 
               key={energy.id}
               onClick={() => toggleEnergy(energy.id)}
               title={energy.tagline}
+              aria-pressed={isSelected}
               className={`${PILL_BASE} ${isSelected ? PILL_ACTIVE : PILL_IDLE}`}
             >
               {energy.label}
