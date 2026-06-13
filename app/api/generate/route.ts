@@ -231,6 +231,10 @@ export async function POST(req: NextRequest) {
               : script === "mixed"
               ? ("non_latin" as const)
               : ("latin" as const);
+          // Estimate credit cost at warning time so the user knows the cost before clicking Continue.
+          const warningMode = isEnabled("advanced_outputs") ? "advanced" : "basic";
+          const warningCreditCost = calculateCreditsForGeneration(transcriptResult.durationSec, warningMode);
+          const estimatedCredits = warningCreditCost.total > 0 ? warningCreditCost.total : undefined;
           if (generationAttemptId) {
             await supabase.rpc("fail_generation_attempt", {
               p_attempt_key: generationAttemptId,
@@ -252,6 +256,7 @@ export async function POST(req: NextRequest) {
                 availableLangs,
                 hasEnglish,
                 warningCopy,
+                ...(estimatedCredits !== undefined ? { estimatedCredits } : {}),
               },
             } satisfies GenerateResponse,
             { status: 200 },

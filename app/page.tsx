@@ -237,7 +237,7 @@ export default function Home() {
     setUrl(exampleUrl);
     setError(null);
     setPasteMode(false);
-    void runGeneration(exampleUrl, selectedEnergies);
+    // URL is set; user clicks Generate to start.
   }
 
   function handlePaste(pasted: string) {
@@ -245,7 +245,7 @@ export default function Home() {
     setUrl(pasted);
     setError(null);
     setPasteMode(false);
-    setTimeout(() => void runGeneration(pasted, selectedEnergies), 200);
+    // URL is set; user clicks Generate or presses Enter to start.
   }
 
   const handleReset = useCallback(() => {
@@ -376,6 +376,7 @@ export default function Home() {
           <div className="mt-6 w-full max-w-2xl">
             <TranscriptWarningPanel
               warning={transcriptWarning}
+              estimatedCredits={transcriptWarning.estimatedCredits ?? null}
               onTryEnglish={() => {
                 void runGeneration(pendingGenerationUrl, selectedEnergies, undefined, {
                   preferTranscriptLang: "en",
@@ -510,7 +511,7 @@ function HeroCard({
   } else if (isValidUrl) {
     hintText = (
       <span className="text-emerald-600 dark:text-emerald-500">
-        YouTube URL detected — press Enter or Generate to continue
+        YouTube URL detected — press Enter or Generate to continue · Credits depend on video length.
       </span>
     );
   } else {
@@ -695,15 +696,32 @@ const ProgressBar = memo(function ProgressBar() {
 
 function LoadingPanel({ stepIndex, url }: { stepIndex: number; url: string }) {
   const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1];
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="mt-8 w-full max-w-2xl animate-[fade-in_0.3s_ease_forwards]">
       <div className="rounded-xl border border-zinc-200 bg-white px-6 py-5 dark:border-zinc-800/60 dark:bg-[#0a0a0a] dark:shadow-[0_0_0_1px_rgba(255,255,255,0.02),inset_0_1px_0_rgba(255,255,255,0.03)]">
         <ProgressBar />
 
-        {videoId && (
-          <p className="mb-4 font-mono text-[10px] text-zinc-400 dark:text-zinc-700">
-            youtu.be/{videoId}
+        <div className="mb-4 flex items-center gap-2">
+          {videoId && (
+            <p className="font-mono text-[10px] text-zinc-400 dark:text-zinc-700">
+              youtu.be/{videoId}
+            </p>
+          )}
+          <p className="font-mono text-[10px] text-zinc-400 dark:text-zinc-700 ml-auto">
+            {elapsed}s · Longer videos can take up to 90 seconds.
+          </p>
+        </div>
+
+        {elapsed >= 30 && (
+          <p className="mb-3 text-[12px] text-zinc-500 dark:text-zinc-400 animate-[fade-in_0.4s_ease_forwards]">
+            Still working — writing and validating your content kit.
           </p>
         )}
 
@@ -898,7 +916,7 @@ const GenerateButton = memo(function GenerateButton({
           Generating...
         </span>
       ) : (
-        "Generate Content"
+        "Generate"
       )}
     </button>
   );

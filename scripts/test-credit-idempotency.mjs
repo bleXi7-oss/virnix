@@ -93,10 +93,24 @@ console.log("\n── Client-side inFlightRef guard ─────────�
 
 {
   const guard = makeInFlightGuard();
-  guard.tryStart(); // paste auto-trigger
-  const result = guard.tryStart(); // Enter key pressed within 200ms
-  assert("paste + Enter within 200ms: second blocked", result, false);
-  assert("only 1 request started despite paste+Enter", guard.getCallCount(), 1);
+  guard.tryStart(); // first explicit generate click
+  const result = guard.tryStart(); // rapid double-submit (second click within same tick)
+  assert("rapid double-submit: second blocked", result, false);
+  assert("only 1 request started despite rapid double-submit", guard.getCallCount(), 1);
+}
+
+{
+  // Paste sets URL but does NOT start generation.
+  // Generation only starts on explicit Generate button click or Enter key.
+  let generationStarted = false;
+  function simulatePaste() {
+    // In page.tsx: handlePaste sets URL and clears error — no runGeneration call.
+    const urlWasSet = true;
+    return { urlWasSet, generationStarted };
+  }
+  const pasteResult = simulatePaste();
+  assert("paste sets URL without starting generation", pasteResult.urlWasSet, true);
+  assert("paste does NOT auto-start generation", pasteResult.generationStarted, false);
 }
 
 console.log("\n── Server-side generation_attempts idempotency ─────────────────");

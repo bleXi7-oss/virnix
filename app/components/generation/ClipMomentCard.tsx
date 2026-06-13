@@ -157,12 +157,16 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
             >
               {sourceLabel} {showSourcePreview ? "▲" : "▼"}
             </button>
-            {showSourcePreview && (
+            {showSourcePreview ? (
               <p
                 className="mt-1 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2"
                 dir="auto"
               >
                 &ldquo;{moment.sourceTextPreview}&rdquo;
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] italic text-zinc-400 dark:text-zinc-600">
+                Caption hidden by default · click to reveal
               </p>
             )}
           </div>

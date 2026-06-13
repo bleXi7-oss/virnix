@@ -31,7 +31,10 @@ export default function CreditBadge({ balance }: Props) {
   if (display === null) return null;
 
   return (
-    <span className="hidden items-center rounded-full border border-zinc-200 px-2.5 py-0.5 font-mono text-[10px] text-zinc-400 sm:flex dark:border-zinc-800 dark:text-zinc-500">
+    <span
+      title="Credits depend on video length: 0–10 min = 1 credit, 10–30 min = 2 credits, 30–60 min = 4 credits, 60–120 min = 8 credits"
+      className="hidden cursor-default items-center rounded-full border border-zinc-200 px-2.5 py-0.5 font-mono text-[10px] text-zinc-400 sm:flex dark:border-zinc-800 dark:text-zinc-500"
+    >
       {display} {display === 1 ? "credit" : "credits"}
     </span>
   );

@@ -16,6 +16,7 @@ export interface TranscriptWarning {
   availableLangs: string[];            // Caption tracks Supadata reported
   hasEnglish: boolean;                 // Whether "en" is in availableLangs
   warningCopy: string;                 // Human-readable warning for the UI
+  estimatedCredits?: number;           // Credit cost if duration is already known (absent if blocked or unknown)
 }
 
 export type { BestAngle };

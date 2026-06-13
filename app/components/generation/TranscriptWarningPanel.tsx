@@ -5,6 +5,7 @@ import type { TranscriptWarning } from "../../lib/types/generation";
 interface Props {
   warning: TranscriptWarning;
   disabled?: boolean;
+  estimatedCredits?: number | null;
   onTryEnglish: () => void;
   onContinue: () => void;
   onPaste: () => void;
@@ -13,6 +14,7 @@ interface Props {
 export default function TranscriptWarningPanel({
   warning,
   disabled = false,
+  estimatedCredits,
   onTryEnglish,
   onContinue,
   onPaste,
@@ -33,6 +35,13 @@ export default function TranscriptWarningPanel({
       <p className="mb-4 text-[13px] leading-relaxed text-amber-900/80 dark:text-amber-300/80">
         {warning.warningCopy}
       </p>
+
+      {/* Credit cost hint */}
+      {estimatedCredits != null && (
+        <p className="mb-4 text-[12px] text-amber-800/70 dark:text-amber-400/60">
+          Estimated cost: {estimatedCredits} credit{estimatedCredits !== 1 ? "s" : ""} · Videos over 10 minutes use more credits.
+        </p>
+      )}
 
       {/* Actions */}
       <div className="flex flex-col gap-2">
