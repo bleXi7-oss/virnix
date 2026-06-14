@@ -59,6 +59,22 @@ export function countMeaningfulWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).filter(isMeaningfulWord).length;
 }
 
+// Count UNIQUE meaningful words — collapses inline repetitions.
+// YouTube auto-caption buffering produces "phrase-- same phrase" patterns
+// within a single sentence where collapseRepeatedFragments (sentence-level)
+// doesn't help. Raw countMeaningfulWords sees 10 tokens for a 5-word phrase
+// repeated twice. This function returns 5 instead, preventing the ≥7
+// word-count fallback in isDisplayQualityHook from being gamed.
+export function countUniqueMeaningfulWords(text: string): number {
+  const unique = new Set(
+    text.split(/\s+/).filter(Boolean)
+      .filter(isMeaningfulWord)
+      .map((w) => w.toLowerCase().replace(/[^a-z]/g, ""))
+      .filter(Boolean)
+  );
+  return unique.size;
+}
+
 // Fraction of non-whitespace characters that are alphabetic letters.
 // Low values indicate symbol/punctuation-heavy garbage.
 function alphabeticRatio(text: string): number {
@@ -171,19 +187,21 @@ export function hasInsightVocabulary(text: string): boolean {
 //
 // Passes when the sentence:
 //   a) contains insight vocabulary (causation/mechanism/scale/pain), OR
-//   b) has >= 7 meaningful words (substantial enough to stand alone)
+//   b) has >= 7 UNIQUE meaningful words (uses unique count to prevent YouTube
+//      caption buffering artifacts from gaming the fallback — e.g.
+//      "phrase-- same phrase" has 10 raw tokens but only 5 unique)
 //
 // Always rejects questions (ends with "?") — questions without answers are
 // not useful as standalone clip openers for repurposed content.
 //
-// Rejects: "that just made it a little weird…"        (5 words, no insight)
-//          "I was team Vanoss over Speedy"            (5 words, no insight)
+// Rejects: "that just made it a little weird…"        (5 unique, no insight)
+//          "I was team Vanoss over Speedy-- [dup]"    (5 unique, no insight)
 //          "So when he did that breath, what'd you notice?" (question)
 // Allows:  "500 million subscribers still doesn't feel real" (insight vocab)
 //          "The team moved faster than solo players"   (insight vocab)
-//          "Someone advanced by watching where others submitted answers" (7 words)
+//          "Someone advanced by watching where others submitted answers" (7 unique)
 export function isDisplayQualityHook(hookSentence: string): boolean {
   if (/\?$/.test(hookSentence.trim())) return false;
   if (hasInsightVocabulary(hookSentence)) return true;
-  return countMeaningfulWords(hookSentence) >= 7;
+  return countUniqueMeaningfulWords(hookSentence) >= 7;
 }

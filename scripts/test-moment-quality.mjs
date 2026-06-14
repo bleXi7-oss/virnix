@@ -640,10 +640,24 @@ function hasInsightVocabulary(text) {
   return INSIGHT_VOCAB_RE.test(text);
 }
 
+// CONTENT-MOMENT-QA-D: counts UNIQUE meaningful tokens to prevent YouTube
+// caption buffering artifacts ("phrase-- same phrase") from inflating the count.
+function countUniqueMeaningfulWords(text) {
+  const unique = new Set(
+    text.split(/\s+/).filter(Boolean)
+      .filter(isMeaningfulWord)
+      .map((w) => w.toLowerCase().replace(/[^a-z]/g, ""))
+      .filter(Boolean)
+  );
+  return unique.size;
+}
+
 function isDisplayQualityHook(hookSentence) {
   if (/\?$/.test(hookSentence.trim())) return false;
   if (hasInsightVocabulary(hookSentence)) return true;
-  return countMeaningfulWords(hookSentence) >= 7;
+  // Use unique count — prevents "phrase-- same phrase" YouTube buffering artifacts
+  // from gaming the word-count fallback (10 raw tokens → only 5 unique).
+  return countUniqueMeaningfulWords(hookSentence) >= 7;
 }
 
 function resolveDisplayType(scoredType, hookSentence) {
@@ -766,6 +780,106 @@ assert(resolveDisplayType("mechanism_reframe", "any sentence here") === "mechani
 assert(resolveDisplayType("quote_moment", "any sentence here") === "quote_moment", "quote_moment unchanged");
 assert(resolveDisplayType("emotional_confession", "I failed badly.") === "emotional_confession", "emotional_confession unchanged");
 assert(resolveDisplayType("story_turning_point", "That's when everything changed.") === "story_turning_point", "story_turning_point unchanged");
+
+// ─── CONTENT-MOMENT-QA-D — regression tests for production bad moments ────────
+// These strings appeared in the production smoke test after QA-C was shipped.
+// Root cause: YouTube caption buffering repeats "phrase-- same phrase" within
+// one sentence. collapseRepeatedFragments (sentence-level) doesn't catch it.
+// Raw countMeaningfulWords saw 10/11 tokens → gamed the ≥7 fallback.
+// Fix: countUniqueMeaningfulWords deduplicates by lowercased letter-only key.
+
+const QA_D_BAD_1 = "I was team Vanoss over Speedy-- I was team Vanoss over Speedy-- nooOO!!";
+const QA_D_BAD_2 = "that just made it a little weird, but-- that just made it a little weird...";
+const QA_D_BAD_3 = "So when he did that breath, what'd you notice?";
+
+console.log("\nCONTENT-MOMENT-QA-D — countUniqueMeaningfulWords collapses inline repetitions");
+assert(
+  countUniqueMeaningfulWords(QA_D_BAD_1) < 7,
+  `'${QA_D_BAD_1}' → ${countUniqueMeaningfulWords(QA_D_BAD_1)} unique words < 7`,
+);
+assert(
+  countUniqueMeaningfulWords(QA_D_BAD_2) < 7,
+  `'${QA_D_BAD_2}' → ${countUniqueMeaningfulWords(QA_D_BAD_2)} unique words < 7`,
+);
+// Raw count is inflated but unique count is not
+assert(
+  countMeaningfulWords(QA_D_BAD_1) > countUniqueMeaningfulWords(QA_D_BAD_1),
+  "raw count > unique count confirms inline repetition was inflating the raw count",
+);
+assert(
+  countMeaningfulWords(QA_D_BAD_2) > countUniqueMeaningfulWords(QA_D_BAD_2),
+  "raw count > unique count for bad2 confirms same inflation",
+);
+
+console.log("\nCONTENT-MOMENT-QA-D — isDisplayQualityHook REJECTS production bad moments");
+assert(
+  !isDisplayQualityHook(QA_D_BAD_1),
+  "REGRESSION: 'I was team Vanoss over Speedy-- [dup]-- nooOO!!' → REJECTED",
+);
+assert(
+  !isDisplayQualityHook(QA_D_BAD_2),
+  "REGRESSION: 'that just made it a little weird, but-- [dup]...' → REJECTED",
+);
+assert(
+  !isDisplayQualityHook(QA_D_BAD_3),
+  "REGRESSION: 'So when he did that breath, what'd you notice?' → REJECTED (question)",
+);
+
+console.log("\nCONTENT-MOMENT-QA-D — full pipeline regression (cleanWindowText → collapseRepeatedFragments → findFirstMeaningfulSentence → isDisplayQualityHook)");
+{
+  // Simulate a 30s window containing only the bad YouTube caption
+  const rawWindow1 = QA_D_BAD_1;
+  const cleaned1 = collapseRepeatedFragments(cleanWindowText(rawWindow1));
+  const hook1 = findFirstMeaningfulSentence(cleaned1, 5);
+  assert(
+    !isDisplayQualityHook(hook1),
+    `REGRESSION pipeline: Vanoss game chatter rejected end-to-end (hook: '${hook1.slice(0, 60)}')`,
+  );
+}
+{
+  const rawWindow2 = QA_D_BAD_2;
+  const cleaned2 = collapseRepeatedFragments(cleanWindowText(rawWindow2));
+  const hook2 = findFirstMeaningfulSentence(cleaned2, 5);
+  assert(
+    !isDisplayQualityHook(hook2),
+    `REGRESSION pipeline: 'weird but--dup' game chatter rejected end-to-end (hook: '${hook2.slice(0, 60)}')`,
+  );
+}
+{
+  const rawWindow3 = QA_D_BAD_3;
+  const cleaned3 = collapseRepeatedFragments(cleanWindowText(rawWindow3));
+  const hook3 = findFirstMeaningfulSentence(cleaned3, 5);
+  assert(
+    !isDisplayQualityHook(hook3),
+    `REGRESSION pipeline: coaching question rejected end-to-end (hook: '${hook3.slice(0, 60)}')`,
+  );
+}
+
+console.log("\nCONTENT-MOMENT-QA-D — good moments still pass (unique count doesn't penalise genuine long sentences)");
+assert(
+  countUniqueMeaningfulWords("Someone advanced by watching where others submitted answers") >= 7,
+  "'Someone advanced by watching...' → 7 unique words → passes",
+);
+assert(
+  countUniqueMeaningfulWords("You have to trust in something — your gut, destiny, life, karma, whatever.") >= 7,
+  "'You have to trust in something...' → 10 unique words → passes",
+);
+assert(
+  countUniqueMeaningfulWords("The people who are crazy enough to think they can change the world are the ones who do.") >= 7,
+  "Steve Jobs quote → ≥7 unique words → passes",
+);
+assert(
+  isDisplayQualityHook("Someone advanced by watching where others submitted answers"),
+  "QA-D doesn't break: 7-unique-word sentence still ALLOWED",
+);
+assert(
+  isDisplayQualityHook("500 million subscribers still doesn't feel real"),
+  "QA-D doesn't break: insight vocab sentence still ALLOWED",
+);
+assert(
+  isDisplayQualityHook("The team that shared answers moved faster than solo players"),
+  "QA-D doesn't break: 'faster than' insight vocab still ALLOWED",
+);
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 

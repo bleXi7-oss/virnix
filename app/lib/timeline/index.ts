@@ -22,6 +22,7 @@ export {
   cleanWindowText,
   collapseRepeatedFragments,
   countMeaningfulWords,
+  countUniqueMeaningfulWords,
   isLowSemanticContent,
   isNoiseHeavy,
   noiseTokenRatio,
