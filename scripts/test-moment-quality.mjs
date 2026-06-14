@@ -631,6 +631,142 @@ console.log("\nfindFirstMeaningfulSentence(text, 5) — skips 4-word event comme
   );
 }
 
+// ─── CONTENT-MOMENT-QA-C mirrors ─────────────────────────────────────────────
+
+const INSIGHT_VOCAB_RE =
+  /because|the reason|that'?s why|which is why|leads to|results in|the real reason|cause of|realize|realise|understand|discover|figured out|turns out|found out|instead of|rather than|strategy|system|mechanism|method|approach|technique|the key|the secret|how to|always|never|most people|no one|everyone|nobody|faster than|better than|worse than|more than|less than|compared to|actually|in reality|struggling|failing|failed|afraid|fear|doubt|wrong about|mistake|regret|million|billion|thousand|percent|subscribers|followers|years of|decades|not about|isn'?t about|it'?s not about|not just|the opposite|nothing to do with/i;
+
+function hasInsightVocabulary(text) {
+  return INSIGHT_VOCAB_RE.test(text);
+}
+
+function isDisplayQualityHook(hookSentence) {
+  if (/\?$/.test(hookSentence.trim())) return false;
+  if (hasInsightVocabulary(hookSentence)) return true;
+  return countMeaningfulWords(hookSentence) >= 7;
+}
+
+function resolveDisplayType(scoredType, hookSentence) {
+  if (scoredType === "validation_hook" && !isValidValidationHookSentence(hookSentence)) {
+    return "quote_moment";
+  }
+  return scoredType;
+}
+
+// ─── hasInsightVocabulary ─────────────────────────────────────────────────────
+
+console.log("\nhasInsightVocabulary — REJECTS sentences with no insight concept");
+assert(!hasInsightVocabulary("that just made it a little weird"), "'that just made it a little weird' → no insight vocab");
+assert(!hasInsightVocabulary("I was team Vanoss over Speedy"), "'I was team Vanoss over Speedy' → no insight vocab");
+assert(!hasInsightVocabulary("We're all out now"), "'We're all out now' → no insight vocab");
+assert(!hasInsightVocabulary("So when he did that breath"), "'So when he did that breath' → no insight vocab");
+assert(!hasInsightVocabulary("Close! It was epic!"), "'Close! It was epic!' → no insight vocab");
+assert(!hasInsightVocabulary("Even Casey no"), "'Even Casey no' → no insight vocab");
+
+console.log("\nhasInsightVocabulary — ALLOWS sentences with transferable insight");
+assert(hasInsightVocabulary("500 million subscribers still doesn't feel real"), "'million', 'subscribers' → insight vocab");
+assert(hasInsightVocabulary("The team moved faster than solo players"), "'faster than' → insight vocab");
+assert(hasInsightVocabulary("Here's the real reason most people never achieve their goals"), "'the real reason', 'most people', 'never' → insight vocab");
+assert(hasInsightVocabulary("I was wrong about what success actually takes"), "'wrong about', 'actually' → insight vocab");
+assert(hasInsightVocabulary("The mechanism here is dopamine interference in the reward loop"), "'mechanism' → insight vocab");
+assert(hasInsightVocabulary("I spent years struggling with the same thing you are"), "'struggling', 'years of' not needed — 'struggling' matches");
+assert(hasInsightVocabulary("it's not about willpower at all"), "'it's not about' → insight vocab");
+assert(hasInsightVocabulary("turns out the strategy was completely backwards"), "'turns out', 'strategy' → insight vocab");
+
+// ─── isDisplayQualityHook ─────────────────────────────────────────────────────
+
+console.log("\nisDisplayQualityHook — REJECTS game chatter and question hooks");
+assert(
+  !isDisplayQualityHook("that just made it a little weird…"),
+  "'that just made it a little weird…' → no insight, 5 meaningful words → REJECT",
+);
+assert(
+  !isDisplayQualityHook("I was team Vanoss over Speedy"),
+  "'I was team Vanoss over Speedy' → no insight, 5 meaningful words → REJECT",
+);
+assert(
+  !isDisplayQualityHook("So when he did that breath, what'd you notice?"),
+  "'…what'd you notice?' → question → REJECT",
+);
+assert(
+  !isDisplayQualityHook("What are you thinking right now?"),
+  "standalone question → REJECT",
+);
+assert(
+  !isDisplayQualityHook("Did you see that coming?"),
+  "game question → REJECT",
+);
+assert(
+  !isDisplayQualityHook("Well that just happened"),
+  "'Well that just happened' → 4 meaningful words, no insight → REJECT",
+);
+
+console.log("\nisDisplayQualityHook — ALLOWS real content sentences");
+assert(
+  isDisplayQualityHook("500 million subscribers still doesn't feel real"),
+  "'million', 'subscribers' → insight vocab → ALLOW",
+);
+assert(
+  isDisplayQualityHook("The team that shared answers moved faster than solo players"),
+  "'faster than' → insight vocab → ALLOW",
+);
+assert(
+  isDisplayQualityHook("Someone advanced by watching where others submitted answers"),
+  "7 meaningful words (no insight vocab needed) → ALLOW",
+);
+assert(
+  isDisplayQualityHook("You have to trust in something — your gut, destiny, life, karma, whatever."),
+  "10 meaningful words → ALLOW",
+);
+assert(
+  isDisplayQualityHook("I was wrong about success and productivity for ten years straight"),
+  "'wrong about', 'actually' → insight vocab → ALLOW",
+);
+assert(
+  isDisplayQualityHook("I realized the real reason people fail at building habits is not motivation."),
+  "'the real reason', 'fail' → insight vocab → ALLOW",
+);
+assert(
+  isDisplayQualityHook("The people who are crazy enough to think they can change the world are the ones who do."),
+  "18 meaningful words → ALLOW",
+);
+
+// ─── resolveDisplayType ───────────────────────────────────────────────────────
+
+console.log("\nresolveDisplayType — validation_hook WITHOUT validation signals → quote_moment");
+assert(
+  resolveDisplayType("validation_hook", "We're all out now.") === "quote_moment",
+  "'We're all out now.' → downgraded to quote_moment",
+);
+assert(
+  resolveDisplayType("validation_hook", "that just made it a little weird.") === "quote_moment",
+  "'that just made it a little weird.' → downgraded to quote_moment",
+);
+assert(
+  resolveDisplayType("validation_hook", "I was team Vanoss over Speedy.") === "quote_moment",
+  "game chatter → downgraded to quote_moment",
+);
+
+console.log("\nresolveDisplayType — validation_hook WITH genuine validation signals → kept");
+assert(
+  resolveDisplayType("validation_hook", "You're not lazy, you just never learned the right system.") === "validation_hook",
+  "'lazy' → validation_hook kept",
+);
+assert(
+  resolveDisplayType("validation_hook", "I quit three times before I understood the mechanism.") === "validation_hook",
+  "'quit' → validation_hook kept",
+);
+assert(
+  resolveDisplayType("validation_hook", "Most people are afraid to admit they're confused.") === "validation_hook",
+  "'afraid', 'confused' → validation_hook kept",
+);
+
+console.log("\nresolveDisplayType — non-validation types pass through unchanged");
+assert(resolveDisplayType("mechanism_reframe", "any sentence here") === "mechanism_reframe", "mechanism_reframe unchanged");
+assert(resolveDisplayType("quote_moment", "any sentence here") === "quote_moment", "quote_moment unchanged");
+assert(resolveDisplayType("emotional_confession", "I failed badly.") === "emotional_confession", "emotional_confession unchanged");
+assert(resolveDisplayType("story_turning_point", "That's when everything changed.") === "story_turning_point", "story_turning_point unchanged");
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

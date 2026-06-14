@@ -27,6 +27,8 @@ export {
   noiseTokenRatio,
   trimToMeaningfulStart,
   findFirstMeaningfulSentence,
+  hasInsightVocabulary,
+  isDisplayQualityHook,
 } from "./moment-text-cleaner";
 export type { TimestampedLine, TranscriptSegment } from "./transcript-timestamps";
 export { buildTimestampedTranscript } from "./build-timestamped-transcript";

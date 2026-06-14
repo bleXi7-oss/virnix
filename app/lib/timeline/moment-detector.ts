@@ -4,13 +4,16 @@
 //   1. detectTimestampedLines()   — find all lines with timestamps
 //   2. groupLinesIntoSegments()   — pair each timestamp with the next
 //   3. groupIntoWindows()         — merge 3s segments into 30s scoring windows
-//   4. scoreMoment()              — heuristic score per window
-//   5. top MAX_MOMENTS returned, sorted by confidence
+//   4. isLowSemanticContent()     — Gate 1: reject pure noise windows
+//   5. isNoiseHeavy()             — Gate 2: reject exclamation-dominant windows
+//   6. isDisplayQualityHook()     — Gate 3: reject event chatter with no insight
+//   7. scoreMoment()              — heuristic score per window (Gate 4: >= 10)
+//   8. top MAX_MOMENTS returned, sorted by confidence
 //
 // Deterministic heuristic — no AI calls, no ML, no external dependencies.
 // Never throws — returns [] on any failure or missing timestamps.
 
-import type { TimelineMoment } from "./types";
+import type { TimelineMoment, MomentType } from "./types";
 import {
   detectTimestampedLines,
   groupLinesIntoSegments,
@@ -23,6 +26,7 @@ import {
   collapseRepeatedFragments,
   isLowSemanticContent,
   isNoiseHeavy,
+  isDisplayQualityHook,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -48,28 +52,38 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
       // Gate 2: reject exclamation-dominant windows where no single sentence
       //         has 3+ meaningful words, or >55% of sentences are short !… noise.
       .filter((win) => !isNoiseHeavy(win.text))
-      .map((win, i) => {
-        // Clean once: remove invisible chars + collapse duplicate subtitle fragments.
-        // Used for scoring (prevents duplicate signal inflation) and display.
+      .flatMap((win, i): TimelineMoment[] => {
+        // Clean once — used for scoring (prevents duplicate signal inflation)
+        // and for extracting the hook sentence and preview.
         const cleanText = collapseRepeatedFragments(cleanWindowText(win.text));
+        // Extract the hook sentence once; require >= 5 meaningful words so
+        // brief event commentary ("We're all out now." = 4 words) is skipped.
+        const hookSentence = findFirstMeaningfulSentence(cleanText, 5);
+        // Gate 3: reject hook sentences that can't stand alone as a clip opener
+        // — questions, short vague descriptors, game chatter with no insight.
+        if (!isDisplayQualityHook(hookSentence)) return [];
         const scored = scoreMoment(cleanText);
-        return {
+        // Gate 4: minimum confidence threshold.
+        if (scored.score < MIN_SCORE_THRESHOLD) return [];
+        // Resolve display type: validation_hook without genuine validation
+        // signals is downgraded to quote_moment so the label and prefix match.
+        const displayType = resolveDisplayType(scored.momentType, hookSentence);
+        return [{
           id: `moment-${i}`,
           startTime: win.startTime,
           endTime: win.endTime,
-          title: MOMENT_TITLES[scored.momentType] ?? "Strong Moment",
-          momentType: scored.momentType,
+          title: MOMENT_TITLES[displayType] ?? "Strong Moment",
+          momentType: displayType,
           platformFit: scored.platformFit,
-          suggestedHook: buildSuggestedHook(cleanText, scored.momentType),
+          suggestedHook: buildSuggestedHook(hookSentence, displayType),
           whyItWorks: scored.reason,
           emotionalTrigger: scored.emotionalTrigger,
-          contentUse: CONTENT_USES[scored.momentType] ?? "repurposable content moment",
+          contentUse: CONTENT_USES[displayType] ?? "repurposable content moment",
           confidenceScore: scored.score,
           // Trim leading noise sentences so preview doesn't open with "NOOooo…"
           sourceTextPreview: trimToMeaningfulStart(cleanText).slice(0, 120),
-        } satisfies TimelineMoment;
-      })
-      .filter((m) => m.confidenceScore >= MIN_SCORE_THRESHOLD);
+        }];
+      });
 
     moments.sort((a, b) => b.confidenceScore - a.confidenceScore);
     return moments.slice(0, MAX_MOMENTS);
@@ -142,10 +156,17 @@ function isValidValidationHookSentence(sentence: string): boolean {
   return VALIDATION_CONTENT_SIGNALS.some((s) => lower.includes(s));
 }
 
-function buildSuggestedHook(text: string, type: string): string {
-  // Require >= 5 meaningful words so brief event commentary ("We're all out
-  // now." = 4 words) is skipped in favour of a substantive sentence.
-  const firstSentence = findFirstMeaningfulSentence(text, 5);
+// Returns the display moment type, downgrading validation_hook to quote_moment
+// when the hook sentence lacks genuine self-blame or misconception signals.
+// This keeps the label, prefix, and content_use consistent with the hook text.
+function resolveDisplayType(scoredType: MomentType, hookSentence: string): MomentType {
+  if (scoredType === "validation_hook" && !isValidValidationHookSentence(hookSentence)) {
+    return "quote_moment";
+  }
+  return scoredType;
+}
+
+function buildSuggestedHook(hookSentence: string, type: string): string {
   const prefixes: Record<string, string> = {
     validation_hook:       "You're not failing — ",
     mechanism_reframe:     "This isn't what you think. ",
@@ -158,20 +179,10 @@ function buildSuggestedHook(text: string, type: string): string {
     authority_proof:       "After working with hundreds of creators: ",
     transformation_moment: "Before this moment, I was ",
   };
-
-  // validation_hook prefix only makes sense when the sentence actually
-  // contains self-blame, failure, or misconception language.
-  // Fall back to a neutral quote when it doesn't, to avoid nonsense like
-  // "You're not failing — We're all out now."
-  const resolvedType =
-    type === "validation_hook" && !isValidValidationHookSentence(firstSentence)
-      ? "quote_moment"
-      : type;
-
-  const prefix = prefixes[resolvedType] ?? "";
-  const hook = `${prefix}${firstSentence}`;
+  const prefix = prefixes[type] ?? "";
+  const hook = `${prefix}${hookSentence}`;
   // Close the opening quote for quote_moment
-  return resolvedType === "quote_moment" && prefix === "“"
+  return type === "quote_moment" && prefix === "“"
     ? `${hook}”`
     : hook;
 }

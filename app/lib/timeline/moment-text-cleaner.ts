@@ -152,3 +152,38 @@ export function isNoiseHeavy(rawText: string): boolean {
 
   return false;
 }
+
+// Vocabulary that signals a sentence carries transferable insight — causation,
+// realization, mechanism, comparison, scale, or emotional truth. Used by
+// isDisplayQualityHook to accept good moments without requiring long sentences.
+const INSIGHT_VOCAB_RE =
+  /because|the reason|that'?s why|which is why|leads to|results in|the real reason|cause of|realize|realise|understand|discover|figured out|turns out|found out|instead of|rather than|strategy|system|mechanism|method|approach|technique|the key|the secret|how to|always|never|most people|no one|everyone|nobody|faster than|better than|worse than|more than|less than|compared to|actually|in reality|struggling|failing|failed|afraid|fear|doubt|wrong about|mistake|regret|million|billion|thousand|percent|subscribers|followers|years of|decades|not about|isn'?t about|it'?s not about|not just|the opposite|nothing to do with/i;
+
+// True when a sentence contains at least one concept word that signals
+// transferable, context-independent insight.
+export function hasInsightVocabulary(text: string): boolean {
+  return INSIGHT_VOCAB_RE.test(text);
+}
+
+// Final display gate applied to the extracted hook sentence after all noise
+// gates and scoring. A hook sentence passes when it can stand alone as a
+// clip opener for a creator who wasn't in the room.
+//
+// Passes when the sentence:
+//   a) contains insight vocabulary (causation/mechanism/scale/pain), OR
+//   b) has >= 7 meaningful words (substantial enough to stand alone)
+//
+// Always rejects questions (ends with "?") — questions without answers are
+// not useful as standalone clip openers for repurposed content.
+//
+// Rejects: "that just made it a little weird…"        (5 words, no insight)
+//          "I was team Vanoss over Speedy"            (5 words, no insight)
+//          "So when he did that breath, what'd you notice?" (question)
+// Allows:  "500 million subscribers still doesn't feel real" (insight vocab)
+//          "The team moved faster than solo players"   (insight vocab)
+//          "Someone advanced by watching where others submitted answers" (7 words)
+export function isDisplayQualityHook(hookSentence: string): boolean {
+  if (/\?$/.test(hookSentence.trim())) return false;
+  if (hasInsightVocabulary(hookSentence)) return true;
+  return countMeaningfulWords(hookSentence) >= 7;
+}
