@@ -405,6 +405,232 @@ assert(
   "non-scaffold English-looking phrase → not flagged (partial match only)",
 );
 
+// ─── CONTENT-MOMENT-QA-B mirrors ─────────────────────────────────────────────
+
+function noiseTokenRatio(text) {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return 0;
+  const noiseCount = tokens.filter((w) => !isMeaningfulWord(w)).length;
+  return noiseCount / tokens.length;
+}
+
+function trimToMeaningfulStart(text, minWords = 4) {
+  const sentences = text.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  for (let i = 0; i < sentences.length; i++) {
+    if (countMeaningfulWords(sentences[i]) >= minWords) {
+      return sentences.slice(i).join(" ").trim();
+    }
+  }
+  return text.trim();
+}
+
+function isNoiseHeavy(rawText) {
+  const cleaned = collapseRepeatedFragments(cleanWindowText(rawText));
+  const sentences = cleaned.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if (sentences.length === 0) return true;
+  const maxMeaningful = Math.max(0, ...sentences.map(countMeaningfulWords));
+  if (maxMeaningful < 3) return true;
+  if (sentences.length >= 3) {
+    const noisySentences = sentences.filter(
+      (s) => /[!…]$/.test(s.trim()) && countMeaningfulWords(s) <= 2
+    ).length;
+    if (noisySentences / sentences.length > 0.55) return true;
+  }
+  return false;
+}
+
+const VALIDATION_CONTENT_SIGNALS = [
+  "fail", "wrong", "lazy", "broken", "blame", "bad at", "can't", "cannot",
+  "couldn't", "struggling", "stuck", "afraid", "fear", "doubt", "never",
+  "don't understand", "confused", "overwhelmed", "shame", "not enough",
+  "inadequate", "weak", "scared", "lost", "worthless", "hopeless",
+  "giving up", "quit", "hate myself", "hate my",
+];
+
+function isValidValidationHookSentence(sentence) {
+  const lower = sentence.toLowerCase();
+  return VALIDATION_CONTENT_SIGNALS.some((s) => lower.includes(s));
+}
+
+// ─── noiseTokenRatio ──────────────────────────────────────────────────────────
+
+console.log("\nnoiseTokenRatio — pure noise text");
+// "NOOooo" (triple-o, noise), "Close" (5 letters, meaningful), "eeuuHHH" (triple-H, noise), "heh" (noise) → 3/4 = 75%
+assert(noiseTokenRatio("NOOooo Close eeuuHHH heh") > 0.70, "mostly noise → ratio > 70%");
+assert(noiseTokenRatio("eeuuHHH heh heehhh") > 0.90, "'eeuuHHH heh heehhh' → > 90% noise (all noise words)");
+assert(noiseTokenRatio("oh ah uh") === 1, "all short interjections → 100% noise");
+
+console.log("\nnoiseTokenRatio — meaningful text");
+assert(noiseTokenRatio(MEANINGFUL_WINDOW) < 0.20, "Steve Jobs window → < 20% noise");
+// "to" and "in" are 2-letter words (noise by length); ratio ≈ 33% — meaningful threshold is 0.40
+assert(noiseTokenRatio("You have to trust in something.") < 0.40, "clean sentence → < 40% noise (short prepositions counted as noise)");
+
+console.log("\nnoiseTokenRatio — mixed");
+assert(noiseTokenRatio("NOOooo yeah wow this is actually pretty interesting.") > 0.30, "mixed noise+content → > 30%");
+
+// ─── isNoiseHeavy — gate 1: maxSentenceMeaningfulWords < 3 ───────────────────
+
+console.log("\nisNoiseHeavy — gate 1: no sentence with 3+ meaningful words");
+assert(
+  isNoiseHeavy("NOOooo… Close! It was close. It was epic!! NOOO!!"),
+  "'NOOooo… Close! It was close. It was epic!! NOOO!!' → noise heavy (max sentence = 2 meaningful words)",
+);
+assert(
+  isNoiseHeavy("Close! Close! It was close. It was epic."),
+  "'Close! Close! It was close. It was epic.' → noise heavy after dedup",
+);
+assert(
+  isNoiseHeavy("NOOO!! Close! It was so close."),
+  "'NOOO!! Close! It was so close.' → noise heavy (max = 2)",
+);
+assert(
+  isNoiseHeavy("Wow! Oh! Yes! No! Ha!"),
+  "pure single-word exclamations → noise heavy",
+);
+
+// ─── isNoiseHeavy — gate 2: exclamation-dominant ─────────────────────────────
+
+console.log("\nisNoiseHeavy — gate 2: exclamation-dominant (>55% of sentences are short !… noise)");
+{
+  // 4 out of 5 sentences are short !… noise → 80% > 55%
+  const txt =
+    "NOOooo… Close! It was close. It was epic!! Actually that's when everything changed.";
+  assert(isNoiseHeavy(txt), "4/5 sentences are short exclamations → noise heavy");
+}
+{
+  // 3 out of 4 sentences are !… noise → 75% > 55%
+  const txt = "Wow! Amazing! Oh no… But here is the real mechanism behind this technique.";
+  assert(isNoiseHeavy(txt), "3/4 short exclamations → noise heavy");
+}
+
+// ─── isNoiseHeavy — real content passes ──────────────────────────────────────
+
+console.log("\nisNoiseHeavy — real content NOT flagged as noise heavy");
+assert(!isNoiseHeavy(MEANINGFUL_WINDOW), "Steve Jobs window → not noise heavy");
+assert(
+  !isNoiseHeavy(
+    "I quit. I was wrong. That changed everything. " +
+    "Actually that's when I realized what motivation actually means."
+  ),
+  "short punchy confession + insight → not noise heavy",
+);
+assert(
+  !isNoiseHeavy(
+    "You're not failing because you're lazy. " +
+    "The real mechanism here is dopamine. " +
+    "Most people have been lied to about how willpower works."
+  ),
+  "validation hook window → not noise heavy",
+);
+assert(
+  !isNoiseHeavy(
+    "NOOooo… Close! It was close. It was epic!! " +
+    "Actually that's when everything changed for us. " +
+    "The real reason we won was not talent — it was preparation. " +
+    "Every single session we'd done the same drill until it was automatic."
+  ),
+  "noise prefix + 3 real content sentences → NOT noise heavy (real content dominates)",
+);
+assert(
+  !isNoiseHeavy("Well… that just made it a little weird…"),
+  "'Well… that just made it a little weird…' → not noise heavy (single sentence, 6 meaningful words)",
+);
+
+// ─── trimToMeaningfulStart ────────────────────────────────────────────────────
+
+console.log("\ntrimToMeaningfulStart — strips leading noise sentences");
+{
+  const text = "NOOooo… Close! eeuuHHH heh heehhh.. The real reason we won was not talent.";
+  const trimmed = trimToMeaningfulStart(text);
+  assert(!trimmed.startsWith("NOOooo"), "leading 'NOOooo…' stripped");
+  assert(!trimmed.startsWith("eeuuHHH"), "leading 'eeuuHHH' stripped");
+  assert(trimmed.includes("real reason"), "real content sentence preserved");
+}
+
+console.log("\ntrimToMeaningfulStart — falls back to full text when no sentence meets threshold");
+{
+  // Short punchy confessional: no sentence has >= 4 meaningful words
+  const text = "I quit. I was wrong.";
+  const trimmed = trimToMeaningfulStart(text);
+  assert(trimmed === text.trim(), "short confession → full text returned unchanged");
+}
+
+console.log("\ntrimToMeaningfulStart — clean text unchanged when first sentence is meaningful");
+{
+  const text = "You have to trust in something — your gut, destiny, life, karma, whatever.";
+  const trimmed = trimToMeaningfulStart(text);
+  assert(trimmed.startsWith("You have to trust"), "clean text unchanged");
+}
+
+// ─── isValidValidationHookSentence ───────────────────────────────────────────
+
+console.log("\nisValidValidationHookSentence — REJECTS event commentary as validation hook");
+assert(
+  !isValidValidationHookSentence("We're all out now."),
+  "'We're all out now.' → NOT a valid validation hook sentence",
+);
+assert(
+  !isValidValidationHookSentence("that just made it a little weird."),
+  "'that just made it a little weird' → NOT valid",
+);
+assert(
+  !isValidValidationHookSentence("So when he did that breath, what'd you notice?"),
+  "'So when he did that breath, what'd you notice?' → NOT valid",
+);
+assert(
+  !isValidValidationHookSentence("It was close. It was epic."),
+  "'It was close. It was epic.' → NOT valid",
+);
+assert(
+  !isValidValidationHookSentence("The team played well today."),
+  "positive event commentary → NOT valid",
+);
+
+console.log("\nisValidValidationHookSentence — ALLOWS genuine validation content");
+assert(
+  isValidValidationHookSentence("You're not lazy, you just never learned the right system."),
+  "'lazy' → valid validation hook sentence",
+);
+assert(
+  isValidValidationHookSentence("Most people are struggling with the same thing you are."),
+  "'struggling' → valid",
+);
+assert(
+  isValidValidationHookSentence("I was wrong about what success actually takes."),
+  "'wrong' → valid",
+);
+assert(
+  isValidValidationHookSentence("You can't rely on willpower because it was never designed for this."),
+  "'can't' → valid",
+);
+assert(
+  isValidValidationHookSentence("I quit three times before I understood the mechanism."),
+  "'quit' → valid",
+);
+assert(
+  isValidValidationHookSentence("Most people are afraid to admit they're confused."),
+  "'afraid', 'confused' → valid",
+);
+
+// ─── findFirstMeaningfulSentence with min=5 ───────────────────────────────────
+
+console.log("\nfindFirstMeaningfulSentence(text, 5) — skips 4-word event commentary");
+{
+  // "We're all out now." has exactly 4 meaningful words → skipped with min=5
+  // next sentence has ≥5 → returned
+  const text =
+    "We're all out now. But here's what actually determines the outcome of every match.";
+  const sentence = findFirstMeaningfulSentence(text, 5);
+  assert(
+    !sentence.startsWith("We're all out now"),
+    "'We're all out now.' (4 words) skipped at min=5",
+  );
+  assert(
+    sentence.includes("determines"),
+    "next sentence with ≥5 meaningful words returned",
+  );
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

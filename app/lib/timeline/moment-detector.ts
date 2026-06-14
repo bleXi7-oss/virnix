@@ -22,7 +22,9 @@ import {
   cleanWindowText,
   collapseRepeatedFragments,
   isLowSemanticContent,
+  isNoiseHeavy,
   findFirstMeaningfulSentence,
+  trimToMeaningfulStart,
 } from "./moment-text-cleaner";
 
 const MAX_MOMENTS = 8;
@@ -40,9 +42,12 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
     const windows = groupIntoWindows(segments, WINDOW_SECONDS);
 
     const moments: TimelineMoment[] = windows
-      // Pre-filter: reject pure noise / reaction windows before scoring.
-      // isLowSemanticContent cleans and deduplicates internally.
+      // Gate 1: reject pure noise / reaction windows (< 5 meaningful words,
+      //         < 0.40 alpha ratio, < 20 chars after clean+dedup).
       .filter((win) => !isLowSemanticContent(win.text))
+      // Gate 2: reject exclamation-dominant windows where no single sentence
+      //         has 3+ meaningful words, or >55% of sentences are short !… noise.
+      .filter((win) => !isNoiseHeavy(win.text))
       .map((win, i) => {
         // Clean once: remove invisible chars + collapse duplicate subtitle fragments.
         // Used for scoring (prevents duplicate signal inflation) and display.
@@ -60,7 +65,8 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
           emotionalTrigger: scored.emotionalTrigger,
           contentUse: CONTENT_USES[scored.momentType] ?? "repurposable content moment",
           confidenceScore: scored.score,
-          sourceTextPreview: cleanText.slice(0, 120),
+          // Trim leading noise sentences so preview doesn't open with "NOOooo…"
+          sourceTextPreview: trimToMeaningfulStart(cleanText).slice(0, 120),
         } satisfies TimelineMoment;
       })
       .filter((m) => m.confidenceScore >= MIN_SCORE_THRESHOLD);
@@ -120,10 +126,26 @@ function groupIntoWindows(
   return windows;
 }
 
+// Words that signal genuine self-blame, misconception, or audience pain —
+// required for the "You're not failing — " validation hook prefix to apply.
+// Without these, the sentence is event commentary, not a validation hook.
+const VALIDATION_CONTENT_SIGNALS = [
+  "fail", "wrong", "lazy", "broken", "blame", "bad at", "can't", "cannot",
+  "couldn't", "struggling", "stuck", "afraid", "fear", "doubt", "never",
+  "don't understand", "confused", "overwhelmed", "shame", "not enough",
+  "inadequate", "weak", "scared", "lost", "worthless", "hopeless",
+  "giving up", "quit", "hate myself", "hate my",
+];
+
+function isValidValidationHookSentence(sentence: string): boolean {
+  const lower = sentence.toLowerCase();
+  return VALIDATION_CONTENT_SIGNALS.some((s) => lower.includes(s));
+}
+
 function buildSuggestedHook(text: string, type: string): string {
-  // Find first sentence with >= 4 meaningful words to skip reaction noise
-  // (e.g. "NOOooo… Close!" before a real content sentence).
-  const firstSentence = findFirstMeaningfulSentence(text, 4);
+  // Require >= 5 meaningful words so brief event commentary ("We're all out
+  // now." = 4 words) is skipped in favour of a substantive sentence.
+  const firstSentence = findFirstMeaningfulSentence(text, 5);
   const prefixes: Record<string, string> = {
     validation_hook:       "You're not failing — ",
     mechanism_reframe:     "This isn't what you think. ",
@@ -131,13 +153,27 @@ function buildSuggestedHook(text: string, type: string): string {
     emotional_confession:  "I used to believe ",
     story_turning_point:   "That's when everything changed: ",
     educational_gem:       "Here's why: ",
-    quote_moment:          '"',
+    quote_moment:          "“",
     fomo_loss_frame:       "Most people are already behind on this. ",
     authority_proof:       "After working with hundreds of creators: ",
     transformation_moment: "Before this moment, I was ",
   };
-  const prefix = prefixes[type] ?? "";
-  return `${prefix}${firstSentence}`;
+
+  // validation_hook prefix only makes sense when the sentence actually
+  // contains self-blame, failure, or misconception language.
+  // Fall back to a neutral quote when it doesn't, to avoid nonsense like
+  // "You're not failing — We're all out now."
+  const resolvedType =
+    type === "validation_hook" && !isValidValidationHookSentence(firstSentence)
+      ? "quote_moment"
+      : type;
+
+  const prefix = prefixes[resolvedType] ?? "";
+  const hook = `${prefix}${firstSentence}`;
+  // Close the opening quote for quote_moment
+  return resolvedType === "quote_moment" && prefix === "“"
+    ? `${hook}”`
+    : hook;
 }
 
 const MOMENT_TITLES: Record<string, string> = {

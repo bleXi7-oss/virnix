@@ -96,3 +96,59 @@ export function findFirstMeaningfulSentence(text: string, minWords = 4): string 
   // Fallback: original naive behavior
   return text.match(/[^.!?]+[.!?]/)?.[0]?.trim() ?? text.slice(0, 80).trim();
 }
+
+// Fraction of word tokens in text that are NOT meaningful (noise/short/sound).
+export function noiseTokenRatio(text: string): number {
+  const tokens = text.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return 0;
+  const noiseCount = tokens.filter((w) => !isMeaningfulWord(w)).length;
+  return noiseCount / tokens.length;
+}
+
+// Returns text trimmed to start at the first sentence with >= minWords
+// meaningful words. Used for sourceTextPreview so it does not open with
+// noise lines like "NOOooo…" or "eeuuHHH heh heehhh..".
+// Falls back to the full text when no sentence meets the threshold (keeps
+// short punchy confessional windows like "I quit. I was wrong." intact).
+export function trimToMeaningfulStart(text: string, minWords = 4): string {
+  const sentences = text.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  for (let i = 0; i < sentences.length; i++) {
+    if (countMeaningfulWords(sentences[i]) >= minWords) {
+      return sentences.slice(i).join(" ").trim();
+    }
+  }
+  return text.trim();
+}
+
+// Second-level noise gate — applied after isLowSemanticContent.
+// Catches windows that scraped past the 5-meaningful-word floor but still
+// have no extractable sentence worth showing as a Strongest Moment.
+//
+// Gate 1: no single sentence reaches 3 meaningful words → nothing to quote.
+//   Catches: "NOOooo… Close! It was close. It was epic!! NOOO!!"
+//            "Close! Close! It was close. It was epic."
+//
+// Gate 2 (≥3 sentences): >55% of sentences are short exclamation/trailing
+//   fragments with ≤2 meaningful words → window is exclamation-dominant.
+//   Catches: "NOOooo… Close! It was close. It was epic!! Actually that was cool."
+//            (4 of 5 sentences are short !… fragments → 80% > 55%)
+//
+// Thresholds are deliberately permissive to avoid rejecting punchy short
+// confessional content ("I quit. I was wrong. That changed everything.").
+export function isNoiseHeavy(rawText: string): boolean {
+  const cleaned = collapseRepeatedFragments(cleanWindowText(rawText));
+  const sentences = cleaned.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if (sentences.length === 0) return true;
+
+  const maxMeaningful = Math.max(0, ...sentences.map(countMeaningfulWords));
+  if (maxMeaningful < 3) return true;
+
+  if (sentences.length >= 3) {
+    const noisySentences = sentences.filter(
+      (s) => /[!…]$/.test(s.trim()) && countMeaningfulWords(s) <= 2
+    ).length;
+    if (noisySentences / sentences.length > 0.55) return true;
+  }
+
+  return false;
+}

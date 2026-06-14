@@ -23,6 +23,9 @@ export {
   collapseRepeatedFragments,
   countMeaningfulWords,
   isLowSemanticContent,
+  isNoiseHeavy,
+  noiseTokenRatio,
+  trimToMeaningfulStart,
   findFirstMeaningfulSentence,
 } from "./moment-text-cleaner";
 export type { TimestampedLine, TranscriptSegment } from "./transcript-timestamps";
