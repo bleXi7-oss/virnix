@@ -14,6 +14,7 @@ export function formatLanguageContext(id: OutputLanguageId): string {
   const lines: string[] = [
     `Output language: ${lang.promptName}`,
     `Write all outputs natively in ${lang.promptName}. Do not literally translate English viral hook formulas. Use natural creator and social media phrasing for that language and region.`,
+    `Do NOT include English scaffold phrases, framing labels, or transition markers anywhere in the generated content. Examples of patterns that must NEVER appear in non-English output: "Here is the question worth asking:", "The key insight is:", "In this episode,", "What's fascinating is:", "Let me explain:". Every word of every content field — including structural connectors and framing phrases — must be written in ${lang.promptName}.`,
   ];
 
   // For English: the transcript may arrive in any language (Arabic, Chinese, Spanish, etc.).
