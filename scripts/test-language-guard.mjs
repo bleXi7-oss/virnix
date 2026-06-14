@@ -494,6 +494,49 @@ assert(!computeHideSource("This is clean English text.", "en", "en"), "English +
 assert(!computeHideSource("This is English.", null, null), "English + no lang → show");
 assert(!computeHideSource("Danes govorimo o uspehu.", "sl", "sl"), "Slovenian + sl/sl → show");
 
+// ─── ClipMomentCard hideHook — main quote guard (CAPTION-HIDE-B) ─────────────
+//
+// ClipMomentCard computes hideHook with the SAME combined logic as hideSource,
+// applied to moment.suggestedHook. When true, the hook is hidden by default and
+// a single toggle (showSourcePreview) reveals both hook and sourceTextPreview.
+
+function computeHideHook(text, transcriptLang, outputLanguage) {
+  return (
+    shouldHideSourcePreview(text, transcriptLang, outputLanguage) ||
+    !["latin_dominant", "no_letters"].includes(detectTranscriptScript(text))
+  );
+}
+
+console.log("\nClipMomentCard hideHook — main quote guard");
+
+// Pure Arabic hook (AI generated in Arabic when outputLanguage="auto") → hide
+assert(computeHideHook("(ضحك) كلنا نوجد بأماكن مختلفة", "ar", "auto"), "Arabic hook + auto output → hide");
+assert(computeHideHook("توقف عن فعل هذا الشيء الآن", null, null), "Arabic hook, no lang → hide");
+assert(computeHideHook("العادة الإنتاجية الوحيدة", "ar", "sl"), "Arabic hook + ar/sl → hide");
+
+// Mixed Arabic/Latin hook (> 15% Arabic) → hide
+assert(
+  computeHideHook("In this moment الوقت أثمن من المال about time", "ar", "auto"),
+  "Mixed Arabic/Latin hook (> 15%) + auto → hide",
+);
+
+// Cyrillic hook → hide
+assert(computeHideHook("Сегодня мы говорим о продуктивности", "ru", "auto"), "Cyrillic hook + auto → hide");
+
+// CJK hook → hide
+assert(computeHideHook("今天我们来谈谈生产力和成功", "zh", "en"), "CJK hook + en output → hide");
+
+// English hook → never hide
+assert(!computeHideHook("Stop doing this one thing. You're wasting 3 hours.", "en", "sl"), "English hook + sl → show");
+assert(!computeHideHook("The one habit top performers never skip.", null, null), "English hook, no lang → show");
+assert(!computeHideHook("Stop grinding. Start winning.", "en", "auto"), "English hook + auto → show");
+
+// Turkish Latin-script hook + auto → show (Latin script, no mismatch)
+assert(!computeHideHook("Bu içerik üretkenlik hakkında konuşuyor.", "tr", "auto"), "Turkish Latin hook + auto → show");
+
+// Turkish Latin-script + mismatch → hide (lang metadata fires)
+assert(computeHideHook("Bu içerik Türkçe bir videodur.", "tr", "sl"), "Turkish Latin hook + tr/sl → hide (lang mismatch)");
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

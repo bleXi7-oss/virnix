@@ -102,6 +102,10 @@ interface Props {
 export default function ClipMomentCard({ moment, rank, transcriptLang, outputLanguage }: Props) {
   const meta = TYPE_META[moment.momentType] ?? TYPE_META.educational_gem;
   const [showSourcePreview, setShowSourcePreview] = useState(false);
+  const hideHook = !!moment.suggestedHook && (
+    shouldHideSourcePreview(moment.suggestedHook, transcriptLang, outputLanguage) ||
+    !["latin_dominant", "no_letters"].includes(detectTranscriptScript(moment.suggestedHook))
+  );
   const hideSource = !!moment.sourceTextPreview && (
     shouldHideSourcePreview(moment.sourceTextPreview, transcriptLang, outputLanguage) ||
     !["latin_dominant", "no_letters"].includes(detectTranscriptScript(moment.sourceTextPreview))
@@ -127,9 +131,32 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
       </div>
 
       {/* Hook — the most important line */}
-      <p className="mb-2.5 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
-        &ldquo;{moment.suggestedHook}&rdquo;
-      </p>
+      {hideHook ? (
+        <div className="mb-2.5">
+          <button
+            onClick={() => setShowSourcePreview((v) => !v)}
+            className="flex min-h-[44px] items-center text-[12px] text-zinc-400 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-500"
+          >
+            {sourceLabel} {showSourcePreview ? "▲" : "▼"}
+          </button>
+          {showSourcePreview ? (
+            <p
+              className="text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100"
+              dir="auto"
+            >
+              &ldquo;{moment.suggestedHook}&rdquo;
+            </p>
+          ) : (
+            <p className="text-[11px] italic text-zinc-400 dark:text-zinc-600">
+              Caption hidden by default · click to reveal
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="mb-2.5 text-[14px] font-semibold leading-snug text-zinc-900 dark:text-zinc-100">
+          &ldquo;{moment.suggestedHook}&rdquo;
+        </p>
+      )}
 
       {/* Why it works */}
       <p className="mb-3.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-400">
@@ -149,7 +176,16 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
       </div>
 
       {moment.sourceTextPreview && (
-        hideSource ? (
+        hideHook ? (
+          showSourcePreview ? (
+            <p
+              className="mt-3 font-mono text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600 line-clamp-2"
+              dir="auto"
+            >
+              &ldquo;{moment.sourceTextPreview}&rdquo;
+            </p>
+          ) : null
+        ) : hideSource ? (
           <div className="mt-3">
             <button
               onClick={() => setShowSourcePreview((v) => !v)}
