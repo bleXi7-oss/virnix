@@ -444,6 +444,56 @@ assert(detectTranscriptScript("今天我们来谈谈生产力") === "cjk_dominan
 assert(detectTranscriptScript("Bu video çok ilginç bir konu.") === "latin_dominant", "Pasted Turkish (Latin) → latin_dominant → NO note (can't detect without metadata)");
 assert(detectTranscriptScript("Ce contenu est en français.") === "latin_dominant", "Pasted French (Latin) → latin_dominant → NO note (can't detect without metadata)");
 
+// ─── ClipMomentCard hideSource — combined guard (script + lang) ───────────────
+//
+// ClipMomentCard computes:
+//   hideSource = shouldHideSourcePreview(text, lang, output) ||
+//     !['latin_dominant','no_letters'].includes(detectTranscriptScript(text))
+//
+// The second clause catches mixed-language captions (15–30% non-Latin) that the
+// shouldHideSourcePreview auto-output bypass would otherwise let through.
+
+function computeHideSource(text, transcriptLang, outputLanguage) {
+  return (
+    shouldHideSourcePreview(text, transcriptLang, outputLanguage) ||
+    !["latin_dominant", "no_letters"].includes(detectTranscriptScript(text))
+  );
+}
+
+console.log("\nClipMomentCard hideSource — combined guard");
+
+// Pure Arabic → always hide (script check fires)
+assert(computeHideSource("الوقت أثمن من المال في هذا العصر", null, null), "Pure Arabic, no lang → hide");
+assert(computeHideSource("الوقت أثمن من المال", "ar", "auto"), "Pure Arabic + auto output → hide");
+assert(computeHideSource("الوقت أثمن من المال", "ar", "sl"), "Arabic + ar/sl → hide");
+
+// Mixed Arabic/Latin (16–28% Arabic) + auto output — previously leaked through, now hidden
+assert(
+  computeHideSource(
+    "In this segment the speaker says الوقت أثمن من المال about time management",
+    "ar", "auto",
+  ),
+  "Mixed Arabic/Latin (> 15% Arabic) + auto output → hide (new guard)",
+);
+
+// Cyrillic + auto → hide (script check)
+assert(computeHideSource("Сегодня мы говорим о продуктивности", "ru", "auto"), "Cyrillic + auto → hide");
+
+// CJK → hide
+assert(computeHideSource("今天我们来谈谈生产力", "zh", "en"), "Chinese CJK + en → hide");
+
+// Turkish (Latin-script) + lang mismatch → hide via lang check
+assert(computeHideSource("Bu video çok ilginç", "tr", "sl"), "Turkish Latin + tr/sl → hide (lang mismatch)");
+
+// Turkish (Latin-script) + auto → show (no non-Latin chars, no lang mismatch)
+assert(!computeHideSource("Bu içerik Türkçe bir videodur.", "tr", "auto"), "Turkish Latin + auto → show");
+
+// English source excerpts → always show when safe
+assert(!computeHideSource("This is an English excerpt.", "en", "sl"), "English + sl output → show (translation expected)");
+assert(!computeHideSource("This is clean English text.", "en", "en"), "English + en output → show");
+assert(!computeHideSource("This is English.", null, null), "English + no lang → show");
+assert(!computeHideSource("Danes govorimo o uspehu.", "sl", "sl"), "Slovenian + sl/sl → show");
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

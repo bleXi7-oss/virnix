@@ -5,6 +5,7 @@ import type { TimelineMoment, MomentType, PlatformFit } from "../../lib/timeline
 import {
   shouldHideSourcePreview,
   getSourcePreviewLabel,
+  detectTranscriptScript,
 } from "../../lib/transcript/detectTranscriptLanguage";
 
 const TYPE_META: Record<MomentType, { label: string; accent: string; badgeColor: string }> = {
@@ -101,10 +102,9 @@ interface Props {
 export default function ClipMomentCard({ moment, rank, transcriptLang, outputLanguage }: Props) {
   const meta = TYPE_META[moment.momentType] ?? TYPE_META.educational_gem;
   const [showSourcePreview, setShowSourcePreview] = useState(false);
-  const hideSource = !!moment.sourceTextPreview && shouldHideSourcePreview(
-    moment.sourceTextPreview,
-    transcriptLang,
-    outputLanguage,
+  const hideSource = !!moment.sourceTextPreview && (
+    shouldHideSourcePreview(moment.sourceTextPreview, transcriptLang, outputLanguage) ||
+    !["latin_dominant", "no_letters"].includes(detectTranscriptScript(moment.sourceTextPreview))
   );
   const sourceLabel = getSourcePreviewLabel(transcriptLang);
 
