@@ -407,9 +407,6 @@ export default function Home() {
                 </p>
               </div>
             )}
-            {transcriptQuality && (
-              <TranscriptQualityCard report={transcriptQuality} />
-            )}
             {bestAngle && (
               <UseThisFirstCard bestAngle={bestAngle} />
             )}
@@ -419,6 +416,9 @@ export default function Home() {
                 transcriptLang={transcriptLang}
                 outputLanguage={selectedLanguage}
               />
+            )}
+            {transcriptQuality && (
+              <TranscriptQualityCard report={transcriptQuality} />
             )}
             <ErrorBoundary>
               <OutputPanel cards={cards} onReset={handleReset} />
@@ -578,6 +578,7 @@ function HeroCard({
             )}
             <input
               type="url"
+              aria-label="YouTube video URL"
               placeholder="Paste a YouTube URL..."
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
@@ -625,6 +626,8 @@ function HeroCard({
           </div>
         )}
 
+        <p className="mt-4 text-[12px]">{hintText}</p>
+
         {phase === "idle" && (
           <CreatorEnergySelector selectedIds={selectedEnergies} onChange={onEnergyChange} />
         )}
@@ -634,8 +637,6 @@ function HeroCard({
         )}
 
         {phase === "idle" && <CreatorBrainPanel user={user} />}
-
-        <p className="mt-4 text-[12px]">{hintText}</p>
         </div>
       </div>
     </div>
@@ -725,7 +726,7 @@ function LoadingPanel({ stepIndex, url }: { stepIndex: number; url: string }) {
           </p>
         )}
 
-        <div className="space-y-3.5">
+        <div className="space-y-3.5" role="status" aria-live="polite">
           {LOADING_STEPS.map((label, i) => {
             if (i > stepIndex) return null;
             const isDone = i < stepIndex;
@@ -798,7 +799,7 @@ function OutputPanel({
             >
               <path d="M20 6L9 17l-5-5" />
             </svg>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
               {cards.length} pieces ready to post
             </span>
           </div>
@@ -908,6 +909,7 @@ const GenerateButton = memo(function GenerateButton({
     <button
       onClick={onClick}
       disabled={phase === "loading"}
+      aria-busy={phase === "loading"}
       className="cursor-pointer whitespace-nowrap rounded-xl bg-zinc-900 px-6 py-3.5 text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(0,0,0,0.14),0_4px_24px_rgba(0,0,0,0.14),inset_0_1px_0_rgba(255,255,255,0.07)] transition-all hover:bg-zinc-800 hover:shadow-[0_0_0_1px_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.20)] active:scale-[0.98] disabled:pointer-events-none disabled:opacity-70 dark:bg-white dark:text-black dark:shadow-[0_0_0_1px_rgba(255,255,255,0.10),0_4px_24px_rgba(255,255,255,0.08)] dark:hover:bg-zinc-50 dark:hover:shadow-[0_0_0_1px_rgba(255,255,255,0.20),0_8px_40px_rgba(255,255,255,0.14)]"
     >
       {phase === "loading" ? (

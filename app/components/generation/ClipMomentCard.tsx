@@ -86,7 +86,7 @@ function ConfidenceDot({ score }: { score: number }) {
       aria-label={label}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
-      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{label}</span>
+      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">{label}</span>
     </span>
   );
 }
@@ -119,7 +119,7 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
           {moment.startTime}–{moment.endTime}
         </span>
         <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${meta.badgeColor}`}
+          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${meta.badgeColor}`}
         >
           {meta.label}
         </span>
@@ -141,7 +141,7 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
         {moment.platformFit.slice(0, 3).map((p) => (
           <span
             key={p}
-            className="rounded-full border border-zinc-200 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-400"
+            className="rounded-full border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-500 dark:border-zinc-700/60 dark:text-zinc-400"
           >
             {PLATFORM_LABELS[p] ?? p}
           </span>
@@ -153,7 +153,7 @@ export default function ClipMomentCard({ moment, rank, transcriptLang, outputLan
           <div className="mt-3">
             <button
               onClick={() => setShowSourcePreview((v) => !v)}
-              className="text-[11px] text-zinc-400 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-500"
+              className="flex min-h-[44px] items-center text-[12px] text-zinc-400 hover:text-zinc-500 dark:text-zinc-600 dark:hover:text-zinc-500"
             >
               {sourceLabel} {showSourcePreview ? "▲" : "▼"}
             </button>

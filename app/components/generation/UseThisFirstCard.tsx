@@ -58,7 +58,7 @@ function SectionDivider({ label }: { label: string }) {
   return (
     <div className="mb-5 flex items-center gap-4">
       <div className="h-px flex-1 bg-linear-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
-      <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
         {label}
       </span>
       <div className="h-px flex-1 bg-linear-to-l from-transparent to-zinc-200 dark:to-zinc-800" />
@@ -104,7 +104,7 @@ export default function UseThisFirstCard({ bestAngle }: Props) {
 
         {/* Hook variants */}
         <div className="mt-5 border-t border-zinc-100 pt-5 dark:border-zinc-800/40">
-          <p className="mb-3.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+          <p className="mb-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
             Hook Variants
           </p>
           <div className="flex flex-col gap-2.5">
@@ -116,7 +116,7 @@ export default function UseThisFirstCard({ bestAngle }: Props) {
                   key={key}
                   className="flex items-start gap-2.5 rounded-lg border border-zinc-100 bg-zinc-50/50 px-3.5 py-2.5 dark:border-zinc-800/60 dark:bg-zinc-900/30"
                 >
-                  <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
+                  <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">
                     {VARIANT_LABELS[key]}
                   </span>
                   <p className="flex-1 text-[12px] leading-[1.6] text-zinc-600 dark:text-zinc-300">

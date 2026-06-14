@@ -57,14 +57,14 @@ function OutputCard({
     >
       <div className="mb-4 flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
             {card.platform}
           </span>
           <span className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
             {card.type}
           </span>
         </div>
-        <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
+        <span className="mt-0.5 shrink-0 rounded-full border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/80">
           {card.badge}
         </span>
       </div>
@@ -75,7 +75,7 @@ function OutputCard({
 
       <div className="mt-5 flex items-center gap-2 border-t border-zinc-100 pt-4 dark:border-zinc-800/40">
         <PlatformIcon type={card.iconType} />
-        <span className="text-[10px] text-zinc-400 dark:text-zinc-500">
+        <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
           {card.charCount}
         </span>
         <div className="ml-auto">

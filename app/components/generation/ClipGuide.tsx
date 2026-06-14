@@ -19,7 +19,7 @@ export default function ClipGuide({ moments, transcriptLang, outputLanguage }: P
       {/* Section header */}
       <div className="mb-6 flex items-center gap-4">
         <div className="h-px flex-1 bg-linear-to-r from-transparent to-zinc-200 dark:to-zinc-800" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
           Strongest moments
         </span>
         <div className="h-px flex-1 bg-linear-to-l from-transparent to-zinc-200 dark:to-zinc-800" />

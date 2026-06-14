@@ -49,7 +49,7 @@ export default function TranscriptWarningPanel({
           <button
             onClick={onTryEnglish}
             disabled={disabled}
-            className="w-full rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[13px] font-medium text-amber-800 transition hover:bg-amber-50 disabled:pointer-events-none disabled:opacity-50 dark:border-amber-700/50 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-600 disabled:pointer-events-none disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
           >
             Try English captions instead
           </button>
@@ -57,7 +57,7 @@ export default function TranscriptWarningPanel({
         <button
           onClick={onContinue}
           disabled={disabled}
-          className="w-full rounded-lg bg-amber-500 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-600 disabled:pointer-events-none disabled:opacity-50 dark:bg-amber-600 dark:hover:bg-amber-500"
+          className="w-full rounded-lg border border-amber-400/60 bg-white px-4 py-2.5 text-[13px] font-medium text-amber-800 transition hover:bg-amber-50 disabled:pointer-events-none disabled:opacity-50 dark:border-amber-700/50 dark:bg-zinc-900 dark:text-amber-300 dark:hover:bg-amber-950/30"
         >
           Continue with approximate translation
         </button>

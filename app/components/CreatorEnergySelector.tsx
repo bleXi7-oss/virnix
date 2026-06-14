@@ -36,7 +36,7 @@ export default function CreatorEnergySelector({ selectedIds, onChange }: Props) 
         <span className="block text-[11px] text-zinc-400 dark:text-zinc-600">
           Direction
         </span>
-        <span className="block text-[10px] text-zinc-400/60 dark:text-zinc-700">
+        <span className="block text-[11px] text-zinc-400 dark:text-zinc-600">
           Shapes the angle and tone of generated posts.
         </span>
       </div>
