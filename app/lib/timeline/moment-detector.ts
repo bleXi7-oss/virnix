@@ -18,6 +18,12 @@ import {
   type TranscriptSegment,
 } from "./transcript-timestamps";
 import { scoreMoment } from "./moment-scoring";
+import {
+  cleanWindowText,
+  collapseRepeatedFragments,
+  isLowSemanticContent,
+  findFirstMeaningfulSentence,
+} from "./moment-text-cleaner";
 
 const MAX_MOMENTS = 8;
 const MIN_SCORE_THRESHOLD = 10;
@@ -34,8 +40,14 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
     const windows = groupIntoWindows(segments, WINDOW_SECONDS);
 
     const moments: TimelineMoment[] = windows
+      // Pre-filter: reject pure noise / reaction windows before scoring.
+      // isLowSemanticContent cleans and deduplicates internally.
+      .filter((win) => !isLowSemanticContent(win.text))
       .map((win, i) => {
-        const scored = scoreMoment(win.text);
+        // Clean once: remove invisible chars + collapse duplicate subtitle fragments.
+        // Used for scoring (prevents duplicate signal inflation) and display.
+        const cleanText = collapseRepeatedFragments(cleanWindowText(win.text));
+        const scored = scoreMoment(cleanText);
         return {
           id: `moment-${i}`,
           startTime: win.startTime,
@@ -43,12 +55,12 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
           title: MOMENT_TITLES[scored.momentType] ?? "Strong Moment",
           momentType: scored.momentType,
           platformFit: scored.platformFit,
-          suggestedHook: buildSuggestedHook(win.text, scored.momentType),
+          suggestedHook: buildSuggestedHook(cleanText, scored.momentType),
           whyItWorks: scored.reason,
           emotionalTrigger: scored.emotionalTrigger,
           contentUse: CONTENT_USES[scored.momentType] ?? "repurposable content moment",
           confidenceScore: scored.score,
-          sourceTextPreview: win.text.slice(0, 120),
+          sourceTextPreview: cleanText.slice(0, 120),
         } satisfies TimelineMoment;
       })
       .filter((m) => m.confidenceScore >= MIN_SCORE_THRESHOLD);
@@ -109,7 +121,9 @@ function groupIntoWindows(
 }
 
 function buildSuggestedHook(text: string, type: string): string {
-  const firstSentence = text.match(/[^.!?]+[.!?]/)?.[0]?.trim() ?? text.slice(0, 80).trim();
+  // Find first sentence with >= 4 meaningful words to skip reaction noise
+  // (e.g. "NOOooo… Close!" before a real content sentence).
+  const firstSentence = findFirstMeaningfulSentence(text, 4);
   const prefixes: Record<string, string> = {
     validation_hook:       "You're not failing — ",
     mechanism_reframe:     "This isn't what you think. ",

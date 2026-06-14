@@ -18,6 +18,13 @@ export {
 } from "./transcript-timestamps";
 export { scoreMoment } from "./moment-scoring";
 export type { MomentScore } from "./moment-scoring";
+export {
+  cleanWindowText,
+  collapseRepeatedFragments,
+  countMeaningfulWords,
+  isLowSemanticContent,
+  findFirstMeaningfulSentence,
+} from "./moment-text-cleaner";
 export type { TimestampedLine, TranscriptSegment } from "./transcript-timestamps";
 export { buildTimestampedTranscript } from "./build-timestamped-transcript";
 export type { RawSegment } from "./build-timestamped-transcript";
