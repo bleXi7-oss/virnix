@@ -143,13 +143,22 @@ export function scoreMoment(text: string): MomentScore {
 
   const score = Math.max(0, Math.min(typeScore + specificityBonus + motivationPenalty, 100));
 
+  // Apply the same bonus/penalty to every type so fallback selection uses
+  // comparable adjusted scores (same basis as the composite `score` field).
+  const allScores = Object.fromEntries(
+    (Object.entries(raw) as [MomentType, number][]).map(([t, s]) => [
+      t,
+      Math.max(0, Math.min(s + specificityBonus + motivationPenalty, 100)),
+    ])
+  ) as Record<MomentType, number>;
+
   return {
     score,
     momentType,
     emotionalTrigger: EMOTIONAL_TRIGGERS[momentType],
     platformFit: PLATFORM_FIT[momentType],
     reason: REASONS[momentType],
-    allScores: raw,
+    allScores,
   };
 }
 
