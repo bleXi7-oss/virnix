@@ -22,17 +22,28 @@ function cleanText(raw) {
 
 function computeDurationSeconds(segments) {
   if (!segments || segments.length === 0) return 0;
+  const detectSample = segments.slice(0, 20);
   const isMs = (() => {
-    if (segments.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
-    const sample = segments.filter((s) => s.duration > 0).slice(0, 10);
+    if (detectSample.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
+    const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
     if (!sample.length) return true;
     const avg = sample.reduce((sum, s) => sum + s.duration, 0) / sample.length;
     return avg > 100;
   })();
   const last = segments[segments.length - 1];
-  const offsetSec = isMs ? last.offset / 1000 : last.offset;
-  const durSec = isMs ? last.duration / 1000 : last.duration;
-  return offsetSec + durSec;
+  const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;
+  const lastDurSec   = isMs ? last.duration / 1000 : last.duration;
+  let durationSec = lastOffsetSec + lastDurSec;
+  if (segments.length >= 10) {
+    const allEndSec = segments
+      .map((s) => (isMs ? s.offset / 1000 : s.offset) + (isMs ? s.duration / 1000 : s.duration))
+      .sort((a, b) => a - b);
+    const p90EndSec = allEndSec[Math.floor(allEndSec.length * 0.90)];
+    if (durationSec > p90EndSec * 3) {
+      durationSec = p90EndSec;
+    }
+  }
+  return durationSec;
 }
 
 // mirrors toFriendlyError from transcript.ts
@@ -291,6 +302,134 @@ console.log("\ncomputeDurationSeconds — ms vs seconds auto-detection");
 {
   assert(computeDurationSeconds([]) === 0, "empty segments → 0");
   assert(computeDurationSeconds(null) === 0, "null → 0");
+}
+
+// ─── TRANSCRIPT-DURATION-QA-A: regression tests ───────────────────────────────
+// Production failure: two ~35-minute Huberman Lab Essentials videos were falsely
+// rejected with "Content over 120 minutes cannot be processed."
+// Root causes found and fixed:
+//   1. isMs detection checked ALL segments — a single late decimal offset (e.g.,
+//      2097000.4 ms from float conversion) caused isMs=false, treating ms offsets
+//      as seconds and inflating 35 min to 583 hours.
+//   2. Last-segment-only duration relied on the final segment's offset, which in
+//      compilation/Essentials videos can reference the original episode timestamp
+//      (e.g., minute 130 of a 3h podcast), not the clip length.
+// Fix: isMs detection uses first 20 segments; 90th-percentile outlier guard.
+
+// Helper: makes N consecutive ms-format segments (3 s each)
+function makeSegmentsMsFormat(count, startOffsetMs = 0) {
+  return Array.from({ length: count }, (_, i) => ({
+    text: `word${i}`,
+    offset: startOffsetMs + i * 3000,
+    duration: 3000,
+  }));
+}
+
+// Max duration that 7200 sec threshold maps to (in seconds)
+const MAX_ALLOWED_SEC = 7200;
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — normal 35-36 min video accepted");
+{
+  // HXuj7wAt7u8 fixture (~36 min = 720 segments × 3s = 2160 sec)
+  const segs = makeSegmentsMsFormat(720); // last offset=719*3000=2,157,000 ms
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `HXuj7wAt7u8 fixture: ~36 min → ${Math.round(dur / 60)} min — accepted (< 120)`,
+  );
+}
+{
+  // jwChiek_aRY fixture (~35 min = 700 segments × 3s = 2100 sec)
+  const segs = makeSegmentsMsFormat(700); // last offset=699*3000=2,097,000 ms
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `jwChiek_aRY fixture: ~35 min → ${Math.round(dur / 60)} min — accepted (< 120)`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — true 125-min video blocked");
+{
+  // 2500 segments × 3s = 7500 sec = 125 min
+  const segs = makeSegmentsMsFormat(2500); // last offset=2499*3000=7,497,000 ms
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur > MAX_ALLOWED_SEC,
+    `true 125-min fixture: → ${Math.round(dur / 60)} min — blocked (> 120)`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — compilation video with outlier last segment accepted");
+{
+  // 35-min compilation (700 normal segments) + 1 final segment at 2h10m of original podcast.
+  // Old: uses last segment → 7803 sec = 130 min → blocked.
+  // New: p90 guard kicks in (last > p90*3) → ~35 min → accepted.
+  const normal = makeSegmentsMsFormat(700); // normal: 0..2,097,000 ms
+  const outlier = { text: "from original podcast", offset: 7_800_000, duration: 3000 };
+  const segs = [...normal, outlier];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `compilation outlier fixture: outlier at 130min, p90 guard → ${Math.round(dur / 60)} min — accepted`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — ms-format with decimal last segment not inflated");
+{
+  // The last segment has floating-point imprecision (2097000.4 ms instead of 2097000).
+  // Old: segments.some() finds decimal → isMs=false → duration = 2,097,000 sec (583 hr) → blocked.
+  // New: isMs detection uses only first 20 segments (all integers) → isMs=true → ~35 min → accepted.
+  const normal = makeSegmentsMsFormat(699);
+  const malformed = { text: "decimal ms value", offset: 2_097_000.4, duration: 3000.3 };
+  const segs = [...normal, malformed];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `decimal last-segment fixture: isMs=true (first-20 detection) → ${Math.round(dur / 60)} min — accepted`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — multiple outlier tail segments handled");
+{
+  // Last 5 segments reference original episode at 2h+ (5 outliers, not just 1)
+  const normal = makeSegmentsMsFormat(695);
+  const outliers = [
+    { text: "clip1", offset: 7_800_000, duration: 3000 },
+    { text: "clip2", offset: 7_803_000, duration: 3000 },
+    { text: "clip3", offset: 7_806_000, duration: 3000 },
+    { text: "clip4", offset: 7_809_000, duration: 3000 },
+    { text: "clip5", offset: 7_812_000, duration: 3000 },
+  ];
+  const segs = [...normal, ...outliers];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `5-outlier tail fixture: p90 guard → ${Math.round(dur / 60)} min — accepted`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — unit conversion: ms → seconds → minutes");
+{
+  // 36 min in ms: last offset = 2157000 ms → / 1000 = 2157 sec → 36 min
+  const segs = makeSegmentsMsFormat(720);
+  const durSec = computeDurationSeconds(segs);
+  const durMin = durSec / 60;
+  assert(durSec > 2100 && durSec < 2200, `ms→sec: ${Math.round(durSec)} sec in expected 2100-2200 range`);
+  assert(durMin > 35 && durMin < 37, `sec→min: ${durMin.toFixed(1)} min in expected 35-37 range`);
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-A — unit conversion: float seconds → minutes");
+{
+  // Classic XML seconds format: 2100.0 + 3.0 = 2103 sec = 35 min
+  const segs = [
+    { text: "start", offset: 0.0, duration: 3.0 },
+    { text: "end", offset: 2100.0, duration: 3.0 },
+  ];
+  const durSec = computeDurationSeconds(segs);
+  assert(
+    Math.abs(durSec - 2103.0) < 0.1,
+    `float-seconds: 2100+3 = 2103 sec: got ${durSec}`,
+  );
 }
 
 // ─── Optional live test ───────────────────────────────────────────────────────

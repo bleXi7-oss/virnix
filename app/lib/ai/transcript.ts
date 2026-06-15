@@ -110,7 +110,7 @@ export async function getTranscriptFull(
     }
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     const durationSec = Math.ceil((wordCount / 130) * 60);
-    console.log(`[virnix-transcript] supadata ok chars=${text.length} elapsed=${elapsedMs}ms`);
+    console.log(`[virnix-transcript] supadata ok chars=${text.length} source=plaintext duration_sec=${durationSec} duration_min=${Math.round(durationSec / 60)} elapsed=${elapsedMs}ms`);
     return { transcript: text, timestampedTranscript: text, durationSec, ...langMeta };
   }
 
@@ -131,7 +131,7 @@ export async function getTranscriptFull(
   const durationSec = computeDurationSeconds(segments);
 
   console.log(
-    `[virnix-transcript] supadata ok chars=${transcript.length} elapsed=${elapsedMs}ms`
+    `[virnix-transcript] supadata ok chars=${transcript.length} source=segments duration_sec=${Math.round(durationSec)} duration_min=${Math.round(durationSec / 60)} elapsed=${elapsedMs}ms`
   );
 
   return { transcript, timestampedTranscript, durationSec, ...langMeta };
@@ -211,17 +211,43 @@ export async function diagnoseTranscript(youtubeUrl: string): Promise<Transcript
 
 function computeDurationSeconds(segments: RawSegment[]): number {
   if (!segments || segments.length === 0) return 0;
+  // Unit detection uses the first 20 segments only. Checking ALL segments (segments.some)
+  // fails when a late segment has floating-point imprecision in ms values (e.g., 2097000.4ms
+  // from YouTube→ms conversion), which would misclassify the entire batch as seconds and
+  // inflate a 35-min video's duration to 583 hours (2,097,000 seconds).
+  const detectSample = segments.slice(0, 20);
   const isMs = (() => {
-    if (segments.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
-    const sample = segments.filter((s) => s.duration > 0).slice(0, 10);
+    if (detectSample.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
+    const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
     if (!sample.length) return true;
     const avg = sample.reduce((sum, s) => sum + s.duration, 0) / sample.length;
     return avg > 100;
   })();
   const last = segments[segments.length - 1];
-  const offsetSec = isMs ? last.offset / 1000 : last.offset;
-  const durSec = isMs ? last.duration / 1000 : last.duration;
-  return offsetSec + durSec;
+  const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;
+  const lastDurSec   = isMs ? last.duration / 1000 : last.duration;
+  let durationSec = lastOffsetSec + lastDurSec;
+  // Outlier guard: compilation/Essentials videos occasionally have a terminal segment
+  // whose offset is from the original source episode (e.g., a 35-min Huberman Lab
+  // Essentials clip that ends at minute 130 of the source podcast). If the final end
+  // time is >3× the 90th-percentile end time of all segments, treat it as an outlier
+  // and use the 90th-percentile value instead.
+  if (segments.length >= 10) {
+    const allEndSec = segments
+      .map((s) => (isMs ? s.offset / 1000 : s.offset) + (isMs ? s.duration / 1000 : s.duration))
+      .sort((a, b) => a - b);
+    const p90EndSec = allEndSec[Math.floor(allEndSec.length * 0.90)];
+    if (durationSec > p90EndSec * 3) {
+      console.warn(
+        `[virnix-duration] outlier last segment: last_sec=${Math.round(durationSec)} p90_sec=${Math.round(p90EndSec)} — using p90`
+      );
+      durationSec = p90EndSec;
+    }
+  }
+  console.log(
+    `[virnix-duration] segments=${segments.length} isMs=${isMs} duration_sec=${Math.round(durationSec)} duration_min=${Math.round(durationSec / 60)}`
+  );
+  return durationSec;
 }
 
 function cleanText(raw: string): string {
