@@ -27,6 +27,7 @@ import {
   isNoiseHeavy,
   isDisplayQualityHook,
   isGenuineReframeConcrete,
+  isStandaloneReframeClaim,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -65,12 +66,15 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         const scored = scoreMoment(cleanText);
         // Gate 4: minimum confidence threshold.
         if (scored.score < MIN_SCORE_THRESHOLD) return [];
-        // Gate 5: mechanism_reframe requires concrete educational content —
-        // causal language, named mechanism vocabulary, or experiment language.
-        // "Not just" / "actually" fire constantly on lecture transcripts.
-        // Hard-reject on failure — no downgrade fallback. Fewer Strongest
-        // Moments is always safer than showing generic lecture fragments.
-        if (scored.momentType === "mechanism_reframe" && !isGenuineReframeConcrete(hookSentence)) {
+        // Gate 5: mechanism_reframe requires (a) concrete educational content
+        // AND (b) a short, standalone claim — not a transcript continuation
+        // fragment or lecture-filler phrase. Hard-reject on either failure.
+        // Fewer Strongest Moments is safer than showing "This isn't what you
+        // think." on generic lecture text.
+        if (
+          scored.momentType === "mechanism_reframe" &&
+          (!isGenuineReframeConcrete(hookSentence) || !isStandaloneReframeClaim(hookSentence))
+        ) {
           return [];
         }
         // Resolve display type: validation_hook without genuine validation

@@ -729,7 +729,7 @@ function resolveDisplayType(scoredType, hookSentence) {
 // mechanism_reframe and generate fake "This isn't what you think." prefixes on
 // generic continuation fragments ("really going to focus on the actions...").
 const REFRAME_CAUSAL_RE =
-  /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?))\b/i;
+  /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?)|reduces?|increases?|impairs?|boosts?|activates?|suppresses?|inhibits?)\b/i;
 
 const REFRAME_MECHANISM_RE =
   /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
@@ -743,6 +743,25 @@ function isGenuineReframeConcrete(hookSentence) {
     REFRAME_MECHANISM_RE.test(hookSentence) ||
     REFRAME_EXPERIMENT_RE.test(hookSentence)
   );
+}
+
+// mirrors isStandaloneReframeClaim from moment-text-cleaner.ts
+function isStandaloneReframeClaim(hookSentence) {
+  const trimmed = hookSentence.trim();
+  if (!trimmed) return false;
+  if (/^[a-z]/.test(trimmed)) return false;
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 50) return false;
+  const lower = trimmed.toLowerCase();
+  const FILLER = [
+    "let's talk about", "let me talk about", "soon you'll understand",
+    "as i mentioned", "i'll just tell you", "so okay", "this is where it gets",
+    "what i want to do", "what we're going to", "i want you to",
+    "so what i'm saying", "what i mean by", "and what that means is",
+    "what that means is", "the goal of today", "in today's episode",
+  ];
+  if (FILLER.some((p) => lower.includes(p))) return false;
+  return true;
 }
 
 // ─── CONTENT-MOMENT-QA-I: isGenuineReframeConcrete tests ─────────────────────
@@ -1392,6 +1411,122 @@ assert(
   isGenuineReframeConcrete("Acetylcholine marks the error, dopamine helps wire the correction"),
   "QA-L: neurotransmitter names → Gate 5 passes",
 );
+
+// ─── CONTENT-MOMENT-QA-M: standalone claim gate ──────────────────────────────
+// Production retest after CONTENT-MOMENT-QA-L (02da2ca) on jrIS_RQJmCU still
+// showed fake reframe moments because isGenuineReframeConcrete() passed on hook
+// sentences that contained mechanism vocabulary (e.g. "dopamine") within a long
+// window but whose hook sentence itself was a continuation fragment starting
+// lowercase. Fix: Gate 5 now requires BOTH isGenuineReframeConcrete AND
+// isStandaloneReframeClaim. Either failing → hard reject.
+
+console.log("\nCONTENT-MOMENT-QA-M — isStandaloneReframeClaim: bad hooks rejected");
+
+// Production failures from jrIS_RQJmCU — lowercase continuation fragments:
+assert(
+  !isStandaloneReframeClaim("don't like working hard some people do but most people work hard in order to achieve some end goal"),
+  "QA-M: lowercase start 'don't like working hard...' → standalone claim REJECTED",
+);
+assert(
+  !isStandaloneReframeClaim("do this very hard thing and I'm going to push and push and push and push for that end goal"),
+  "QA-M: lowercase start 'do this very hard thing...' → standalone claim REJECTED",
+);
+// Pre-existing production failures — also caught by lowercase start:
+assert(
+  !isStandaloneReframeClaim("really going to focus on the actions the motor commands"),
+  "QA-M: 'really going to focus...' → standalone claim REJECTED (lowercase)",
+);
+assert(
+  !isStandaloneReframeClaim("meaning balance programs but not just for learning motor commands"),
+  "QA-M: 'meaning balance programs...' → standalone claim REJECTED (lowercase)",
+);
+assert(
+  !isStandaloneReframeClaim("likelihood of performing that habit regularly and effectively"),
+  "QA-M: 'likelihood of performing...' → standalone claim REJECTED (lowercase)",
+);
+assert(
+  !isStandaloneReframeClaim("particular days of the week and simply do four or five other activities"),
+  "QA-M: 'particular days of the week...' → standalone claim REJECTED (lowercase)",
+);
+assert(
+  !isStandaloneReframeClaim("top of one another or you can use them individually"),
+  "QA-M: 'top of one another...' → standalone claim REJECTED (lowercase)",
+);
+
+console.log("\nCONTENT-MOMENT-QA-M — isStandaloneReframeClaim: filler phrase rejection");
+assert(
+  !isStandaloneReframeClaim("Let's talk about why dopamine is misunderstood"),
+  "QA-M: 'let's talk about' filler → REJECTED",
+);
+assert(
+  !isStandaloneReframeClaim("This is where it gets interesting with cortisol levels"),
+  "QA-M: 'this is where it gets' filler → REJECTED",
+);
+assert(
+  !isStandaloneReframeClaim("As I mentioned earlier, sleep architecture is disrupted"),
+  "QA-M: 'as i mentioned' filler → REJECTED",
+);
+
+console.log("\nCONTENT-MOMENT-QA-M — isStandaloneReframeClaim: good hooks pass");
+assert(
+  isStandaloneReframeClaim("7 to 30 minutes of making errors triggers adult plasticity."),
+  "QA-M: digit start, short, no filler → PASS",
+);
+assert(
+  isStandaloneReframeClaim("Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally."),
+  "QA-M: uppercase start, short, no filler → PASS",
+);
+assert(
+  isStandaloneReframeClaim("Acetylcholine marks the error, dopamine helps wire the correction."),
+  "QA-M: uppercase start, short, no filler → PASS",
+);
+assert(
+  isStandaloneReframeClaim("Rewarding children for drawing reduces their intrinsic motivation."),
+  "QA-M: uppercase start, short, no filler → PASS",
+);
+assert(
+  isStandaloneReframeClaim("Dopamine must attach to effort, not only to the reward after effort."),
+  "QA-M: uppercase start, short, no filler → PASS",
+);
+
+console.log("\nCONTENT-MOMENT-QA-M — combined gate: bad hooks blocked, good hooks shown");
+{
+  // Every bad hook must fail at least one gate → Gate 5 rejects the window:
+  const badHooks = [
+    "don't like working hard some people do but most people work hard in order to achieve some end goal",
+    "do this very hard thing and I'm going to push and push and push and push for that end goal",
+    "really going to focus on the actions the motor commands",
+    "meaning balance programs but not just for learning motor commands",
+    "likelihood of performing that habit regularly and effectively",
+    "The idea is you write down six things that you would like to do every day for 21 days",
+    "particular days of the week and simply do four or five other activities",
+    "top of one another or you can use them individually",
+  ];
+  const badPass = badHooks.filter(
+    h => isGenuineReframeConcrete(h) && isStandaloneReframeClaim(h)
+  );
+  assert(
+    badPass.length === 0,
+    `QA-M: all 8 bad hooks rejected by combined gate (${badPass.length} incorrectly passed)`,
+  );
+}
+{
+  // Every good hook must pass both gates → Gate 5 allows the window:
+  const goodHooks = [
+    "7 to 30 minutes of making errors triggers adult plasticity.",
+    "Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally.",
+    "Acetylcholine marks the error, dopamine helps wire the correction.",
+    "Rewarding children for drawing reduces their intrinsic motivation.",
+    "Dopamine must attach to effort, not only to the reward after effort.",
+  ];
+  const goodPass = goodHooks.filter(
+    h => isGenuineReframeConcrete(h) && isStandaloneReframeClaim(h)
+  );
+  assert(
+    goodPass.length === 5,
+    `QA-M: all 5 good hooks pass combined gate (${goodPass.length}/5)`,
+  );
+}
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 

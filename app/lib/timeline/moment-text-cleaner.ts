@@ -272,7 +272,7 @@ export function isDisplayQualityHook(hookSentence: string): boolean {
 // "actually") without offering a genuine paradigm shift. These three categories
 // distinguish real educational insight from generic lecture continuation fragments.
 const REFRAME_CAUSAL_RE =
-  /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?))\b/i;
+  /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?)|reduces?|increases?|impairs?|boosts?|activates?|suppresses?|inhibits?)\b/i;
 
 const REFRAME_MECHANISM_RE =
   /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
@@ -282,8 +282,8 @@ const REFRAME_EXPERIMENT_RE =
 
 // Returns true when a hook sentence contains concrete educational content that
 // justifies the "This isn't what you think." prefix: causal language (triggers,
-// disrupts), named biological/psychological mechanism (dopamine, plasticity,
-// deep sleep, habit), or study/experiment language.
+// disrupts, reduces), named biological/psychological mechanism (dopamine, plasticity,
+// deep sleep), or study/experiment language.
 // Prevents weak mechanism_reframe signals ("not just", "actually") from
 // generating fake reframe moments on educational/talking-head videos.
 export function isGenuineReframeConcrete(hookSentence: string): boolean {
@@ -292,4 +292,48 @@ export function isGenuineReframeConcrete(hookSentence: string): boolean {
     REFRAME_MECHANISM_RE.test(hookSentence) ||
     REFRAME_EXPERIMENT_RE.test(hookSentence)
   );
+}
+
+// Returns true when a hook sentence is a short, complete, standalone claim —
+// not a transcript continuation fragment or lecture-transition filler.
+// Used as a second gate alongside isGenuineReframeConcrete for mechanism_reframe.
+// Mechanism/experiment vocabulary alone is not enough: the hook must also read
+// as a self-contained assertion that can open a clip without prior context.
+export function isStandaloneReframeClaim(hookSentence: string): boolean {
+  const trimmed = hookSentence.trim();
+  if (!trimmed) return false;
+
+  // Continuation fragments always start lowercase — they were clipped from
+  // mid-sentence transcript text. Standalone claims start with an uppercase
+  // letter or a leading digit (e.g. "7 to 30 minutes of making errors...").
+  if (/^[a-z]/.test(trimmed)) return false;
+
+  // Long clipped excerpts are window text pasted verbatim, not tight claims.
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount > 50) return false;
+
+  // Lecture-transition and filler phrases signal the sentence is an in-context
+  // setup or instruction, not a standalone claim.
+  const lower = trimmed.toLowerCase();
+  const FILLER: string[] = [
+    "let's talk about",
+    "let me talk about",
+    "soon you'll understand",
+    "as i mentioned",
+    "i'll just tell you",
+    "so okay",
+    "this is where it gets",
+    "what i want to do",
+    "what we're going to",
+    "i want you to",
+    "so what i'm saying",
+    "what i mean by",
+    "and what that means is",
+    "what that means is",
+    "the goal of today",
+    "in today's episode",
+  ];
+  if (FILLER.some((p) => lower.includes(p))) return false;
+
+  return true;
 }
