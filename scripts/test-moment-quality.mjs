@@ -28,6 +28,21 @@ function collapseRepeatedFragments(text) {
   return result.join(" ");
 }
 
+function collapseCommaRepetitions(text) {
+  const parts = text.split(/,\s+/).filter(Boolean);
+  if (parts.length <= 1) return text;
+  const seen = new Set();
+  const result = [];
+  for (const part of parts) {
+    const key = part.trim().toLowerCase().replace(/[.!?,;……]+$/, "").replace(/\s+/g, " ");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(part.trim());
+  }
+  if (result.length === parts.length) return text;
+  return result.join(", ");
+}
+
 const NOISE_WORD_RE =
   /^(n+o+|y+e+a+h?|w+o+|o+h+|a+h+|e+h+|u+g+h+|h+m+|h+e+h+|h+a+h?|h+a+|a+w+|w+o+w+|e+u+h?|u+m+|u+h+|e+r+)$/i;
 
@@ -1021,6 +1036,58 @@ assert(
 assert(
   isDisplayQualityHook("The team that shared answers moved faster than solo players"),
   "QA-D doesn't break: 'faster than' insight vocab still ALLOWED",
+);
+
+// ─── CONTENT-POLISH-QA-F: collapseCommaRepetitions ───────────────────────────
+
+console.log("\nCONTENT-POLISH-QA-F — collapseCommaRepetitions: comma-separated inline repetitions");
+
+// Core dedup: exact repeat collapses
+assert(
+  collapseCommaRepetitions(
+    "We KNEW it was the wrong one, We KNEW it was the wrong one..."
+  ) === "We KNEW it was the wrong one",
+  "QA-F: exact comma-repeat collapses to single phrase",
+);
+
+// Trailing non-duplicate clause is kept
+assert(
+  collapseCommaRepetitions(
+    "We KNEW it was the wrong one, We KNEW it was the wrong one, and there was no mistaking it."
+  ) === "We KNEW it was the wrong one, and there was no mistaking it.",
+  "QA-F: repeated prefix collapsed, unique suffix kept",
+);
+
+// Case-insensitive key comparison
+assert(
+  collapseCommaRepetitions("this matters, This matters, something else") ===
+    "this matters, something else",
+  "QA-F: case-insensitive dedup",
+);
+
+// Trailing punct stripped from key (phrase. vs phrase — same key)
+assert(
+  collapseCommaRepetitions("right now, right now...") === "right now",
+  "QA-F: trailing punct stripped before key comparison",
+);
+
+// No duplicates → returns unchanged original (including original spacing)
+assert(
+  collapseCommaRepetitions("apples, oranges, bananas") === "apples, oranges, bananas",
+  "QA-F: no duplicates → original string unchanged",
+);
+
+// Single part (no comma) → returns original unchanged
+assert(
+  collapseCommaRepetitions("No comma here at all") === "No comma here at all",
+  "QA-F: single fragment → original unchanged",
+);
+
+// Inline list with commas (real content) → no false dedup
+assert(
+  collapseCommaRepetitions("The real reason, which is often misunderstood, is the mechanism behind failure.") ===
+    "The real reason, which is often misunderstood, is the mechanism behind failure.",
+  "QA-F: non-duplicate comma-separated clauses → unchanged",
 );
 
 // ─── Summary ──────────────────────────────────────────────────────────────────

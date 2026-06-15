@@ -19,6 +19,29 @@ export function cleanWindowText(raw: string): string {
     .trim();
 }
 
+// Collapse duplicate comma-separated phrase fragments within a sentence.
+// YouTube caption buffering can produce "phrase, same phrase" inline patterns
+// that collapseRepeatedFragments (sentence-level) misses because commas are
+// not sentence terminators. Example:
+//   "We KNEW it was the wrong one, We KNEW it was the wrong one..."
+//   → "We KNEW it was the wrong one..."
+// Comparison is case-insensitive and strips trailing punctuation so
+// "phrase" and "phrase..." or "phrase," are treated as the same fragment.
+export function collapseCommaRepetitions(text: string): string {
+  const parts = text.split(/,\s+/).filter(Boolean);
+  if (parts.length <= 1) return text;
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const part of parts) {
+    const key = part.trim().toLowerCase().replace(/[.!?,;……]+$/, "").replace(/\s+/g, " ");
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(part.trim());
+  }
+  if (result.length === parts.length) return text;
+  return result.join(", ");
+}
+
 // Collapse duplicate adjacent sentences/fragments — catches YouTube subtitle
 // repetition where the same phrase appears twice with invisible spacing chars.
 // Clean the text first so invisible chars don't prevent sentence splitting.

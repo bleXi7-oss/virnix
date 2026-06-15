@@ -21,7 +21,7 @@ export const OUTPUT_LANGUAGES: ReadonlyArray<OutputLanguage> = [
     id: "sl",
     label: "Slovenian",
     promptName: "Slovenian",
-    nativeNote: "Use natural Slovenian creator and social media phrasing. Do not mix Slovenian with Croatian, Serbian, or Bosnian.",
+    nativeNote: "Use natural Slovenian creator and social media phrasing. Do not mix Slovenian with Croatian, Serbian, or Bosnian. Do NOT use the English word 'Transcript' in Slovenian output — use 'prepis', 'vsebina', or 'iz posnetka' instead. For English 'mannequin(s)': use 'mannequin' / 'mannequini' or 'lutka' / 'lutke' (display dummy). Do NOT use 'manekenka' / 'manekenke' / 'manekenkami' — those mean fashion model(s), not display mannequins.",
   },
   {
     id: "hr",

@@ -537,6 +537,49 @@ assert(!computeHideHook("Bu içerik üretkenlik hakkında konuşuyor.", "tr", "a
 // Turkish Latin-script + mismatch → hide (lang metadata fires)
 assert(computeHideHook("Bu içerik Türkçe bir videodur.", "tr", "sl"), "Turkish Latin hook + tr/sl → hide (lang mismatch)");
 
+// ─── CONTENT-POLISH-QA-F: Slovenian nativeNote rules ────────────────────────
+// Mirror the Slovenian nativeNote from app/lib/languages/options.ts.
+// These tests verify the note contains the required prompt-engineering guards
+// so that if the string is ever edited, the regression is immediately visible.
+
+const SLOVENIAN_NATIVE_NOTE =
+  "Use natural Slovenian creator and social media phrasing. Do not mix Slovenian with Croatian, Serbian, or Bosnian. Do NOT use the English word 'Transcript' in Slovenian output — use 'prepis', 'vsebina', or 'iz posnetka' instead. For English 'mannequin(s)': use 'mannequin' / 'mannequini' or 'lutka' / 'lutke' (display dummy). Do NOT use 'manekenka' / 'manekenke' / 'manekenkami' — those mean fashion model(s), not display mannequins.";
+
+console.log("\nCONTENT-POLISH-QA-F — Slovenian nativeNote guards");
+
+assert(
+  SLOVENIAN_NATIVE_NOTE.includes("Transcript") &&
+    SLOVENIAN_NATIVE_NOTE.includes("prepis"),
+  "QA-F: Slovenian note bans English 'Transcript' and offers 'prepis' alternative",
+);
+
+assert(
+  SLOVENIAN_NATIVE_NOTE.includes("vsebina") &&
+    SLOVENIAN_NATIVE_NOTE.includes("iz posnetka"),
+  "QA-F: Slovenian note includes 'vsebina' and 'iz posnetka' alternatives",
+);
+
+assert(
+  SLOVENIAN_NATIVE_NOTE.includes("mannequin") &&
+    SLOVENIAN_NATIVE_NOTE.includes("lutka"),
+  "QA-F: Slovenian note includes mannequin translation hint with 'lutka'",
+);
+
+assert(
+  SLOVENIAN_NATIVE_NOTE.includes("manekenka"),
+  "QA-F: Slovenian note names 'manekenka' as the word to AVOID",
+);
+
+assert(
+  SLOVENIAN_NATIVE_NOTE.includes("manekenkami"),
+  "QA-F: Slovenian note names 'manekenkami' as the word to AVOID",
+);
+
+assert(
+  !SLOVENIAN_NATIVE_NOTE.startsWith("manekenk"),
+  "QA-F: Slovenian note does not recommend 'manekenk-' forms as the correct translation",
+);
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

@@ -21,6 +21,7 @@ export type { MomentScore } from "./moment-scoring";
 export {
   cleanWindowText,
   collapseRepeatedFragments,
+  collapseCommaRepetitions,
   countMeaningfulWords,
   countUniqueMeaningfulWords,
   isLowSemanticContent,
