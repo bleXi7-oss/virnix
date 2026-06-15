@@ -42,12 +42,19 @@ function cleanMomentDisplayText(rawText) {
 function collapseCommaRepetitions(text) {
   const parts = text.split(/,\s+/).filter(Boolean);
   if (parts.length <= 1) return text;
-  const seen = new Set();
+  const seenKeys = [];
   const result = [];
   for (const part of parts) {
     const key = part.trim().toLowerCase().replace(/[.!?,;……]+$/, "").replace(/\s+/g, " ");
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    if (!key) continue;
+    const covered = seenKeys.some((k) => {
+      if (k === key) return true;
+      if (!k.endsWith(key)) return false;
+      const boundary = k[k.length - key.length - 1];
+      return boundary === " ";
+    });
+    if (covered) continue;
+    seenKeys.push(key);
     result.push(part.trim());
   }
   if (result.length === parts.length) return text;
@@ -1154,6 +1161,56 @@ assert(
   collapseCommaRepetitions("The real reason, which is often misunderstood, is the mechanism behind failure.") ===
     "The real reason, which is often misunderstood, is the mechanism behind failure.",
   "QA-F: non-duplicate comma-separated clauses → unchanged",
+);
+
+// ─── CONTENT-POLISH-QA-H: suffix-aware collapseCommaRepetitions ──────────────
+// Production failure: "I used to believe We KNEW it was the wrong one, We KNEW
+// it was the wrong one, but we were TRAPPED here!" still showed repeated phrase
+// after QA-F/QA-G because exact-match dedup missed the case where the FIRST
+// part is a longer phrase that ENDS WITH the repeated key ("I used to believe X"
+// ends with "X", so second occurrence of bare "X" should be removed).
+// Fix: use seenKeys array + suffix check (same as collapseRepeatedFragments).
+
+console.log("\nCONTENT-POLISH-QA-H — suffix-aware collapseCommaRepetitions");
+
+// QA-H Case 1: prefix-embedded repeated subphrase
+assert(
+  cleanMomentDisplayText(
+    "I used to believe We KNEW it was the wrong one, We KNEW it was the wrong one, but we were TRAPPED here!"
+  ) === "I used to believe We KNEW it was the wrong one, but we were TRAPPED here!",
+  "QA-H: suffix-aware collapseCommaRepetitions removes embedded repeated subphrase",
+);
+
+// QA-H Case 2: production source preview — same pattern without "I used to believe" prefix
+assert(
+  cleanMomentDisplayText(
+    "We KNEW it was the wrong one, We KNEW it was the wrong one, but we were TRAPPED here! HAHA HAA"
+  ) === "We KNEW it was the wrong one, but we were TRAPPED here! HAHA HAA",
+  "QA-H: exact duplicate comma-part still collapsed (regression from QA-F)",
+);
+
+// QA-H Regression 1: QA-E bad moment still rejected (suffix check must not over-match)
+{
+  const raw = "that just made it a little weird, but-- that just made it a little weird, but-- There's no sweating.";
+  const cleaned = collapseRepeatedFragments(cleanWindowText(raw));
+  const hook = findFirstMeaningfulSentence(cleaned, 5);
+  assert(
+    !isDisplayQualityHook(hook),
+    "QA-H regression: QA-E bad moment '...but-- ...but-- There's no sweating.' still rejected",
+  );
+}
+
+// QA-H Regression 2: non-suffix comma parts not incorrectly dropped
+assert(
+  collapseCommaRepetitions("apples, oranges, bananas") === "apples, oranges, bananas",
+  "QA-H regression: non-duplicate comma parts not incorrectly dropped",
+);
+
+// QA-H Regression 3: real non-overlapping clauses kept intact
+assert(
+  collapseCommaRepetitions("The real reason, which is often misunderstood, is the mechanism behind failure.") ===
+    "The real reason, which is often misunderstood, is the mechanism behind failure.",
+  "QA-H regression: non-duplicate comma-separated clauses unchanged",
 );
 
 // ─── Summary ──────────────────────────────────────────────────────────────────

@@ -30,12 +30,21 @@ export function cleanWindowText(raw: string): string {
 export function collapseCommaRepetitions(text: string): string {
   const parts = text.split(/,\s+/).filter(Boolean);
   if (parts.length <= 1) return text;
-  const seen = new Set<string>();
+  const seenKeys: string[] = [];
   const result: string[] = [];
   for (const part of parts) {
     const key = part.trim().toLowerCase().replace(/[.!?,;……]+$/, "").replace(/\s+/g, " ");
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    if (!key) continue;
+    // Exact duplicate OR a prior part ends with this key at a word boundary.
+    // Catches "I used to believe [X], [X]" where [X] is a suffix of the first part.
+    const covered = seenKeys.some((k) => {
+      if (k === key) return true;
+      if (!k.endsWith(key)) return false;
+      const boundary = k[k.length - key.length - 1];
+      return boundary === " ";
+    });
+    if (covered) continue;
+    seenKeys.push(key);
     result.push(part.trim());
   }
   if (result.length === parts.length) return text;
