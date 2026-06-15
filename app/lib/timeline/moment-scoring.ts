@@ -174,7 +174,7 @@ const PLATFORM_FIT: Record<MomentType, PlatformFit[]> = {
   transformation_moment: ["youtube", "tiktok", "reels"],
 };
 
-const REASONS: Record<MomentType, string> = {
+export const REASONS: Record<MomentType, string> = {
   validation_hook:
     "Removes self-blame before delivering insight — validation hook formula",
   mechanism_reframe:
@@ -196,3 +196,11 @@ const REASONS: Record<MomentType, string> = {
   transformation_moment:
     "Identity-level aspiration — viewer sees themselves post-transformation",
 };
+
+// Returns the display rationale string for a given moment type.
+// Use with the RESOLVED display type (after resolveDisplayType), not the
+// raw scored type — so a downgraded validation_hook → quote_moment shows
+// the quote_moment rationale, not the validation_hook one.
+export function getDisplayReason(momentType: MomentType): string {
+  return REASONS[momentType] ?? "";
+}

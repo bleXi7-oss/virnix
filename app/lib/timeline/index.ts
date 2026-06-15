@@ -16,7 +16,7 @@ export {
   detectTimestampedLines,
   groupLinesIntoSegments,
 } from "./transcript-timestamps";
-export { scoreMoment } from "./moment-scoring";
+export { scoreMoment, getDisplayReason } from "./moment-scoring";
 export type { MomentScore } from "./moment-scoring";
 export {
   cleanWindowText,

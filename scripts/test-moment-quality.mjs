@@ -655,9 +655,31 @@ function countUniqueMeaningfulWords(text) {
 function isDisplayQualityHook(hookSentence) {
   if (/\?$/.test(hookSentence.trim())) return false;
   if (hasInsightVocabulary(hookSentence)) return true;
-  // Use unique count — prevents "phrase-- same phrase" YouTube buffering artifacts
-  // from gaming the word-count fallback (10 raw tokens → only 5 unique).
+  // CONTENT-MOMENT-QA-E: "--" in a hook is a YouTube caption buffering artifact.
+  // Trailing fragments can inject new unique words that push the unique word count
+  // past ≥7 even though the core phrase is garbage (e.g. "but-- but-- There's no sweating."
+  // has 8 unique words because "theres"+"sweating" are new after the duplicate fragment).
+  if (hookSentence.includes("--")) return false;
   return countUniqueMeaningfulWords(hookSentence) >= 7;
+}
+
+// ─── CONTENT-MOMENT-QA-E mirrors ─────────────────────────────────────────────
+// REASONS mirrors moment-scoring.ts REASONS record — keep in sync.
+const REASONS = {
+  validation_hook:       "Removes self-blame before delivering insight — validation hook formula",
+  mechanism_reframe:     "Reframes a concept the reader thinks they understand — gold dataset #1 viral pattern",
+  contrarian_insight:    "Challenges assumed truth — forces viewer to re-evaluate their position",
+  emotional_confession:  "Vulnerability builds faster trust than credentials",
+  story_turning_point:   "Narrative arc with clear before/after — completion loop opens",
+  educational_gem:       "High information density + mechanism clarity — save-worthy",
+  quote_moment:          "Borrowed authority + quotable format — high share potential",
+  fomo_loss_frame:       "Loss framing activates urgency 2x stronger than gain framing",
+  authority_proof:       "Experience-backed claim — credibility without asserting credentials",
+  transformation_moment: "Identity-level aspiration — viewer sees themselves post-transformation",
+};
+
+function getDisplayReason(momentType) {
+  return REASONS[momentType] ?? "";
 }
 
 function resolveDisplayType(scoredType, hookSentence) {
@@ -854,6 +876,126 @@ console.log("\nCONTENT-MOMENT-QA-D — full pipeline regression (cleanWindowText
     `REGRESSION pipeline: coaching question rejected end-to-end (hook: '${hook3.slice(0, 60)}')`,
   );
 }
+
+// ─── CONTENT-MOMENT-QA-E — regression tests ──────────────────────────────────
+// Production smoke test after QA-D (commit 7626fce) still showed:
+// "that just made it a little weird, but-- that just made it a little weird, but-- There's no sweating."
+// Root cause:
+//   • collapseRepeatedFragments splits on terminal punct; "--" is NOT a terminator
+//     so the whole string is one sentence fragment.
+//   • The duplicate "but-- fragment" is not removed by collapseRepeatedFragments.
+//   • "There's no sweating." appends 2 NEW unique words ("theres", "sweating")
+//     so countUniqueMeaningfulWords returns 8 (≥7 threshold) → gamed QA-D fix.
+// Fix: reject hook sentences containing "--" unless insight vocab is present.
+// Rationale bug:
+//   • scoreMoment() scored the full 30s window as validation_hook (window had
+//     validation signals elsewhere). resolveDisplayType downgraded to quote_moment.
+//   • whyItWorks used scored.reason (validation_hook's reason) instead of the
+//     downgraded type's reason → "Removes self-blame..." shown for game chatter.
+// Fix: use getDisplayReason(displayType) in moment-detector.ts.
+
+const QA_E_BAD_1 = "that just made it a little weird, but-- that just made it a little weird, but-- There's no sweating.";
+
+console.log("\nCONTENT-MOMENT-QA-E — isDisplayQualityHook REJECTS production bad moment with trailing phrase");
+assert(
+  !isDisplayQualityHook(QA_E_BAD_1),
+  "REGRESSION QA-E: '...but-- ...but-- There's no sweating.' → has -- → REJECTED",
+);
+assert(
+  !hasInsightVocabulary(QA_E_BAD_1),
+  "QA-E bad moment has no insight vocab (confirming -- check is the gate, not insight)",
+);
+assert(
+  countUniqueMeaningfulWords(QA_E_BAD_1) >= 7,
+  "QA-E bad moment has 8 unique words — this is why the QA-D unique-count fix alone was insufficient",
+);
+
+console.log("\nCONTENT-MOMENT-QA-E — full pipeline regression");
+{
+  const raw = QA_E_BAD_1;
+  const cleaned = collapseRepeatedFragments(cleanWindowText(raw));
+  const hook = findFirstMeaningfulSentence(cleaned, 5);
+  assert(
+    hook.includes("--"),
+    `QA-E pipeline: hookSentence still contains '--' after cleaning (hook: '${hook.slice(0, 70)}')`,
+  );
+  assert(
+    !isDisplayQualityHook(hook),
+    `QA-E pipeline: '...but-- ...but-- There's no sweating.' rejected end-to-end`,
+  );
+}
+
+console.log("\nCONTENT-MOMENT-QA-E — 'There's no sweating' repetition rejected");
+{
+  // After collapseRepeatedFragments, the duplicate is removed → "There's no sweating."
+  // findFirstMeaningfulSentence with min=5 finds only 2 meaningful words → falls back
+  // to the first sentence regex → "There's no sweating."
+  // isDisplayQualityHook: not question, no insight vocab, no --, 2 unique < 7 → REJECT
+  const raw = "There's no sweating. There's no sweating.";
+  const cleaned = collapseRepeatedFragments(cleanWindowText(raw));
+  const hook = findFirstMeaningfulSentence(cleaned, 5);
+  assert(
+    !isDisplayQualityHook(hook),
+    `REGRESSION: 'There's no sweating. There's no sweating.' → after dedup → ${countUniqueMeaningfulWords(hook)} unique words → REJECTED`,
+  );
+}
+
+console.log("\nCONTENT-MOMENT-QA-E — getDisplayReason uses the RESOLVED type, not the raw scored type");
+assert(
+  getDisplayReason("quote_moment") === REASONS["quote_moment"],
+  "quote_moment reason is correct after type downgrade",
+);
+assert(
+  getDisplayReason("quote_moment") !== REASONS["validation_hook"],
+  "REGRESSION: 'Removes self-blame...' NOT assigned to downgraded quote_moment",
+);
+assert(
+  !getDisplayReason("quote_moment").includes("self-blame"),
+  "quote_moment rationale never references self-blame (validation hook concept)",
+);
+assert(
+  getDisplayReason("validation_hook") === REASONS["validation_hook"],
+  "genuine validation_hook keeps its own rationale when type is NOT downgraded",
+);
+assert(
+  getDisplayReason("educational_gem") === REASONS["educational_gem"],
+  "non-validation types return their own rationale unchanged",
+);
+
+console.log("\nCONTENT-MOMENT-QA-E — no padding: all three production bad moments rejected");
+{
+  const productionBadMoments = [
+    QA_E_BAD_1,
+    "I was team Vanoss over Speedy-- I was team Vanoss over Speedy-- nooOO!!",
+    "that just made it a little weird, but-- that just made it a little weird...",
+    "So when he did that breath, what'd you notice?",
+    "There's no sweating.",
+  ];
+  const passCount = productionBadMoments.filter(isDisplayQualityHook).length;
+  assert(
+    passCount === 0,
+    `no-padding: all ${productionBadMoments.length} production garbage strings rejected (${passCount} incorrectly passed)`,
+  );
+}
+
+console.log("\nCONTENT-MOMENT-QA-E — good moments unaffected by -- gate (no -- in genuine hooks)");
+assert(
+  isDisplayQualityHook("Someone advanced by watching where others submitted answers"),
+  "QA-E doesn't break: 7-unique-word sentence (no --) still ALLOWED",
+);
+assert(
+  isDisplayQualityHook("You have to trust in something — your gut, destiny, life, karma, whatever."),
+  "QA-E doesn't break: em-dash (—) is NOT double-hyphen (--) → still ALLOWED",
+);
+assert(
+  isDisplayQualityHook("The real reason — which nobody told you — is that motivation wasn't the problem."),
+  "QA-E: insight vocab takes priority; — (em-dash) ≠ -- (double-hyphen) → ALLOWED",
+);
+// Note: a sentence with insight vocab that genuinely contains "--" still passes via insight vocab
+assert(
+  isDisplayQualityHook("The real reason -- and nobody tells you this -- is that motivation doesn't work."),
+  "QA-E: insight vocab ('the real reason') overrides -- gate → ALLOWED",
+);
 
 console.log("\nCONTENT-MOMENT-QA-D — good moments still pass (unique count doesn't penalise genuine long sentences)");
 assert(

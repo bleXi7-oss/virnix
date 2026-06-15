@@ -20,7 +20,7 @@ import {
   formatTimestamp,
   type TranscriptSegment,
 } from "./transcript-timestamps";
-import { scoreMoment } from "./moment-scoring";
+import { scoreMoment, getDisplayReason } from "./moment-scoring";
 import {
   cleanWindowText,
   collapseRepeatedFragments,
@@ -76,7 +76,7 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
           momentType: displayType,
           platformFit: scored.platformFit,
           suggestedHook: buildSuggestedHook(hookSentence, displayType),
-          whyItWorks: scored.reason,
+          whyItWorks: getDisplayReason(displayType),
           emotionalTrigger: scored.emotionalTrigger,
           contentUse: CONTENT_USES[displayType] ?? "repurposable content moment",
           confidenceScore: scored.score,

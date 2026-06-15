@@ -187,21 +187,28 @@ export function hasInsightVocabulary(text: string): boolean {
 //
 // Passes when the sentence:
 //   a) contains insight vocabulary (causation/mechanism/scale/pain), OR
-//   b) has >= 7 UNIQUE meaningful words (uses unique count to prevent YouTube
-//      caption buffering artifacts from gaming the fallback — e.g.
-//      "phrase-- same phrase" has 10 raw tokens but only 5 unique)
+//   b) has >= 7 UNIQUE meaningful words AND contains no "--"
+//      (unique count prevents repeated-phrase inflation; "--" check blocks
+//       YouTube caption buffering artifacts like
+//       "phrase-- same phrase-- trailing bonus phrase" where extra trailing
+//       text adds new unique words beyond the repeated fragment)
 //
 // Always rejects questions (ends with "?") — questions without answers are
 // not useful as standalone clip openers for repurposed content.
 //
-// Rejects: "that just made it a little weird…"        (5 unique, no insight)
-//          "I was team Vanoss over Speedy-- [dup]"    (5 unique, no insight)
-//          "So when he did that breath, what'd you notice?" (question)
-// Allows:  "500 million subscribers still doesn't feel real" (insight vocab)
-//          "The team moved faster than solo players"   (insight vocab)
-//          "Someone advanced by watching where others submitted answers" (7 unique)
+// Rejects: "that just made it a little weird…"                      (5 unique)
+//          "I was team Vanoss over Speedy-- [dup]"                  (has --)
+//          "...but-- ...but-- There's no sweating."                 (has --)
+//          "So when he did that breath, what'd you notice?"         (question)
+// Allows:  "500 million subscribers still doesn't feel real"        (insight)
+//          "The team moved faster than solo players"                 (insight)
+//          "Someone advanced by watching where others submitted answers" (7 unique, no --)
 export function isDisplayQualityHook(hookSentence: string): boolean {
   if (/\?$/.test(hookSentence.trim())) return false;
   if (hasInsightVocabulary(hookSentence)) return true;
+  // "--" in a hook is a YouTube caption buffering artifact. Trailing fragments
+  // can inject new unique words (e.g. "There's no sweating.") that push the
+  // unique word count past the ≥7 threshold even though the core phrase is garbage.
+  if (hookSentence.includes("--")) return false;
   return countUniqueMeaningfulWords(hookSentence) >= 7;
 }
