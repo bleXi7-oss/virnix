@@ -10,6 +10,7 @@ export interface MomentScore {
   emotionalTrigger: string;
   platformFit: PlatformFit[];
   reason: string;
+  allScores: Record<MomentType, number>;
 }
 
 // ─── Signal word lists per moment type ───────────────────────────────────────
@@ -98,7 +99,12 @@ function countSignals(text: string, signals: readonly string[]): number {
 
 export function scoreMoment(text: string): MomentScore {
   if (!text.trim()) {
-    return { score: 0, momentType: "educational_gem", emotionalTrigger: "", platformFit: ["youtube"], reason: "" };
+    const empty: Record<MomentType, number> = {
+      validation_hook: 0, mechanism_reframe: 0, contrarian_insight: 0,
+      emotional_confession: 0, story_turning_point: 0, educational_gem: 0,
+      quote_moment: 0, fomo_loss_frame: 0, authority_proof: 0, transformation_moment: 0,
+    };
+    return { score: 0, momentType: "educational_gem", emotionalTrigger: "", platformFit: ["youtube"], reason: "", allScores: empty };
   }
 
   const raw: Record<MomentType, number> = {
@@ -143,6 +149,7 @@ export function scoreMoment(text: string): MomentScore {
     emotionalTrigger: EMOTIONAL_TRIGGERS[momentType],
     platformFit: PLATFORM_FIT[momentType],
     reason: REASONS[momentType],
+    allScores: raw,
   };
 }
 
@@ -203,4 +210,12 @@ export const REASONS: Record<MomentType, string> = {
 // the quote_moment rationale, not the validation_hook one.
 export function getDisplayReason(momentType: MomentType): string {
   return REASONS[momentType] ?? "";
+}
+
+export function getEmotionalTrigger(type: MomentType): string {
+  return EMOTIONAL_TRIGGERS[type] ?? "";
+}
+
+export function getPlatformFit(type: MomentType): PlatformFit[] {
+  return PLATFORM_FIT[type] ?? [];
 }

@@ -20,7 +20,7 @@ import {
   formatTimestamp,
   type TranscriptSegment,
 } from "./transcript-timestamps";
-import { scoreMoment, getDisplayReason } from "./moment-scoring";
+import { scoreMoment, getDisplayReason, getEmotionalTrigger, getPlatformFit } from "./moment-scoring";
 import {
   cleanMomentDisplayText,
   isLowSemanticContent,
@@ -67,12 +67,30 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         if (scored.score < MIN_SCORE_THRESHOLD) return [];
         // Gate 5: mechanism_reframe requires concrete educational content.
         // Educational/talking-head transcripts trigger weak reframe signals
-        // ("not just", "actually") constantly, producing fake "This isn't what
-        // you think." prefixes on plain lecture continuation fragments like
-        // "really going to focus on..." or "particular days of the week...".
-        // Reject these entirely — prefer zero moments over fake moments.
+        // ("not just", "actually") constantly. When the top-scored type fails
+        // this gate, fall back to the next-best type above MIN_SCORE_THRESHOLD
+        // rather than discarding the window entirely.
         if (scored.momentType === "mechanism_reframe" && !isGenuineReframeConcrete(hookSentence)) {
-          return [];
+          const fallback = (Object.entries(scored.allScores) as [MomentType, number][])
+            .filter(([type, s]) => type !== "mechanism_reframe" && s >= MIN_SCORE_THRESHOLD)
+            .sort(([, a], [, b]) => b - a)[0];
+          if (!fallback) return [];
+          const [fallbackType, fallbackScore] = fallback;
+          const fallbackDisplayType = resolveDisplayType(fallbackType, hookSentence);
+          return [{
+            id: `moment-${i}`,
+            startTime: win.startTime,
+            endTime: win.endTime,
+            title: MOMENT_TITLES[fallbackDisplayType] ?? "Strong Moment",
+            momentType: fallbackDisplayType,
+            platformFit: getPlatformFit(fallbackType),
+            suggestedHook: buildSuggestedHook(hookSentence, fallbackDisplayType),
+            whyItWorks: getDisplayReason(fallbackDisplayType),
+            emotionalTrigger: getEmotionalTrigger(fallbackType),
+            contentUse: CONTENT_USES[fallbackDisplayType] ?? "repurposable content moment",
+            confidenceScore: fallbackScore,
+            sourceTextPreview: trimToMeaningfulStart(cleanText).slice(0, 120),
+          }];
         }
         // Resolve display type: validation_hook without genuine validation
         // signals is downgraded to quote_moment so the label and prefix match.

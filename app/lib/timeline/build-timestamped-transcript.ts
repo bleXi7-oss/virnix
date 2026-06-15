@@ -20,13 +20,16 @@ export interface RawSegment {
 // Detects whether offset/duration values are in milliseconds or seconds.
 // srv3 segments are integers in ms (e.g. 3000 for 3s).
 // Classic XML segments are floats in seconds (e.g. 3.0 or 2.34).
-function detectUnit(segments: RawSegment[]): "ms" | "s" {
-  // Magnitude-based unit detection on the first 20 segments.
-  // Supadata returns ms-format offsets with float imprecision throughout (e.g. 3960.2ms),
-  // so decimal presence alone cannot determine the format — 3960.2 is ms, 3.2 is seconds.
-  // ms durations: 2000–5000; seconds durations: 2–5. Median > 100 → milliseconds.
-  const detectSample = segments.slice(0, 20);
-  const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
+//
+// Magnitude-based detection on the first 20 segments.
+// Supadata returns ms-format offsets with float imprecision throughout (e.g. 3960.2ms),
+// so decimal presence alone cannot determine the format — 3960.2 is ms, 3.2 is seconds.
+// ms durations cluster at 2000–5000; seconds durations cluster at 2–5.
+// Median > 100 → milliseconds.
+//
+// Exported so transcript.ts can share the same detection without duplicating logic.
+export function detectSegmentUnit(segments: RawSegment[]): "ms" | "s" {
+  const sample = segments.slice(0, 20).filter((s) => s.duration > 0).slice(0, 10);
   if (sample.length === 0) return "ms";
   const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
   const median = sorted[Math.floor(sorted.length / 2)];
@@ -65,7 +68,7 @@ function cleanText(text: string): string {
 export function buildTimestampedTranscript(segments: RawSegment[]): string {
   if (!segments || segments.length === 0) return "";
 
-  const unit = detectUnit(segments);
+  const unit = detectSegmentUnit(segments);
   const lines: string[] = [];
 
   for (const seg of segments) {

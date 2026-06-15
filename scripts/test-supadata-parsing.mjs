@@ -20,16 +20,18 @@ function cleanText(raw) {
     .trim();
 }
 
+// mirrors detectSegmentUnit from build-timestamped-transcript.ts
+function detectSegmentUnit(segments) {
+  const sample = segments.slice(0, 20).filter((s) => s.duration > 0).slice(0, 10);
+  if (sample.length === 0) return "ms";
+  const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  return median > 100 ? "ms" : "s";
+}
+
 function computeDurationSeconds(segments) {
   if (!segments || segments.length === 0) return 0;
-  const detectSample = segments.slice(0, 20);
-  const isMs = (() => {
-    const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
-    if (!sample.length) return true;
-    const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    return median > 100;
-  })();
+  const isMs = detectSegmentUnit(segments) === "ms";
   const last = segments[segments.length - 1];
   const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;
   const lastDurSec   = isMs ? last.duration / 1000 : last.duration;

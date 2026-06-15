@@ -745,6 +745,19 @@ function isGenuineReframeConcrete(hookSentence) {
   );
 }
 
+// ─── CONTENT-MOMENT-QA-J mirror: selectGate5Fallback ─────────────────────────
+// Mirrors Gate 5 fallback logic in moment-detector.ts.
+// When mechanism_reframe fails isGenuineReframeConcrete, the detector looks for
+// the next-best scoring type above MIN_SCORE_THRESHOLD rather than discarding.
+const MIN_SCORE_THRESHOLD = 10;
+
+function selectGate5Fallback(allScores) {
+  const fallback = Object.entries(allScores)
+    .filter(([type, s]) => type !== "mechanism_reframe" && s >= MIN_SCORE_THRESHOLD)
+    .sort(([, a], [, b]) => b - a)[0];
+  return fallback ?? null;
+}
+
 // ─── CONTENT-MOMENT-QA-I: isGenuineReframeConcrete tests ─────────────────────
 // Production failure: educational/talking-head videos (Huberman Lab Essentials)
 // generated fake "This isn't what you think." prefixes on generic lecture
@@ -1339,6 +1352,109 @@ assert(
     "The real reason, which is often misunderstood, is the mechanism behind failure.",
   "QA-H regression: non-duplicate comma-separated clauses unchanged",
 );
+
+// ─── CONTENT-MOMENT-QA-J: Gate 5 fallback (selectGate5Fallback) ──────────────
+// Production issue: when mechanism_reframe fires on a weak trigger ("not just",
+// "actually") but fails isGenuineReframeConcrete, the window was discarded even
+// if another moment type (e.g., contrarian_insight, emotional_confession) had a
+// genuine score above MIN_SCORE_THRESHOLD. Fix: fall back to the next-best type.
+
+console.log("\nCONTENT-MOMENT-QA-J — selectGate5Fallback returns best non-reframe type");
+
+// Case 1: contrarian_insight above threshold → selected as fallback
+{
+  const allScores = {
+    mechanism_reframe:    32,
+    contrarian_insight:   24,
+    validation_hook:       0,
+    emotional_confession:  0,
+    story_turning_point:   0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    authority_proof:       0,
+    transformation_moment: 0,
+  };
+  const result = selectGate5Fallback(allScores);
+  assert(result !== null, "QA-J case 1: contrarian_insight=24 above threshold → fallback found");
+  assert(result[0] === "contrarian_insight", `QA-J case 1: fallback type is contrarian_insight, got ${result?.[0]}`);
+  assert(result[1] === 24, `QA-J case 1: fallback score is 24, got ${result?.[1]}`);
+}
+
+// Case 2: all non-reframe types below threshold → null (window discarded)
+{
+  const allScores = {
+    mechanism_reframe:    32,
+    contrarian_insight:    8,
+    validation_hook:       0,
+    emotional_confession:  4,
+    story_turning_point:   0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    authority_proof:       0,
+    transformation_moment: 0,
+  };
+  const result = selectGate5Fallback(allScores);
+  assert(result === null, "QA-J case 2: all non-reframe below threshold → null (discard)");
+}
+
+// Case 3: multiple types above threshold → highest-scoring wins
+{
+  const allScores = {
+    mechanism_reframe:    48,
+    emotional_confession: 36,
+    story_turning_point:  14,
+    contrarian_insight:   12,
+    validation_hook:       0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    authority_proof:       0,
+    transformation_moment: 0,
+  };
+  const result = selectGate5Fallback(allScores);
+  assert(result !== null, "QA-J case 3: multiple above threshold → fallback found");
+  assert(result[0] === "emotional_confession", `QA-J case 3: highest non-reframe type is emotional_confession, got ${result?.[0]}`);
+  assert(result[1] === 36, `QA-J case 3: fallback score is 36, got ${result?.[1]}`);
+}
+
+// Case 4: type exactly at MIN_SCORE_THRESHOLD (10) → included
+{
+  const allScores = {
+    mechanism_reframe:    16,
+    authority_proof:      10,
+    contrarian_insight:    8,
+    validation_hook:       0,
+    emotional_confession:  0,
+    story_turning_point:   0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    transformation_moment: 0,
+  };
+  const result = selectGate5Fallback(allScores);
+  assert(result !== null, "QA-J case 4: type at exactly threshold=10 → included");
+  assert(result[0] === "authority_proof", `QA-J case 4: authority_proof=10 selected, got ${result?.[0]}`);
+}
+
+// Case 5: mechanism_reframe excluded even if no other types above threshold
+{
+  const allScores = {
+    mechanism_reframe:    48,
+    contrarian_insight:    0,
+    validation_hook:       0,
+    emotional_confession:  0,
+    story_turning_point:   0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    authority_proof:       0,
+    transformation_moment: 0,
+  };
+  const result = selectGate5Fallback(allScores);
+  assert(result === null, "QA-J case 5: only mechanism_reframe above threshold → null (no valid fallback)");
+}
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 

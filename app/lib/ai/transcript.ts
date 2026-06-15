@@ -1,5 +1,5 @@
 import { getYouTubeVideoId } from "../youtube";
-import { buildTimestampedTranscript } from "../timeline/build-timestamped-transcript";
+import { buildTimestampedTranscript, detectSegmentUnit } from "../timeline/build-timestamped-transcript";
 import type { RawSegment } from "../timeline/build-timestamped-transcript";
 
 export interface TranscriptResult {
@@ -211,22 +211,7 @@ export async function diagnoseTranscript(youtubeUrl: string): Promise<Transcript
 
 function computeDurationSeconds(segments: RawSegment[]): number {
   if (!segments || segments.length === 0) return 0;
-  // Magnitude-based unit detection on the first 20 segments.
-  // Supadata returns ms-format segments with floating-point imprecision throughout
-  // (e.g. every offset ends in .4, every duration ends in .2). Decimal presence alone
-  // cannot classify the format: 3960.2 looks like a float but is clearly milliseconds,
-  // while 3.2 is clearly seconds. Instead we use magnitude:
-  //   ms segment durations: 2000–5000 (YouTube subtitle segments at ms scale)
-  //   seconds segment durations: 2–5 (same clips at seconds scale)
-  // Median > 100 → milliseconds; ≤ 100 → seconds.
-  const detectSample = segments.slice(0, 20);
-  const isMs = (() => {
-    const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
-    if (!sample.length) return true;
-    const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)];
-    return median > 100;
-  })();
+  const isMs = detectSegmentUnit(segments) === "ms";
   const last = segments[segments.length - 1];
   const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;
   const lastDurSec   = isMs ? last.duration / 1000 : last.duration;
