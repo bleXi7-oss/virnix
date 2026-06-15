@@ -26,6 +26,7 @@ import {
   isLowSemanticContent,
   isNoiseHeavy,
   isDisplayQualityHook,
+  isGenuineReframeConcrete,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -64,6 +65,15 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         const scored = scoreMoment(cleanText);
         // Gate 4: minimum confidence threshold.
         if (scored.score < MIN_SCORE_THRESHOLD) return [];
+        // Gate 5: mechanism_reframe requires concrete educational content.
+        // Educational/talking-head transcripts trigger weak reframe signals
+        // ("not just", "actually") constantly, producing fake "This isn't what
+        // you think." prefixes on plain lecture continuation fragments like
+        // "really going to focus on..." or "particular days of the week...".
+        // Reject these entirely — prefer zero moments over fake moments.
+        if (scored.momentType === "mechanism_reframe" && !isGenuineReframeConcrete(hookSentence)) {
+          return [];
+        }
         // Resolve display type: validation_hook without genuine validation
         // signals is downgraded to quote_moment so the label and prefix match.
         const displayType = resolveDisplayType(scored.momentType, hookSentence);

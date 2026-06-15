@@ -722,6 +722,133 @@ function resolveDisplayType(scoredType, hookSentence) {
   return scoredType;
 }
 
+// ─── CONTENT-MOMENT-QA-I mirror: isGenuineReframeConcrete ────────────────────
+// Gate 5 in the pipeline: mechanism_reframe moments require at least one of
+// (a) causal language, (b) named mechanism vocabulary, (c) experiment language.
+// Without this gate, lecture phrases like "not just" / "actually" score as
+// mechanism_reframe and generate fake "This isn't what you think." prefixes on
+// generic continuation fragments ("really going to focus on the actions...").
+const REFRAME_CAUSAL_RE =
+  /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?))\b/i;
+
+const REFRAME_MECHANISM_RE =
+  /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|habit\b|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
+
+const REFRAME_EXPERIMENT_RE =
+  /\b(stud(?:y|ies)|research|experiment(?:al)?|lab\b|subjects?|clinical\s+trial|evidence|scientific(?:ally)?|researchers?|findings?|peer[\s-]?review)\b/i;
+
+function isGenuineReframeConcrete(hookSentence) {
+  return (
+    REFRAME_CAUSAL_RE.test(hookSentence) ||
+    REFRAME_MECHANISM_RE.test(hookSentence) ||
+    REFRAME_EXPERIMENT_RE.test(hookSentence)
+  );
+}
+
+// ─── CONTENT-MOMENT-QA-I: isGenuineReframeConcrete tests ─────────────────────
+// Production failure: educational/talking-head videos (Huberman Lab Essentials)
+// generated fake "This isn't what you think." prefixes on generic lecture
+// continuation fragments. Root cause: "not just"/"actually" in MECHANISM_REFRAME_SIGNALS
+// fires on any educational sentence, and buildSuggestedHook() prepends the prefix
+// regardless of whether the hook text is a real reframe.
+// Fix: Gate 5 in moment-detector.ts rejects mechanism_reframe moments where
+// isGenuineReframeConcrete(hookSentence) returns false → prefer zero moments over fake ones.
+
+console.log("\nCONTENT-MOMENT-QA-I — isGenuineReframeConcrete REJECTS weak lecture fragments");
+// These are the exact hook sentences observed in production (before prefix is added).
+// They all triggered mechanism_reframe scoring due to "not just" / "actually" signals
+// but contain no concrete mechanism/causal/experiment content.
+assert(
+  !isGenuineReframeConcrete("really going to focus on the actions the motor commands"),
+  "QA-I: continuation fragment 'really going to focus on...' → NOT concrete",
+);
+assert(
+  !isGenuineReframeConcrete("meaning balance programs but not just for learning motor commands"),
+  "QA-I: continuation fragment 'meaning balance programs...' → NOT concrete",
+);
+assert(
+  !isGenuineReframeConcrete("The idea is you write down six things that you would like to do every day for 21 days"),
+  "QA-I: procedural instruction with date → NOT concrete (no mechanism/causal/experiment)",
+);
+assert(
+  !isGenuineReframeConcrete("particular days of the week and simply do four or five other activities"),
+  "QA-I: continuation fragment 'particular days of the week...' → NOT concrete",
+);
+assert(
+  !isGenuineReframeConcrete("top of one another or you can use them individually"),
+  "QA-I: continuation fragment 'top of one another...' → NOT concrete",
+);
+
+// No fake "This isn't what you think." prefix on these:
+assert(
+  !isGenuineReframeConcrete("And that's the part that most people miss"),
+  "QA-I: vague insight claim without mechanism → NOT concrete",
+);
+assert(
+  !isGenuineReframeConcrete("you have to understand what you're actually doing here"),
+  "QA-I: generic instruction with 'actually' → NOT concrete (despite reframe signal word)",
+);
+
+console.log("\nCONTENT-MOMENT-QA-I — isGenuineReframeConcrete ALLOWS strong educational moments");
+// These contain concrete mechanism/causal/experiment content and should be allowed
+// as mechanism_reframe moments (or any other type that passes the pipeline).
+assert(
+  isGenuineReframeConcrete("7 to 30 minutes of making errors is what triggers adult plasticity"),
+  "QA-I: 'triggers' (causal) + 'plasticity' (mechanism) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally"),
+  "QA-I: 'disrupts' (causal) + 'sleep architecture' (mechanism) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("Habits are consolidated during deep sleep, not just during practice"),
+  "QA-I: 'consolidated' (causal/mechanism) + 'deep sleep' (mechanism) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("Acetylcholine marks the error, dopamine helps wire the correction"),
+  "QA-I: 'Acetylcholine' + 'dopamine' (mechanism vocab) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("A replacement habit works best immediately after the unwanted habit"),
+  "QA-I: 'habit' (mechanism vocab) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("The study shows that 90 minutes of practice consolidates motor memory"),
+  "QA-I: 'study' (experiment) + 'consolidates' (causal) → concrete",
+);
+assert(
+  isGenuineReframeConcrete("Fear conditioning is driven by the amygdala, not the prefrontal cortex"),
+  "QA-I: 'amygdala' + 'prefrontal' (mechanism vocab) → concrete",
+);
+
+console.log("\nCONTENT-MOMENT-QA-I — pipeline behavior: fewer moments over fake moments");
+// The pipeline rejects mechanism_reframe when !isGenuineReframeConcrete.
+// These tests demonstrate that the gate maps to: 0 or fewer Strongest Moments
+// displayed, ClipGuide returns null, section is hidden.
+{
+  // All five observed bad production hooks fail the gate → all rejected:
+  const badHooks = [
+    "really going to focus on the actions the motor commands",
+    "meaning balance programs but not just for learning motor commands",
+    "The idea is you write down six things that you would like to do every day for 21 days",
+    "particular days of the week and simply do four or five other activities",
+    "top of one another or you can use them individually",
+  ];
+  const badCount = badHooks.filter(h => !isGenuineReframeConcrete(h)).length;
+  assert(badCount === 5, `QA-I: all 5 bad production hooks rejected (${badCount}/5 fail gate → 0 moments displayed)`);
+
+  // All five good educational hooks pass → shown in Strongest Moments:
+  const goodHooks = [
+    "7 to 30 minutes of making errors is what triggers adult plasticity",
+    "Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally",
+    "Habits are consolidated during deep sleep, not just during practice",
+    "Acetylcholine marks the error, dopamine helps wire the correction",
+    "A replacement habit works best immediately after the unwanted habit",
+  ];
+  const goodCount = goodHooks.filter(h => isGenuineReframeConcrete(h)).length;
+  assert(goodCount === 5, `QA-I: all 5 good educational hooks allowed (${goodCount}/5 pass gate → moments displayed)`);
+}
+
 // ─── hasInsightVocabulary ─────────────────────────────────────────────────────
 
 console.log("\nhasInsightVocabulary — REJECTS sentences with no insight concept");
