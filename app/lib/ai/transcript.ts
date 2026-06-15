@@ -211,17 +211,21 @@ export async function diagnoseTranscript(youtubeUrl: string): Promise<Transcript
 
 function computeDurationSeconds(segments: RawSegment[]): number {
   if (!segments || segments.length === 0) return 0;
-  // Unit detection uses the first 20 segments only. Checking ALL segments (segments.some)
-  // fails when a late segment has floating-point imprecision in ms values (e.g., 2097000.4ms
-  // from YouTube→ms conversion), which would misclassify the entire batch as seconds and
-  // inflate a 35-min video's duration to 583 hours (2,097,000 seconds).
+  // Magnitude-based unit detection on the first 20 segments.
+  // Supadata returns ms-format segments with floating-point imprecision throughout
+  // (e.g. every offset ends in .4, every duration ends in .2). Decimal presence alone
+  // cannot classify the format: 3960.2 looks like a float but is clearly milliseconds,
+  // while 3.2 is clearly seconds. Instead we use magnitude:
+  //   ms segment durations: 2000–5000 (YouTube subtitle segments at ms scale)
+  //   seconds segment durations: 2–5 (same clips at seconds scale)
+  // Median > 100 → milliseconds; ≤ 100 → seconds.
   const detectSample = segments.slice(0, 20);
   const isMs = (() => {
-    if (detectSample.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
     const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
     if (!sample.length) return true;
-    const avg = sample.reduce((sum, s) => sum + s.duration, 0) / sample.length;
-    return avg > 100;
+    const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return median > 100;
   })();
   const last = segments[segments.length - 1];
   const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;

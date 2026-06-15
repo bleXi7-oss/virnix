@@ -24,11 +24,11 @@ function computeDurationSeconds(segments) {
   if (!segments || segments.length === 0) return 0;
   const detectSample = segments.slice(0, 20);
   const isMs = (() => {
-    if (detectSample.some((s) => s.duration % 1 !== 0 || s.offset % 1 !== 0)) return false;
     const sample = detectSample.filter((s) => s.duration > 0).slice(0, 10);
     if (!sample.length) return true;
-    const avg = sample.reduce((sum, s) => sum + s.duration, 0) / sample.length;
-    return avg > 100;
+    const sorted = [...sample.map((s) => s.duration)].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    return median > 100;
   })();
   const last = segments[segments.length - 1];
   const lastOffsetSec = isMs ? last.offset / 1000 : last.offset;
@@ -378,14 +378,14 @@ console.log("\nTRANSCRIPT-DURATION-QA-A — ms-format with decimal last segment 
 {
   // The last segment has floating-point imprecision (2097000.4 ms instead of 2097000).
   // Old: segments.some() finds decimal → isMs=false → duration = 2,097,000 sec (583 hr) → blocked.
-  // New: isMs detection uses only first 20 segments (all integers) → isMs=true → ~35 min → accepted.
+  // New: magnitude detection: sample median = 3000 > 100 → isMs=true → ~35 min → accepted.
   const normal = makeSegmentsMsFormat(699);
   const malformed = { text: "decimal ms value", offset: 2_097_000.4, duration: 3000.3 };
   const segs = [...normal, malformed];
   const dur = computeDurationSeconds(segs);
   assert(
     dur < MAX_ALLOWED_SEC,
-    `decimal last-segment fixture: isMs=true (first-20 detection) → ${Math.round(dur / 60)} min — accepted`,
+    `decimal last-segment fixture: isMs=true (magnitude) → ${Math.round(dur / 60)} min — accepted`,
   );
 }
 
@@ -429,6 +429,103 @@ console.log("\nTRANSCRIPT-DURATION-QA-A — unit conversion: float seconds → m
   assert(
     Math.abs(durSec - 2103.0) < 0.1,
     `float-seconds: 2100+3 = 2103 sec: got ${durSec}`,
+  );
+}
+
+// ─── TRANSCRIPT-DURATION-QA-B: magnitude-based unit detection ─────────────────
+// Production failure (after commit a41f91c): valid ~35-minute videos still rejected.
+// Live Vercel log for jwChiek_aRY:
+//   [virnix-duration] segments=870 isMs=false duration_sec=2033960 duration_min=33899
+// Root cause: Supadata returns ms-format segments with float imprecision THROUGHOUT
+// (every offset/duration has a decimal), not just the last segment. QA-A's first-20
+// fix didn't help — the first 20 segments also have decimals. The old modulo check
+// (`offset % 1 !== 0`) treats 3960.2ms as seconds, inflating 33.9 min → 33,899 min.
+// Fix: use median duration magnitude instead of modulo. ms durations are 2000-5000;
+// seconds durations are 2-5. Median > 100 → ms regardless of decimal presence.
+
+// Helper: simulates Supadata decimal-ms imprecision throughout all segments
+function makeDecimalMsSegments(count, durationMs = 2338) {
+  return Array.from({ length: count }, (_, i) => ({
+    text: `word${i}`,
+    offset: i * durationMs + 0.4,
+    duration: durationMs + 0.2,
+  }));
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-B — ms integer values classified correctly");
+{
+  // offset=2030000ms, duration=3960ms → total = 2033960ms → /1000 = 2033.96s ≈ 33.9 min
+  const segs = [
+    { text: "x", offset: 0, duration: 3960 },
+    { text: "y", offset: 2030000, duration: 3960 },
+  ];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    Math.abs(dur - 2033.96) < 1,
+    `ms integer: (2030000+3960)/1000 → ${dur.toFixed(2)}s ≈ 33.9 min`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-B — ms decimal values classified correctly (production failure)");
+{
+  // offset=2030000.4ms, duration=3960.2ms → total ≈ 2033960.6ms → /1000 ≈ 2034s ≈ 33.9 min
+  // Old: any decimal → isMs=false → 2033960.6s = 565 hrs → blocked
+  // New: median = 3960.2 > 100 → isMs=true → 2034s → accepted
+  const segs = [
+    { text: "x", offset: 0.0, duration: 3960.2 },
+    { text: "y", offset: 2030000.4, duration: 3960.2 },
+  ];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `ms decimal: magnitude isMs=true → ${dur.toFixed(2)}s (not 2033960.6s) — accepted`,
+  );
+  assert(
+    Math.abs(dur - 2033.96) < 1,
+    `ms decimal: value ≈ 2034s (33.9 min): got ${dur.toFixed(2)}s`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-B — seconds decimal values classified correctly");
+{
+  // offset=2030.4s, duration=3.2s → total = 2033.6s ≈ 33.9 min
+  // median = 3.2 < 100 → isMs=false → treat as seconds
+  const segs = [
+    { text: "x", offset: 0.0, duration: 3.2 },
+    { text: "y", offset: 2030.4, duration: 3.2 },
+  ];
+  const dur = computeDurationSeconds(segs);
+  assert(
+    Math.abs(dur - 2033.6) < 0.01,
+    `seconds decimal: isMs=false → 2030.4+3.2 = ${dur.toFixed(2)}s`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-B — production log reproduction (870 decimal-ms segments)");
+{
+  // Simulates jwChiek_aRY: 870 segments, all with decimal ms offsets/durations.
+  // Expected: duration_min ≈ 33.9, NOT 33,899.
+  const segs = makeDecimalMsSegments(870, 2338);
+  const dur = computeDurationSeconds(segs);
+  const durMin = dur / 60;
+  assert(
+    dur < MAX_ALLOWED_SEC,
+    `870 decimal-ms segments: duration_min=${durMin.toFixed(1)} (not 33899) — accepted`,
+  );
+  assert(
+    durMin > 30 && durMin < 40,
+    `870 decimal-ms segments: duration_min=${durMin.toFixed(1)} in expected 30-40 range`,
+  );
+}
+
+console.log("\nTRANSCRIPT-DURATION-QA-B — true 125-min decimal-ms video still blocked");
+{
+  // 2500 decimal-ms segments × ~3000ms = ~7500s = 125 min → must be blocked
+  const segs = makeDecimalMsSegments(2500, 3000);
+  const dur = computeDurationSeconds(segs);
+  assert(
+    dur > MAX_ALLOWED_SEC,
+    `true 125-min decimal-ms: ${Math.round(dur / 60)} min — blocked (> 120)`,
   );
 }
 
