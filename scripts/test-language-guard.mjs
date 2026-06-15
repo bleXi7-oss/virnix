@@ -537,6 +537,74 @@ assert(!computeHideHook("Bu içerik üretkenlik hakkında konuşuyor.", "tr", "a
 // Turkish Latin-script + mismatch → hide (lang metadata fires)
 assert(computeHideHook("Bu içerik Türkçe bir videodur.", "tr", "sl"), "Turkish Latin hook + tr/sl → hide (lang mismatch)");
 
+// ─── CONTENT-POLISH-QA-G: Slovenian output sanitizer ────────────────────────
+
+function sanitizeSlovenianOutput(text) {
+  return text
+    .replace(/[Ѐ-ԯ]/g, "")
+    .replace(/ć/g, "č").replace(/Ć/g, "Č")
+    .replace(/đ/g, "dž").replace(/Đ/g, "Dž")
+    .replace(/\bmannequin[a-z]*/gi, "lutke")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
+
+console.log("\nCONTENT-POLISH-QA-G — Slovenian output sanitizer");
+
+// Cyrillic characters stripped (production failure: "Kdo Je Preživел?")
+assert(
+  !/[Ѐ-ԯ]/.test(sanitizeSlovenianOutput("Kdo Je Preživел?")),
+  "QA-G: Cyrillic stripped from Slovenian output",
+);
+
+// ć → č (production failure: "neobstojećih")
+assert(
+  sanitizeSlovenianOutput("neobstojećih dejstev") === "neobstoječih dejstev",
+  "QA-G: ć replaced with č",
+);
+assert(
+  !sanitizeSlovenianOutput("neobstojećih dejstev").includes("neobstojećih"),
+  "QA-G: 'neobstojećih' absent after sanitization",
+);
+
+// mannequini replaced (production failure: "mannequini / mannequinom")
+assert(
+  !sanitizeSlovenianOutput("med stotimi mannequini").includes("mannequini"),
+  "QA-G: 'mannequini' replaced",
+);
+assert(
+  sanitizeSlovenianOutput("med stotimi mannequini") === "med stotimi lutke",
+  "QA-G: mannequini → lutke",
+);
+
+// mannequinom replaced
+assert(
+  !sanitizeSlovenianOutput("igra z mannequinom").includes("mannequinom"),
+  "QA-G: 'mannequinom' replaced",
+);
+assert(
+  sanitizeSlovenianOutput("igra z mannequinom") === "igra z lutke",
+  "QA-G: mannequinom → lutke",
+);
+
+// Case-insensitive mannequin replacement
+assert(
+  !sanitizeSlovenianOutput("MANNEQUINI so visoke").includes("MANNEQUINI"),
+  "QA-G: uppercase MANNEQUINI replaced",
+);
+
+// đ → dž
+assert(
+  !sanitizeSlovenianOutput("Đuro je prišel").includes("Đ"),
+  "QA-G: Đ replaced in Slovenian output",
+);
+
+// Clean Slovenian passes through unchanged
+assert(
+  sanitizeSlovenianOutput("Lutke so na polici.") === "Lutke so na polici.",
+  "QA-G: clean Slovenian text unchanged",
+);
+
 // ─── CONTENT-POLISH-QA-F: Slovenian nativeNote rules ────────────────────────
 // Mirror the Slovenian nativeNote from app/lib/languages/options.ts.
 // These tests verify the note contains the required prompt-engineering guards

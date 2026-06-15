@@ -45,17 +45,38 @@ export function collapseCommaRepetitions(text: string): string {
 // Collapse duplicate adjacent sentences/fragments — catches YouTube subtitle
 // repetition where the same phrase appears twice with invisible spacing chars.
 // Clean the text first so invisible chars don't prevent sentence splitting.
+//
+// Also handles suffix repetition: when a short sentence S2 appears verbatim at
+// the end of a previously-seen longer sentence S1 (preceded by space or comma),
+// S2 is redundant and skipped. This covers the pattern produced by YouTube caption
+// buffering after collapseCommaRepetitions deduplicates a comma-group:
+//   "S1, S2!" → "S2!" (standalone)  — "S2!" is a suffix of "S1, S2!" → removed.
 export function collapseRepeatedFragments(text: string): string {
   const parts = text.split(/(?<=[.!?…])\s+/).filter(Boolean);
-  const seen = new Set<string>();
+  const seenKeys: string[] = [];
   const result: string[] = [];
   for (const part of parts) {
     const key = part.trim().toLowerCase().replace(/\s+/g, " ");
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    if (!key) continue;
+    const covered = seenKeys.some((k) => {
+      if (k === key) return true;
+      if (!k.endsWith(key)) return false;
+      // Only count as covered when the suffix begins at a word boundary
+      // (space or comma) — prevents partial-word false matches.
+      const boundary = k[k.length - key.length - 1];
+      return boundary === " " || boundary === ",";
+    });
+    if (covered) continue;
+    seenKeys.push(key);
     result.push(part.trim());
   }
   return result.join(" ");
+}
+
+// Full display cleaning pipeline: sentence-level dedup (with suffix coverage),
+// then comma-level dedup. Apply to any moment text field before display.
+export function cleanMomentDisplayText(rawText: string): string {
+  return collapseCommaRepetitions(collapseRepeatedFragments(cleanWindowText(rawText)));
 }
 
 // Known reaction sounds and interjections with zero semantic content.

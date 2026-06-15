@@ -20,6 +20,7 @@ export { scoreMoment, getDisplayReason } from "./moment-scoring";
 export type { MomentScore } from "./moment-scoring";
 export {
   cleanWindowText,
+  cleanMomentDisplayText,
   collapseRepeatedFragments,
   collapseCommaRepetitions,
   countMeaningfulWords,

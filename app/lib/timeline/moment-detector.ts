@@ -22,9 +22,7 @@ import {
 } from "./transcript-timestamps";
 import { scoreMoment, getDisplayReason } from "./moment-scoring";
 import {
-  cleanWindowText,
-  collapseRepeatedFragments,
-  collapseCommaRepetitions,
+  cleanMomentDisplayText,
   isLowSemanticContent,
   isNoiseHeavy,
   isDisplayQualityHook,
@@ -56,7 +54,7 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
       .flatMap((win, i): TimelineMoment[] => {
         // Clean once — used for scoring (prevents duplicate signal inflation)
         // and for extracting the hook sentence and preview.
-        const cleanText = collapseCommaRepetitions(collapseRepeatedFragments(cleanWindowText(win.text)));
+        const cleanText = cleanMomentDisplayText(win.text);
         // Extract the hook sentence once; require >= 5 meaningful words so
         // brief event commentary ("We're all out now." = 4 words) is skipped.
         const hookSentence = findFirstMeaningfulSentence(cleanText, 5);

@@ -17,15 +17,26 @@ function cleanWindowText(raw) {
 
 function collapseRepeatedFragments(text) {
   const parts = text.split(/(?<=[.!?…])\s+/).filter(Boolean);
-  const seen = new Set();
+  const seenKeys = [];
   const result = [];
   for (const part of parts) {
     const key = part.trim().toLowerCase().replace(/\s+/g, " ");
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
+    if (!key) continue;
+    const covered = seenKeys.some((k) => {
+      if (k === key) return true;
+      if (!k.endsWith(key)) return false;
+      const boundary = k[k.length - key.length - 1];
+      return boundary === " " || boundary === ",";
+    });
+    if (covered) continue;
+    seenKeys.push(key);
     result.push(part.trim());
   }
   return result.join(" ");
+}
+
+function cleanMomentDisplayText(rawText) {
+  return collapseCommaRepetitions(collapseRepeatedFragments(cleanWindowText(rawText)));
 }
 
 function collapseCommaRepetitions(text) {
@@ -1036,6 +1047,61 @@ assert(
 assert(
   isDisplayQualityHook("The team that shared answers moved faster than solo players"),
   "QA-D doesn't break: 'faster than' insight vocab still ALLOWED",
+);
+
+// ─── CONTENT-POLISH-QA-G: cleanMomentDisplayText + suffix-aware dedup ────────
+
+console.log("\nCONTENT-POLISH-QA-G — cleanMomentDisplayText: combined comma + suffix dedup");
+
+// Production failure case: comma-dup AND sentence-suffix-dup in same window
+assert(
+  cleanMomentDisplayText(
+    "We KNEW it was the wrong one, We KNEW it was the wrong one, but we were TRAPPED here! but we were TRAPPED here! HAHA HAA"
+  ) === "We KNEW it was the wrong one, but we were TRAPPED here! HAHA HAA",
+  "QA-G: comma-rep + suffix-rep both collapsed (production failure case)",
+);
+
+// Suffix dedup without comma involvement
+assert(
+  cleanMomentDisplayText(
+    "I realized the mistake, and now I know. Now I know."
+  ) === "I realized the mistake, and now I know.",
+  "QA-G: sentence-ending suffix deduplicated",
+);
+
+// Non-duplicate suffixes are NOT removed
+assert(
+  cleanMomentDisplayText(
+    "We built something great. We built it with care. Great things take time."
+  ) === "We built something great. We built it with care. Great things take time.",
+  "QA-G: non-duplicate suffixes left intact",
+);
+
+// QA-F comma dedup still works inside cleanMomentDisplayText
+assert(
+  cleanMomentDisplayText("right now, right now...") === "right now",
+  "QA-G: QA-F comma dedup still works inside cleanMomentDisplayText",
+);
+
+// collapseRepeatedFragments suffix check: exact duplicate still caught
+assert(
+  collapseRepeatedFragments("Hello world. Hello world.") === "Hello world.",
+  "QA-G: collapseRepeatedFragments exact duplicate still caught",
+);
+
+// collapseRepeatedFragments: suffix of prior sentence skipped
+assert(
+  collapseRepeatedFragments(
+    "We KNEW it was the wrong one, but we were TRAPPED here! but we were TRAPPED here!"
+  ) === "We KNEW it was the wrong one, but we were TRAPPED here!",
+  "QA-G: collapseRepeatedFragments skips sentence that is suffix of prior",
+);
+
+// collapseRepeatedFragments: genuinely different sentences NOT removed
+assert(
+  collapseRepeatedFragments("Different sentence. Another one.") ===
+    "Different sentence. Another one.",
+  "QA-G: collapseRepeatedFragments keeps genuinely different sentences",
 );
 
 // ─── CONTENT-POLISH-QA-F: collapseCommaRepetitions ───────────────────────────

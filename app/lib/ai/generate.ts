@@ -13,6 +13,7 @@ import { logDiagnostics } from "./diagnostics";
 import { estimateViralityScore } from "../intelligence/quality";
 import { formatEnergyContext } from "../creator-energy/prompt-context";
 import { formatLanguageContext } from "../languages/prompt-context";
+import { sanitizeSlovenianOutput } from "../languages/sanitize";
 import { formatCreatorBrainContext } from "../creator-brain/prompt-context";
 import { detectTimelineMoments, formatTimelineMomentsForPrompt, selectMomentsForPrompt, evaluateTranscriptQuality } from "../timeline";
 
@@ -163,8 +164,14 @@ async function realGenerate(
     ? selectBestOutputs(result.cards, text)
     : result.cards;
 
+  // Slovenian post-processing: strip Cyrillic leakage and replace forbidden loanwords
+  // (ć→č, đ→dž, mannequin*→lutke). Deterministic; runs after advanced scoring.
+  const sanitizedCards = outputLanguage === "sl"
+    ? finalCards.map((card) => ({ ...card, content: sanitizeSlovenianOutput(card.content) }))
+    : finalCards;
+
   // Score the TikTok hook for diagnostics — first card is always TikTok
-  const viralityScore = estimateViralityScore(finalCards[0]?.content ?? "", "tiktok");
+  const viralityScore = estimateViralityScore(sanitizedCards[0]?.content ?? "", "tiktok");
 
   // Evaluate transcript psychological density — zero cost, uses already-detected moments
   const transcriptQuality = timelineMoments?.length
@@ -193,7 +200,7 @@ async function realGenerate(
   logDiagnostics(diagnostics);
 
   return {
-    cards: finalCards,
+    cards: sanitizedCards,
     generatedAt: result.generatedAt,
     bestAngle: result.bestAngle,
     diagnostics,
