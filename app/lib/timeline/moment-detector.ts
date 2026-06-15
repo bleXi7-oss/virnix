@@ -1,14 +1,15 @@
 // Detects the strongest content moments in a timestamped transcript.
 //
 // Pipeline:
-//   1. detectTimestampedLines()   — find all lines with timestamps
-//   2. groupLinesIntoSegments()   — pair each timestamp with the next
-//   3. groupIntoWindows()         — merge 3s segments into 30s scoring windows
-//   4. isLowSemanticContent()     — Gate 1: reject pure noise windows
-//   5. isNoiseHeavy()             — Gate 2: reject exclamation-dominant windows
-//   6. isDisplayQualityHook()     — Gate 3: reject event chatter with no insight
-//   7. scoreMoment()              — heuristic score per window (Gate 4: >= 10)
-//   8. top MAX_MOMENTS returned, sorted by confidence
+//   1. detectTimestampedLines()     — find all lines with timestamps
+//   2. groupLinesIntoSegments()     — pair each timestamp with the next
+//   3. groupIntoWindows()           — merge 3s segments into 30s scoring windows
+//   4. isLowSemanticContent()       — Gate 1: reject pure noise windows
+//   5. isNoiseHeavy()               — Gate 2: reject exclamation-dominant windows
+//   6. isDisplayQualityHook()       — Gate 3: reject event chatter with no insight
+//   7. isSponsorOrAdReadText()      — Gate 4: reject sponsor/ad-read + self-referential filler
+//   8. scoreMoment()                — heuristic score per window (Gate 5: >= 10)
+//   9. top MAX_MOMENTS returned, sorted by confidence
 //
 // Deterministic heuristic — no AI calls, no ML, no external dependencies.
 // Never throws — returns [] on any failure or missing timestamps.
@@ -28,6 +29,8 @@ import {
   isDisplayQualityHook,
   isGenuineReframeConcrete,
   isStandaloneReframeClaim,
+  isSponsorOrAdReadText,
+  isSelfReferentialFillerHook,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -63,10 +66,17 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         // Gate 3: reject hook sentences that can't stand alone as a clip opener
         // — questions, short vague descriptors, game chatter with no insight.
         if (!isDisplayQualityHook(hookSentence)) return [];
+        // Gate 4: reject sponsor/ad-read windows and self-referential episode
+        // filler. Commercial segments and "I did an episode on..." hooks deliver
+        // no transferable insight — fewer moments is better than sponsor
+        // contamination or meta-commentary masquerading as creator insight.
+        if (isSponsorOrAdReadText(cleanText) || isSelfReferentialFillerHook(hookSentence)) {
+          return [];
+        }
         const scored = scoreMoment(cleanText);
-        // Gate 4: minimum confidence threshold.
+        // Gate 5: minimum confidence threshold.
         if (scored.score < MIN_SCORE_THRESHOLD) return [];
-        // Gate 5: mechanism_reframe requires (a) concrete educational content
+        // Gate 6: mechanism_reframe requires (a) concrete educational content
         // AND (b) a short, standalone claim — not a transcript continuation
         // fragment or lecture-filler phrase. Hard-reject on either failure.
         // Fewer Strongest Moments is safer than showing "This isn't what you

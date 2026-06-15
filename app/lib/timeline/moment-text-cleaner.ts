@@ -294,6 +294,30 @@ export function isGenuineReframeConcrete(hookSentence: string): boolean {
   );
 }
 
+// Patterns indicating sponsor/ad-read content — commercial segments that should
+// never surface as Strongest Moments. Checked against the full window text so
+// that ad segments are blocked even when the hook sentence looks benign.
+const SPONSOR_AD_RE =
+  /\b(sponsor(?:s|ed|ing|ship)?|today'?s\s+sponsor|link\s+in\s+the\s+description|discount\s+code|use\s+code|biomarkers?|expert\s+physicians?|improve\s+your\s+health\s+and\s+lifespan)\b/i;
+
+// Returns true when the window text is a sponsor/ad-read segment.
+export function isSponsorOrAdReadText(text: string): boolean {
+  return SPONSOR_AD_RE.test(text);
+}
+
+// Patterns that signal a hook sentence is self-referential filler — pointing
+// to another episode or the creator's own internal process rather than
+// delivering a transferable insight. These produce useless Strongest Moments
+// with any prefix ("This isn't what you think. I did an episode on...").
+const SELF_REF_EPISODE_RE =
+  /\b(i\s+did\s+an\s+episode|last\s+episode|previous\s+episode|prior\s+episode|check\s+out\s+that\s+episode|as\s+i\s+mentioned\s+last\s+episode|this\s+episode\s+on\s+how\s+to|i\s+went\s+to\s+the\s+data\s+to\s+find\s+out|i\s+have\s+my\s+methods)\b/i;
+
+// Returns true when the hook sentence points back to another episode or uses
+// creator meta-commentary instead of delivering an actionable insight.
+export function isSelfReferentialFillerHook(hookSentence: string): boolean {
+  return SELF_REF_EPISODE_RE.test(hookSentence);
+}
+
 // Returns true when a hook sentence is a short, complete, standalone claim —
 // not a transcript continuation fragment or lecture-transition filler.
 // Used as a second gate alongside isGenuineReframeConcrete for mechanism_reframe.

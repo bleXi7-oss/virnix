@@ -1528,6 +1528,119 @@ console.log("\nCONTENT-MOMENT-QA-M — combined gate: bad hooks blocked, good ho
   );
 }
 
+// ─── CONTENT-MOMENT-QA-N: sponsor/ad-read and self-referential filler ────────
+// Production failures on qM6yqU7RGhU:
+// 1. Sponsor/ad-read (11:13–11:43): "that monitor over a 100 biomarkers and their
+//    team of expert physicians analyze the data and give you actionable advice to
+//    improve your health and lifespan." — commercial segment, not creator insight
+// 2. Self-referential (03:04–03:34): "This isn't what you think. I did an episode
+//    on how to best study and learn." — points to another episode, delivers no insight
+// Gate 4 in the pipeline: isSponsorOrAdReadText(cleanText) || isSelfReferentialFillerHook(hookSentence)
+
+// Mirror isSponsorOrAdReadText from moment-text-cleaner.ts
+const SPONSOR_AD_RE =
+  /\b(sponsor(?:s|ed|ing|ship)?|today'?s\s+sponsor|link\s+in\s+the\s+description|discount\s+code|use\s+code|biomarkers?|expert\s+physicians?|improve\s+your\s+health\s+and\s+lifespan)\b/i;
+
+function isSponsorOrAdReadText(text) {
+  return SPONSOR_AD_RE.test(text);
+}
+
+// Mirror isSelfReferentialFillerHook from moment-text-cleaner.ts
+const SELF_REF_EPISODE_RE =
+  /\b(i\s+did\s+an\s+episode|last\s+episode|previous\s+episode|prior\s+episode|check\s+out\s+that\s+episode|as\s+i\s+mentioned\s+last\s+episode|this\s+episode\s+on\s+how\s+to|i\s+went\s+to\s+the\s+data\s+to\s+find\s+out|i\s+have\s+my\s+methods)\b/i;
+
+function isSelfReferentialFillerHook(hookSentence) {
+  return SELF_REF_EPISODE_RE.test(hookSentence);
+}
+
+console.log("\nCONTENT-MOMENT-QA-N — isSponsorOrAdReadText: sponsor/ad-read windows REJECTED");
+// Production failure: 11:13–11:43 from qM6yqU7RGhU — health-tracking app sponsor read
+assert(
+  isSponsorOrAdReadText(
+    "that monitor over a 100 biomarkers and their team of expert physicians analyze the data and give you actionable advice to improve your health and lifespan."
+  ),
+  "QA-N: 'biomarkers' + 'expert physicians' + 'health and lifespan' → sponsor window BLOCKED",
+);
+assert(
+  isSponsorOrAdReadText("today's sponsor gives you access to expert physicians and biomarkers."),
+  "QA-N: 'today's sponsor' → sponsor window BLOCKED",
+);
+assert(
+  isSponsorOrAdReadText("use code HUBERMAN to get a discount."),
+  "QA-N: 'use code' → sponsor window BLOCKED",
+);
+assert(
+  isSponsorOrAdReadText("link in the description to improve your health and lifespan."),
+  "QA-N: 'link in the description' → sponsor window BLOCKED",
+);
+
+console.log("\nCONTENT-MOMENT-QA-N — isSelfReferentialFillerHook: episode-pointer hooks REJECTED");
+// Production failure: 03:04–03:34 from qM6yqU7RGhU — hook points to another episode
+assert(
+  isSelfReferentialFillerHook("I did an episode on how to best study and learn."),
+  "QA-N: 'I did an episode' → self-referential filler BLOCKED",
+);
+assert(
+  isSelfReferentialFillerHook("as I mentioned last episode and I'll just tell you right now again."),
+  "QA-N: 'last episode' → self-referential filler BLOCKED",
+);
+assert(
+  isSelfReferentialFillerHook("Check out that episode if you want to dive deeper into this topic."),
+  "QA-N: 'check out that episode' → self-referential filler BLOCKED",
+);
+
+console.log("\nCONTENT-MOMENT-QA-N — good educational hooks pass both filters");
+// These must NOT be blocked by either isSponsorOrAdReadText or isSelfReferentialFillerHook.
+// They reference "health", "learning", "study" in a non-promotional educational context.
+assert(
+  !isSponsorOrAdReadText("Self-testing improves retention more than rereading."),
+  "QA-N: 'Self-testing improves retention...' → NOT sponsor/ad",
+);
+assert(
+  !isSponsorOrAdReadText("Boring breaks reduce sensory overload before focused work."),
+  "QA-N: 'Boring breaks reduce sensory overload...' → NOT sponsor/ad",
+);
+assert(
+  !isSponsorOrAdReadText("Quiet reflection after learning improves memory consolidation."),
+  "QA-N: 'Quiet reflection...' mentions 'improves' but NOT 'improve your health and lifespan' → NOT sponsor/ad",
+);
+assert(
+  !isSponsorOrAdReadText("Dopamine must attach to effort, not only to the reward after effort."),
+  "QA-N: 'Dopamine must attach to effort...' → NOT sponsor/ad",
+);
+assert(
+  !isSponsorOrAdReadText("Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally."),
+  "QA-N: 'Caffeine after 4pm disrupts sleep architecture...' → NOT sponsor/ad",
+);
+
+console.log("\nCONTENT-MOMENT-QA-N — batch: bad sponsor texts all blocked");
+{
+  const badSponsors = [
+    "that monitor over a 100 biomarkers and their team of expert physicians analyze the data and give you actionable advice to improve your health and lifespan.",
+    "today's sponsor gives you access to expert physicians and biomarkers.",
+    "use code HUBERMAN to get a discount.",
+    "link in the description to improve your health and lifespan.",
+  ];
+  const blockedCount = badSponsors.filter(isSponsorOrAdReadText).length;
+  assert(blockedCount === 4, `QA-N: all 4 sponsor texts blocked by isSponsorOrAdReadText (${blockedCount}/4)`);
+}
+
+console.log("\nCONTENT-MOMENT-QA-N — batch: good hooks pass both filters");
+{
+  const goodHooks = [
+    "Self-testing improves retention more than rereading.",
+    "Boring breaks reduce sensory overload before focused work.",
+    "Quiet reflection after learning improves memory consolidation.",
+    "Dopamine must attach to effort, not only to the reward after effort.",
+    "Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally.",
+  ];
+  const blocked = goodHooks.filter(h => isSponsorOrAdReadText(h) || isSelfReferentialFillerHook(h));
+  assert(
+    blocked.length === 0,
+    `QA-N: all 5 good educational hooks pass both filters (${blocked.length} incorrectly blocked)`,
+  );
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);
