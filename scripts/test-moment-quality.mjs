@@ -1456,6 +1456,35 @@ console.log("\nCONTENT-MOMENT-QA-J — selectGate5Fallback returns best non-refr
   assert(result === null, "QA-J case 5: only mechanism_reframe above threshold → null (no valid fallback)");
 }
 
+// Case 6: validation_hook wins Gate 5 fallback but hookSentence has no validation
+// signals → resolveDisplayType must downgrade to quote_moment. Regression test for
+// the 3b5a117 bug where getPlatformFit/getEmotionalTrigger used fallbackType (pre-resolve)
+// instead of fallbackDisplayType (post-resolve), causing wrong platform/trigger when
+// validation_hook → quote_moment downgrade occurred.
+{
+  const allScores = {
+    mechanism_reframe:    48,
+    validation_hook:      20,
+    contrarian_insight:   12,
+    emotional_confession:  0,
+    story_turning_point:   0,
+    educational_gem:       0,
+    quote_moment:          0,
+    fomo_loss_frame:       0,
+    authority_proof:       0,
+    transformation_moment: 0,
+  };
+  const hookSentence = "We're all out now.";
+  const result = selectGate5Fallback(allScores);
+  assert(result !== null, "QA-J case 6: validation_hook=20 → fallback found");
+  assert(result[0] === "validation_hook", `QA-J case 6: raw fallback type is validation_hook, got ${result?.[0]}`);
+  const fallbackDisplayType = resolveDisplayType(result[0], hookSentence);
+  assert(
+    fallbackDisplayType === "quote_moment",
+    `QA-J case 6: validation_hook without validation signals → resolveDisplayType → quote_moment (got ${fallbackDisplayType})`,
+  );
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);
