@@ -732,7 +732,7 @@ const REFRAME_CAUSAL_RE =
   /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?))\b/i;
 
 const REFRAME_MECHANISM_RE =
-  /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|habit\b|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
+  /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
 
 const REFRAME_EXPERIMENT_RE =
   /\b(stud(?:y|ies)|research|experiment(?:al)?|lab\b|subjects?|clinical\s+trial|evidence|scientific(?:ally)?|researchers?|findings?|peer[\s-]?review)\b/i;
@@ -743,19 +743,6 @@ function isGenuineReframeConcrete(hookSentence) {
     REFRAME_MECHANISM_RE.test(hookSentence) ||
     REFRAME_EXPERIMENT_RE.test(hookSentence)
   );
-}
-
-// ─── CONTENT-MOMENT-QA-J mirror: selectGate5Fallback ─────────────────────────
-// Mirrors Gate 5 fallback logic in moment-detector.ts.
-// When mechanism_reframe fails isGenuineReframeConcrete, the detector looks for
-// the next-best scoring type above MIN_SCORE_THRESHOLD rather than discarding.
-const MIN_SCORE_THRESHOLD = 10;
-
-function selectGate5Fallback(allScores) {
-  const fallback = Object.entries(allScores)
-    .filter(([type, s]) => type !== "mechanism_reframe" && s >= MIN_SCORE_THRESHOLD)
-    .sort(([, a], [, b]) => b - a)[0];
-  return fallback ?? null;
 }
 
 // ─── CONTENT-MOMENT-QA-I: isGenuineReframeConcrete tests ─────────────────────
@@ -801,6 +788,10 @@ assert(
   !isGenuineReframeConcrete("you have to understand what you're actually doing here"),
   "QA-I: generic instruction with 'actually' → NOT concrete (despite reframe signal word)",
 );
+assert(
+  !isGenuineReframeConcrete("likelihood of performing that habit regularly and effectively"),
+  "QA-I: 'likelihood of performing that habit regularly...' → NOT concrete (production failure case from CONTENT-MOMENT-QA-L)",
+);
 
 console.log("\nCONTENT-MOMENT-QA-I — isGenuineReframeConcrete ALLOWS strong educational moments");
 // These contain concrete mechanism/causal/experiment content and should be allowed
@@ -822,8 +813,8 @@ assert(
   "QA-I: 'Acetylcholine' + 'dopamine' (mechanism vocab) → concrete",
 );
 assert(
-  isGenuineReframeConcrete("A replacement habit works best immediately after the unwanted habit"),
-  "QA-I: 'habit' (mechanism vocab) → concrete",
+  !isGenuineReframeConcrete("A replacement habit works best immediately after the unwanted habit"),
+  "QA-I: 'habit' alone is NOT mechanism vocab (removed — causes false positives on 'that habit' in lecture text)",
 );
 assert(
   isGenuineReframeConcrete("The study shows that 90 minutes of practice consolidates motor memory"),
@@ -850,16 +841,15 @@ console.log("\nCONTENT-MOMENT-QA-I — pipeline behavior: fewer moments over fak
   const badCount = badHooks.filter(h => !isGenuineReframeConcrete(h)).length;
   assert(badCount === 5, `QA-I: all 5 bad production hooks rejected (${badCount}/5 fail gate → 0 moments displayed)`);
 
-  // All five good educational hooks pass → shown in Strongest Moments:
+  // Concrete educational hooks pass → shown in Strongest Moments:
   const goodHooks = [
     "7 to 30 minutes of making errors is what triggers adult plasticity",
     "Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally",
     "Habits are consolidated during deep sleep, not just during practice",
     "Acetylcholine marks the error, dopamine helps wire the correction",
-    "A replacement habit works best immediately after the unwanted habit",
   ];
   const goodCount = goodHooks.filter(h => isGenuineReframeConcrete(h)).length;
-  assert(goodCount === 5, `QA-I: all 5 good educational hooks allowed (${goodCount}/5 pass gate → moments displayed)`);
+  assert(goodCount === 4, `QA-I: all 4 concrete educational hooks allowed (${goodCount}/4 pass gate → moments displayed)`);
 }
 
 // ─── hasInsightVocabulary ─────────────────────────────────────────────────────
@@ -1353,137 +1343,55 @@ assert(
   "QA-H regression: non-duplicate comma-separated clauses unchanged",
 );
 
-// ─── CONTENT-MOMENT-QA-J: Gate 5 fallback (selectGate5Fallback) ──────────────
-// Production issue: when mechanism_reframe fires on a weak trigger ("not just",
-// "actually") but fails isGenuineReframeConcrete, the window was discarded even
-// if another moment type (e.g., contrarian_insight, emotional_confession) had a
-// genuine score above MIN_SCORE_THRESHOLD. Fix: fall back to the next-best type.
+// ─── CONTENT-MOMENT-QA-L: Gate 5 hard-reject (no fallback) ──────────────────
+// Production retest after T2 (Gate 5 fallback, commits 95bfc25 + 3b5a117) still
+// showed fake "This isn't what you think." fragments on Huberman Lab Essentials videos
+// (HXuj7wAt7u8, jwChiek_aRY). Root cause: the fallback downgraded the window to
+// another moment type, but the hook sentence was still a generic lecture fragment —
+// the prefix changed but the bad content remained.
+// Fix: Gate 5 is a hard reject. No fallback. Fewer Strongest Moments > fake ones.
 
-console.log("\nCONTENT-MOMENT-QA-J — selectGate5Fallback returns best non-reframe type");
+console.log("\nCONTENT-MOMENT-QA-L — Gate 5 hard-reject: production bad hooks rejected");
 
-// Case 1: contrarian_insight above threshold → selected as fallback
-{
-  const allScores = {
-    mechanism_reframe:    32,
-    contrarian_insight:   24,
-    validation_hook:       0,
-    emotional_confession:  0,
-    story_turning_point:   0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    authority_proof:       0,
-    transformation_moment: 0,
-  };
-  const result = selectGate5Fallback(allScores);
-  assert(result !== null, "QA-J case 1: contrarian_insight=24 above threshold → fallback found");
-  assert(result[0] === "contrarian_insight", `QA-J case 1: fallback type is contrarian_insight, got ${result?.[0]}`);
-  assert(result[1] === 24, `QA-J case 1: fallback score is 24, got ${result?.[1]}`);
-}
+// All 6 production-failing hooks must fail isGenuineReframeConcrete → Gate 5 rejects:
+assert(
+  !isGenuineReframeConcrete("likelihood of performing that habit regularly and effectively"),
+  "QA-L: 'likelihood of performing that habit regularly...' → hard-rejected",
+);
+assert(
+  !isGenuineReframeConcrete("really going to focus on the actions the motor commands"),
+  "QA-L: 'really going to focus on the actions...' → hard-rejected",
+);
+assert(
+  !isGenuineReframeConcrete("meaning balance programs but not just for learning motor commands"),
+  "QA-L: 'meaning balance programs but not just...' → hard-rejected",
+);
+assert(
+  !isGenuineReframeConcrete("The idea is you write down six things that you would like to do every day for 21 days"),
+  "QA-L: 'The idea is you write down six things...' → hard-rejected",
+);
+assert(
+  !isGenuineReframeConcrete("particular days of the week and simply do four or five other activities"),
+  "QA-L: 'particular days of the week...' → hard-rejected",
+);
+assert(
+  !isGenuineReframeConcrete("top of one another or you can use them individually"),
+  "QA-L: 'top of one another...' → hard-rejected",
+);
 
-// Case 2: all non-reframe types below threshold → null (window discarded)
-{
-  const allScores = {
-    mechanism_reframe:    32,
-    contrarian_insight:    8,
-    validation_hook:       0,
-    emotional_confession:  4,
-    story_turning_point:   0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    authority_proof:       0,
-    transformation_moment: 0,
-  };
-  const result = selectGate5Fallback(allScores);
-  assert(result === null, "QA-J case 2: all non-reframe below threshold → null (discard)");
-}
-
-// Case 3: multiple types above threshold → highest-scoring wins
-{
-  const allScores = {
-    mechanism_reframe:    48,
-    emotional_confession: 36,
-    story_turning_point:  14,
-    contrarian_insight:   12,
-    validation_hook:       0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    authority_proof:       0,
-    transformation_moment: 0,
-  };
-  const result = selectGate5Fallback(allScores);
-  assert(result !== null, "QA-J case 3: multiple above threshold → fallback found");
-  assert(result[0] === "emotional_confession", `QA-J case 3: highest non-reframe type is emotional_confession, got ${result?.[0]}`);
-  assert(result[1] === 36, `QA-J case 3: fallback score is 36, got ${result?.[1]}`);
-}
-
-// Case 4: type exactly at MIN_SCORE_THRESHOLD (10) → included
-{
-  const allScores = {
-    mechanism_reframe:    16,
-    authority_proof:      10,
-    contrarian_insight:    8,
-    validation_hook:       0,
-    emotional_confession:  0,
-    story_turning_point:   0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    transformation_moment: 0,
-  };
-  const result = selectGate5Fallback(allScores);
-  assert(result !== null, "QA-J case 4: type at exactly threshold=10 → included");
-  assert(result[0] === "authority_proof", `QA-J case 4: authority_proof=10 selected, got ${result?.[0]}`);
-}
-
-// Case 5: mechanism_reframe excluded even if no other types above threshold
-{
-  const allScores = {
-    mechanism_reframe:    48,
-    contrarian_insight:    0,
-    validation_hook:       0,
-    emotional_confession:  0,
-    story_turning_point:   0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    authority_proof:       0,
-    transformation_moment: 0,
-  };
-  const result = selectGate5Fallback(allScores);
-  assert(result === null, "QA-J case 5: only mechanism_reframe above threshold → null (no valid fallback)");
-}
-
-// Case 6: validation_hook wins Gate 5 fallback but hookSentence has no validation
-// signals → resolveDisplayType must downgrade to quote_moment. Regression test for
-// the 3b5a117 bug where getPlatformFit/getEmotionalTrigger used fallbackType (pre-resolve)
-// instead of fallbackDisplayType (post-resolve), causing wrong platform/trigger when
-// validation_hook → quote_moment downgrade occurred.
-{
-  const allScores = {
-    mechanism_reframe:    48,
-    validation_hook:      20,
-    contrarian_insight:   12,
-    emotional_confession:  0,
-    story_turning_point:   0,
-    educational_gem:       0,
-    quote_moment:          0,
-    fomo_loss_frame:       0,
-    authority_proof:       0,
-    transformation_moment: 0,
-  };
-  const hookSentence = "We're all out now.";
-  const result = selectGate5Fallback(allScores);
-  assert(result !== null, "QA-J case 6: validation_hook=20 → fallback found");
-  assert(result[0] === "validation_hook", `QA-J case 6: raw fallback type is validation_hook, got ${result?.[0]}`);
-  const fallbackDisplayType = resolveDisplayType(result[0], hookSentence);
-  assert(
-    fallbackDisplayType === "quote_moment",
-    `QA-J case 6: validation_hook without validation signals → resolveDisplayType → quote_moment (got ${fallbackDisplayType})`,
-  );
-}
+console.log("\nCONTENT-MOMENT-QA-L — Gate 5: valid concrete reframes still pass");
+assert(
+  isGenuineReframeConcrete("7 to 30 minutes of making errors triggers adult plasticity"),
+  "QA-L: causal + mechanism vocab → Gate 5 passes",
+);
+assert(
+  isGenuineReframeConcrete("Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally"),
+  "QA-L: causal + mechanism vocab → Gate 5 passes",
+);
+assert(
+  isGenuineReframeConcrete("Acetylcholine marks the error, dopamine helps wire the correction"),
+  "QA-L: neurotransmitter names → Gate 5 passes",
+);
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
 

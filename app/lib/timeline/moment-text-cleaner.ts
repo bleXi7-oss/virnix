@@ -275,7 +275,7 @@ const REFRAME_CAUSAL_RE =
   /\b(because|therefore|leads?\s+to|triggers?|causes?|results?\s+in|is\s+why|that'?s\s+why|disrupts?|consolidat(?:es?|ed|ion)?|is\s+what\s+(?:triggers?|causes?|makes?))\b/i;
 
 const REFRAME_MECHANISM_RE =
-  /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|habit\b|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
+  /\b(dopamine|acetylcholine|cortisol|serotonin|melatonin|adrenaline|norepinephrine|adenosine|plasticity|neuroplasticity|neural\b|neuron|synapse|prefrontal|amygdala|hippocampus|sleep\s+architecture|deep\s+sleep|rem\s+sleep|circadian|nervous\s+system|testosterone|glucose|insulin|myelin)\b/i;
 
 const REFRAME_EXPERIMENT_RE =
   /\b(stud(?:y|ies)|research|experiment(?:al)?|lab\b|subjects?|clinical\s+trial|evidence|scientific(?:ally)?|researchers?|findings?|peer[\s-]?review)\b/i;

@@ -221,10 +221,3 @@ export function getDisplayReason(momentType: MomentType): string {
   return REASONS[momentType] ?? "";
 }
 
-export function getEmotionalTrigger(type: MomentType): string {
-  return EMOTIONAL_TRIGGERS[type] ?? "";
-}
-
-export function getPlatformFit(type: MomentType): PlatformFit[] {
-  return PLATFORM_FIT[type] ?? [];
-}
