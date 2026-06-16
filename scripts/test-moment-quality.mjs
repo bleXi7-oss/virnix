@@ -1641,6 +1641,184 @@ console.log("\nCONTENT-MOMENT-QA-N — batch: good hooks pass both filters");
   );
 }
 
+// ─── CONTENT-MOMENT-QUALITY-GAUNTLET-A: launch-quality display gate ──────────
+// Final acceptance gate — inspects the fully-built suggestedHook (prefix +
+// hookSentence) rather than the raw hookSentence. Catches display-level failures
+// for non-mechanism_reframe types that prior gates miss:
+//   • story_turning_point: "That's when everything changed: broadly as states…"
+//   • emotional_confession: "I used to believe bits of calcium roll back…"
+// Gate 7 in the pipeline: !isLaunchQualityMomentHook(suggestedHook) → return []
+
+// Mirror DISPLAY_PREFIXES and isLaunchQualityMomentHook from moment-text-cleaner.ts
+const DISPLAY_PREFIXES = [
+  "This isn't what you think. ",
+  "Everyone gets this wrong. ",
+  "I used to believe ",
+  "That's when everything changed: ",
+  "Here's why: ",
+  "You're not failing — ",
+  "Most people are already behind on this. ",
+  "After working with hundreds of creators: ",
+  "Before this moment, I was ",
+];
+
+function isLaunchQualityMomentHook(suggestedHook) {
+  for (const prefix of DISPLAY_PREFIXES) {
+    if (suggestedHook.startsWith(prefix)) {
+      const content = suggestedHook.slice(prefix.length);
+      if (content && /^[a-z]/.test(content)) return false;
+      if (content.split(/\s+/).filter(Boolean).length > 50) return false;
+      return true;
+    }
+  }
+  return true;
+}
+
+console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — known bad hooks REJECTED by display gate");
+
+// mechanism_reframe bad (defense-in-depth: also caught by Gate 6)
+assert(
+  !isLaunchQualityMomentHook("This isn't what you think. really going to focus on the actions the motor commands"),
+  "GAUNTLET-A: 'really going to focus…' lowercase after prefix → REJECTED",
+);
+assert(
+  !isLaunchQualityMomentHook("This isn't what you think. meaning balance programs but not just for learning motor commands"),
+  "GAUNTLET-A: 'meaning balance programs…' lowercase after prefix → REJECTED",
+);
+assert(
+  !isLaunchQualityMomentHook("This isn't what you think. likelihood of performing that habit regularly and effectively"),
+  "GAUNTLET-A: 'likelihood of performing…' lowercase after prefix → REJECTED",
+);
+assert(
+  !isLaunchQualityMomentHook("This isn't what you think. don't like working hard some people do but most people work hard"),
+  "GAUNTLET-A: 'don't like working hard…' lowercase after prefix → REJECTED",
+);
+assert(
+  !isLaunchQualityMomentHook("This isn't what you think. do this very hard thing and I'm going to push and push and push"),
+  "GAUNTLET-A: 'do this very hard thing…' lowercase after prefix → REJECTED",
+);
+
+// story_turning_point bad (NEW — not caught by any prior gate)
+assert(
+  !isLaunchQualityMomentHook("That's when everything changed: broadly as states that are set by your autonomic nervous system."),
+  "GAUNTLET-A: 'broadly as states…' lowercase after 'That's when everything changed:' → REJECTED",
+);
+assert(
+  !isLaunchQualityMomentHook("That's when everything changed: really what this means for habit formation is still unclear."),
+  "GAUNTLET-A: 'really what this means…' lowercase after turning-point prefix → REJECTED",
+);
+
+// emotional_confession bad (NEW — not caught by any prior gate)
+assert(
+  !isLaunchQualityMomentHook("I used to believe bits of calcium roll back and forth like little marbles."),
+  "GAUNTLET-A: 'bits of calcium…' lowercase after 'I used to believe' → REJECTED",
+);
+
+// contrarian_insight bad (NEW)
+assert(
+  !isLaunchQualityMomentHook("Everyone gets this wrong. most people think that effort alone determines success."),
+  "GAUNTLET-A: 'most people think…' lowercase after 'Everyone gets this wrong.' → REJECTED",
+);
+
+// educational_gem bad (NEW)
+assert(
+  !isLaunchQualityMomentHook("Here's why: broadly speaking the mechanism is related to autonomic state regulation."),
+  "GAUNTLET-A: 'broadly speaking…' lowercase after 'Here's why:' → REJECTED",
+);
+
+console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — known good hooks PASS display gate");
+
+// mechanism_reframe good (already pass Gate 6 too)
+assert(
+  isLaunchQualityMomentHook("This isn't what you think. Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally."),
+  "GAUNTLET-A: 'Caffeine after 4pm…' uppercase after mechanism_reframe prefix → PASS",
+);
+assert(
+  isLaunchQualityMomentHook("This isn't what you think. Rewarding children for drawing reduces their intrinsic motivation."),
+  "GAUNTLET-A: 'Rewarding children…' uppercase → PASS",
+);
+assert(
+  isLaunchQualityMomentHook("This isn't what you think. Dopamine must attach to effort, not only to the reward after effort."),
+  "GAUNTLET-A: 'Dopamine must attach…' uppercase → PASS",
+);
+assert(
+  isLaunchQualityMomentHook("This isn't what you think. Acetylcholine marks the error, dopamine helps wire the correction."),
+  "GAUNTLET-A: 'Acetylcholine marks…' uppercase → PASS",
+);
+assert(
+  isLaunchQualityMomentHook("This isn't what you think. 7 to 30 minutes of making errors triggers adult plasticity."),
+  "GAUNTLET-A: '7 to 30 minutes…' digit start → PASS",
+);
+
+// educational_gem good
+assert(
+  isLaunchQualityMomentHook("Here's why: Self-testing improves retention more than rereading."),
+  "GAUNTLET-A: 'Self-testing…' uppercase after 'Here's why:' → PASS",
+);
+assert(
+  isLaunchQualityMomentHook("Here's why: Boring breaks reduce sensory overload before focused work."),
+  "GAUNTLET-A: 'Boring breaks…' uppercase after 'Here's why:' → PASS",
+);
+
+// story_turning_point good
+assert(
+  isLaunchQualityMomentHook("That's when everything changed: Everything I believed about productivity was completely wrong."),
+  "GAUNTLET-A: 'Everything I believed…' uppercase after turning-point prefix → PASS",
+);
+
+// emotional_confession good
+assert(
+  isLaunchQualityMomentHook("I used to believe Willpower was the single most important factor in success."),
+  "GAUNTLET-A: 'Willpower was…' uppercase after 'I used to believe' → PASS",
+);
+
+// quote_moment: no prefix in DISPLAY_PREFIXES → pass through unchecked
+assert(
+  isLaunchQualityMomentHook("“Dopamine drives desire more than satisfaction.”"),
+  "GAUNTLET-A: quote_moment (starts with “) → no prefix match → PASS",
+);
+
+console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — batch: all known-bad hooks rejected");
+{
+  const knownBadHooks = [
+    "This isn't what you think. really going to focus on the actions the motor commands",
+    "This isn't what you think. meaning balance programs but not just for learning motor commands",
+    "This isn't what you think. likelihood of performing that habit regularly and effectively",
+    "This isn't what you think. don't like working hard some people do but most people work hard",
+    "This isn't what you think. do this very hard thing and I'm going to push and push and push",
+    "That's when everything changed: broadly as states that are set by your autonomic nervous system.",
+    "I used to believe bits of calcium roll back and forth like little marbles.",
+    "Everyone gets this wrong. most people think that effort alone determines success.",
+    "Here's why: broadly speaking the mechanism is related to autonomic state regulation.",
+  ];
+  const passed_bad = knownBadHooks.filter(isLaunchQualityMomentHook).length;
+  assert(
+    passed_bad === 0,
+    `GAUNTLET-A: all ${knownBadHooks.length} known-bad hooks rejected (${passed_bad} incorrectly passed)`,
+  );
+}
+
+console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — batch: all known-good hooks pass");
+{
+  const knownGoodHooks = [
+    "This isn't what you think. Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally.",
+    "This isn't what you think. Rewarding children for drawing reduces their intrinsic motivation.",
+    "This isn't what you think. Dopamine must attach to effort, not only to the reward after effort.",
+    "This isn't what you think. Acetylcholine marks the error, dopamine helps wire the correction.",
+    "This isn't what you think. 7 to 30 minutes of making errors triggers adult plasticity.",
+    "Here's why: Self-testing improves retention more than rereading.",
+    "Here's why: Boring breaks reduce sensory overload before focused work.",
+    "That's when everything changed: Everything I believed about productivity was completely wrong.",
+    "I used to believe Willpower was the single most important factor in success.",
+    "“Dopamine drives desire more than satisfaction.”",
+  ];
+  const failed_good = knownGoodHooks.filter(h => !isLaunchQualityMomentHook(h)).length;
+  assert(
+    failed_good === 0,
+    `GAUNTLET-A: all ${knownGoodHooks.length} known-good hooks pass (${failed_good} incorrectly rejected)`,
+  );
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed + failed} tests — ${passed} passed, ${failed} failed`);

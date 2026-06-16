@@ -1,15 +1,16 @@
 // Detects the strongest content moments in a timestamped transcript.
 //
 // Pipeline:
-//   1. detectTimestampedLines()     — find all lines with timestamps
-//   2. groupLinesIntoSegments()     — pair each timestamp with the next
-//   3. groupIntoWindows()           — merge 3s segments into 30s scoring windows
-//   4. isLowSemanticContent()       — Gate 1: reject pure noise windows
-//   5. isNoiseHeavy()               — Gate 2: reject exclamation-dominant windows
-//   6. isDisplayQualityHook()       — Gate 3: reject event chatter with no insight
-//   7. isSponsorOrAdReadText()      — Gate 4: reject sponsor/ad-read + self-referential filler
-//   8. scoreMoment()                — heuristic score per window (Gate 5: >= 10)
-//   9. top MAX_MOMENTS returned, sorted by confidence
+//   1. detectTimestampedLines()       — find all lines with timestamps
+//   2. groupLinesIntoSegments()       — pair each timestamp with the next
+//   3. groupIntoWindows()             — merge 3s segments into 30s scoring windows
+//   4. isLowSemanticContent()         — Gate 1: reject pure noise windows
+//   5. isNoiseHeavy()                 — Gate 2: reject exclamation-dominant windows
+//   6. isDisplayQualityHook()         — Gate 3: reject event chatter with no insight
+//   7. isSponsorOrAdReadText()        — Gate 4: reject sponsor/ad-read + self-referential filler
+//   8. scoreMoment()                  — heuristic score per window (Gate 5: >= 10)
+//   9. isLaunchQualityMomentHook()    — Gate 7: final display-quality check on built hook
+//  10. top MAX_MOMENTS returned, sorted by confidence
 //
 // Deterministic heuristic — no AI calls, no ML, no external dependencies.
 // Never throws — returns [] on any failure or missing timestamps.
@@ -31,6 +32,7 @@ import {
   isStandaloneReframeClaim,
   isSponsorOrAdReadText,
   isSelfReferentialFillerHook,
+  isLaunchQualityMomentHook,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -90,6 +92,13 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         // Resolve display type: validation_hook without genuine validation
         // signals is downgraded to quote_moment so the label and prefix match.
         const displayType = resolveDisplayType(scored.momentType, hookSentence);
+        // Build the displayed hook first so Gate 7 can inspect the final string.
+        const suggestedHook = buildSuggestedHook(hookSentence, displayType);
+        // Gate 7: final display-quality check on the fully-built hook string.
+        // Catches prefix + lowercase continuation fragments that slip through
+        // upstream hookSentence-level gates for non-mechanism_reframe types
+        // (e.g. "That's when everything changed: broadly as states that are…").
+        if (!isLaunchQualityMomentHook(suggestedHook)) return [];
         return [{
           id: `moment-${i}`,
           startTime: win.startTime,
@@ -97,7 +106,7 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
           title: MOMENT_TITLES[displayType] ?? "Strong Moment",
           momentType: displayType,
           platformFit: scored.platformFit,
-          suggestedHook: buildSuggestedHook(hookSentence, displayType),
+          suggestedHook,
           whyItWorks: getDisplayReason(displayType),
           emotionalTrigger: scored.emotionalTrigger,
           contentUse: CONTENT_USES[displayType] ?? "repurposable content moment",
