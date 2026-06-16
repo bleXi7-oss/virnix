@@ -318,53 +318,11 @@ export function isSelfReferentialFillerHook(hookSentence: string): boolean {
   return SELF_REF_EPISODE_RE.test(hookSentence);
 }
 
-// Prefixes prepended by buildSuggestedHook in moment-detector.ts.
-// MUST stay in sync with the `prefixes` record in that file.
-// quote_moment uses a single " character (U+201C) and is excluded — quoted text
-// legitimately starts at any capitalisation and has no word-count expectation.
-const DISPLAY_PREFIXES: readonly string[] = [
-  "This isn't what you think. ",
-  "Everyone gets this wrong. ",
-  "I used to believe ",
-  "That's when everything changed: ",
-  "Here's why: ",
-  "You're not failing — ",
-  "Most people are already behind on this. ",
-  "After working with hundreds of creators: ",
-  "Before this moment, I was ",
-];
-
-// Final display-level gate — returns true when the fully-built suggestedHook
-// (prefix + hookSentence) is launch quality.
-//
-// Upstream gates check the raw hookSentence; this gate checks the DISPLAYED
-// string after the prefix is prepended, catching:
-//   • Prefix + lowercase content = clipped transcript continuation fragment
-//     ("That's when everything changed: broadly as states that are set by…")
-//   • Prefix + >50 words = window excerpt pasted verbatim after the prefix
-//
-// quote_moment (prefix = """ U+201C) is not in DISPLAY_PREFIXES → passes through.
-export function isLaunchQualityMomentHook(suggestedHook: string): boolean {
-  for (const prefix of DISPLAY_PREFIXES) {
-    if (suggestedHook.startsWith(prefix)) {
-      const content = suggestedHook.slice(prefix.length);
-      // Clipped continuation fragments start lowercase.
-      // Launch-quality claims start with an uppercase letter or digit.
-      if (content && /^[a-z]/.test(content)) return false;
-      // More than 50 words after the prefix = transcript window pasted verbatim.
-      if (content.split(/\s+/).filter(Boolean).length > 50) return false;
-      return true;
-    }
-  }
-  // No prefix matched (quote_moment or unknown future type) — pass through.
-  return true;
-}
-
 // Returns true when a hook sentence is a short, complete, standalone claim —
 // not a transcript continuation fragment or lecture-transition filler.
-// Used as a second gate alongside isGenuineReframeConcrete for mechanism_reframe.
-// Mechanism/experiment vocabulary alone is not enough: the hook must also read
-// as a self-contained assertion that can open a clip without prior context.
+// Universal gate applied to ALL moment types (Gate 3b in the pipeline).
+// The hook must read as a self-contained assertion that can stand as a pull-quote
+// without prior context — not a mid-sentence clip, not a lecture setup phrase.
 export function isStandaloneReframeClaim(hookSentence: string): boolean {
   const trimmed = hookSentence.trim();
   if (!trimmed) return false;

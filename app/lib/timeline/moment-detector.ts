@@ -7,10 +7,11 @@
 //   4. isLowSemanticContent()         — Gate 1: reject pure noise windows
 //   5. isNoiseHeavy()                 — Gate 2: reject exclamation-dominant windows
 //   6. isDisplayQualityHook()         — Gate 3: reject event chatter with no insight
-//   7. isSponsorOrAdReadText()        — Gate 4: reject sponsor/ad-read + self-referential filler
-//   8. scoreMoment()                  — heuristic score per window (Gate 5: >= 10)
-//   9. isLaunchQualityMomentHook()    — Gate 7: final display-quality check on built hook
-//  10. top MAX_MOMENTS returned, sorted by confidence
+//   7. isStandaloneReframeClaim()     — Gate 3b: universal — reject lowercase-start / filler / >50-word hooks
+//   8. isSponsorOrAdReadText()        — Gate 4: reject sponsor/ad-read + self-referential filler
+//   9. scoreMoment()                  — heuristic score per window (Gate 5: >= 10)
+//  10. isGenuineReframeConcrete()     — Gate 6: mechanism_reframe only — require causal/mechanism/experiment content
+//  11. top MAX_MOMENTS returned, sorted by confidence
 //
 // Deterministic heuristic — no AI calls, no ML, no external dependencies.
 // Never throws — returns [] on any failure or missing timestamps.
@@ -32,7 +33,6 @@ import {
   isStandaloneReframeClaim,
   isSponsorOrAdReadText,
   isSelfReferentialFillerHook,
-  isLaunchQualityMomentHook,
   findFirstMeaningfulSentence,
   trimToMeaningfulStart,
 } from "./moment-text-cleaner";
@@ -68,37 +68,33 @@ export function detectTimelineMoments(transcript: string): TimelineMoment[] {
         // Gate 3: reject hook sentences that can't stand alone as a clip opener
         // — questions, short vague descriptors, game chatter with no insight.
         if (!isDisplayQualityHook(hookSentence)) return [];
+        // Gate 3b: universal standalone claim gate — rejects lowercase-start
+        // continuation fragments, lecture filler phrases, and >50-word excerpts
+        // for all moment types. Strongest Moments display honest pull-quotes;
+        // mid-sentence clips and setup phrases are never acceptable.
+        if (!isStandaloneReframeClaim(hookSentence)) return [];
         // Gate 4: reject sponsor/ad-read windows and self-referential episode
-        // filler. Commercial segments and "I did an episode on..." hooks deliver
-        // no transferable insight — fewer moments is better than sponsor
-        // contamination or meta-commentary masquerading as creator insight.
+        // filler — fewer moments is better than sponsor contamination.
         if (isSponsorOrAdReadText(cleanText) || isSelfReferentialFillerHook(hookSentence)) {
           return [];
         }
         const scored = scoreMoment(cleanText);
         // Gate 5: minimum confidence threshold.
         if (scored.score < MIN_SCORE_THRESHOLD) return [];
-        // Gate 6: mechanism_reframe requires (a) concrete educational content
-        // AND (b) a short, standalone claim — not a transcript continuation
-        // fragment or lecture-filler phrase. Hard-reject on either failure.
-        // Fewer Strongest Moments is safer than showing "This isn't what you
-        // think." on generic lecture text.
+        // Gate 6: mechanism_reframe requires concrete educational content —
+        // causal language, named biological mechanism, or study/experiment evidence.
+        // Hard-reject on failure; fewer moments is safer than showing a
+        // generic lecture fragment as a "reframe" moment.
         if (
           scored.momentType === "mechanism_reframe" &&
-          (!isGenuineReframeConcrete(hookSentence) || !isStandaloneReframeClaim(hookSentence))
+          !isGenuineReframeConcrete(hookSentence)
         ) {
           return [];
         }
         // Resolve display type: validation_hook without genuine validation
-        // signals is downgraded to quote_moment so the label and prefix match.
+        // signals is downgraded to quote_moment so the label matches.
         const displayType = resolveDisplayType(scored.momentType, hookSentence);
-        // Build the displayed hook first so Gate 7 can inspect the final string.
-        const suggestedHook = buildSuggestedHook(hookSentence, displayType);
-        // Gate 7: final display-quality check on the fully-built hook string.
-        // Catches prefix + lowercase continuation fragments that slip through
-        // upstream hookSentence-level gates for non-mechanism_reframe types
-        // (e.g. "That's when everything changed: broadly as states that are…").
-        if (!isLaunchQualityMomentHook(suggestedHook)) return [];
+        const suggestedHook = buildSuggestedHook(hookSentence);
         return [{
           id: `moment-${i}`,
           startTime: win.startTime,
@@ -197,25 +193,8 @@ function resolveDisplayType(scoredType: MomentType, hookSentence: string): Momen
   return scoredType;
 }
 
-function buildSuggestedHook(hookSentence: string, type: string): string {
-  const prefixes: Record<string, string> = {
-    validation_hook:       "You're not failing — ",
-    mechanism_reframe:     "This isn't what you think. ",
-    contrarian_insight:    "Everyone gets this wrong. ",
-    emotional_confession:  "I used to believe ",
-    story_turning_point:   "That's when everything changed: ",
-    educational_gem:       "Here's why: ",
-    quote_moment:          "“",
-    fomo_loss_frame:       "Most people are already behind on this. ",
-    authority_proof:       "After working with hundreds of creators: ",
-    transformation_moment: "Before this moment, I was ",
-  };
-  const prefix = prefixes[type] ?? "";
-  const hook = `${prefix}${hookSentence}`;
-  // Close the opening quote for quote_moment
-  return type === "quote_moment" && prefix === "“"
-    ? `${hook}”`
-    : hook;
+function buildSuggestedHook(hookSentence: string): string {
+  return `“${hookSentence}”`;
 }
 
 const MOMENT_TITLES: Record<string, string> = {

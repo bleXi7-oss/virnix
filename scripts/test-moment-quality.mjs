@@ -1641,181 +1641,117 @@ console.log("\nCONTENT-MOMENT-QA-N — batch: good hooks pass both filters");
   );
 }
 
-// ─── CONTENT-MOMENT-QUALITY-GAUNTLET-A: launch-quality display gate ──────────
-// Final acceptance gate — inspects the fully-built suggestedHook (prefix +
-// hookSentence) rather than the raw hookSentence. Catches display-level failures
-// for non-mechanism_reframe types that prior gates miss:
-//   • story_turning_point: "That's when everything changed: broadly as states…"
-//   • emotional_confession: "I used to believe bits of calcium roll back…"
-// Gate 7 in the pipeline: !isLaunchQualityMomentHook(suggestedHook) → return []
+// ─── CONTENT-MOMENT-PREFIX-REMOVAL-QA-O: universal standalone claim gate ─────
+// After PREFIX-REMOVAL, isStandaloneReframeClaim is Gate 3b — applied to ALL
+// moment types, not just mechanism_reframe. The former GAUNTLET-A bad hooks
+// (which were lowercase continuation fragments after a fake prefix) are now
+// caught by this universal gate directly on the hookSentence.
+// These tests verify the gate catches non-mechanism_reframe types.
 
-// Mirror DISPLAY_PREFIXES and isLaunchQualityMomentHook from moment-text-cleaner.ts
-const DISPLAY_PREFIXES = [
-  "This isn't what you think. ",
-  "Everyone gets this wrong. ",
-  "I used to believe ",
-  "That's when everything changed: ",
-  "Here's why: ",
-  "You're not failing — ",
-  "Most people are already behind on this. ",
-  "After working with hundreds of creators: ",
-  "Before this moment, I was ",
-];
+console.log("\nCONTENT-MOMENT-PREFIX-REMOVAL-QA-O — universal standalone gate: non-mechanism_reframe types");
 
-function isLaunchQualityMomentHook(suggestedHook) {
-  for (const prefix of DISPLAY_PREFIXES) {
-    if (suggestedHook.startsWith(prefix)) {
-      const content = suggestedHook.slice(prefix.length);
-      if (content && /^[a-z]/.test(content)) return false;
-      if (content.split(/\s+/).filter(Boolean).length > 50) return false;
-      return true;
-    }
-  }
-  return true;
-}
-
-console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — known bad hooks REJECTED by display gate");
-
-// mechanism_reframe bad (defense-in-depth: also caught by Gate 6)
+// story_turning_point: lowercase continuation fragment REJECTED
 assert(
-  !isLaunchQualityMomentHook("This isn't what you think. really going to focus on the actions the motor commands"),
-  "GAUNTLET-A: 'really going to focus…' lowercase after prefix → REJECTED",
+  !isStandaloneReframeClaim("broadly as states that are set by your autonomic nervous system."),
+  "QA-O: story_turning_point: lowercase continuation fragment → REJECTED",
 );
 assert(
-  !isLaunchQualityMomentHook("This isn't what you think. meaning balance programs but not just for learning motor commands"),
-  "GAUNTLET-A: 'meaning balance programs…' lowercase after prefix → REJECTED",
-);
-assert(
-  !isLaunchQualityMomentHook("This isn't what you think. likelihood of performing that habit regularly and effectively"),
-  "GAUNTLET-A: 'likelihood of performing…' lowercase after prefix → REJECTED",
-);
-assert(
-  !isLaunchQualityMomentHook("This isn't what you think. don't like working hard some people do but most people work hard"),
-  "GAUNTLET-A: 'don't like working hard…' lowercase after prefix → REJECTED",
-);
-assert(
-  !isLaunchQualityMomentHook("This isn't what you think. do this very hard thing and I'm going to push and push and push"),
-  "GAUNTLET-A: 'do this very hard thing…' lowercase after prefix → REJECTED",
+  !isStandaloneReframeClaim("really what this means for habit formation is still unclear."),
+  "QA-O: story_turning_point: lowercase 'really what…' → REJECTED",
 );
 
-// story_turning_point bad (NEW — not caught by any prior gate)
+// emotional_confession: lowercase fragment REJECTED
 assert(
-  !isLaunchQualityMomentHook("That's when everything changed: broadly as states that are set by your autonomic nervous system."),
-  "GAUNTLET-A: 'broadly as states…' lowercase after 'That's when everything changed:' → REJECTED",
-);
-assert(
-  !isLaunchQualityMomentHook("That's when everything changed: really what this means for habit formation is still unclear."),
-  "GAUNTLET-A: 'really what this means…' lowercase after turning-point prefix → REJECTED",
+  !isStandaloneReframeClaim("bits of calcium roll back and forth like little marbles."),
+  "QA-O: emotional_confession: lowercase continuation fragment → REJECTED",
 );
 
-// emotional_confession bad (NEW — not caught by any prior gate)
+// contrarian_insight: lowercase fragment REJECTED
 assert(
-  !isLaunchQualityMomentHook("I used to believe bits of calcium roll back and forth like little marbles."),
-  "GAUNTLET-A: 'bits of calcium…' lowercase after 'I used to believe' → REJECTED",
+  !isStandaloneReframeClaim("most people think that effort alone determines success."),
+  "QA-O: contrarian_insight: lowercase 'most people think…' → REJECTED",
 );
 
-// contrarian_insight bad (NEW)
+// educational_gem: filler phrase REJECTED
 assert(
-  !isLaunchQualityMomentHook("Everyone gets this wrong. most people think that effort alone determines success."),
-  "GAUNTLET-A: 'most people think…' lowercase after 'Everyone gets this wrong.' → REJECTED",
+  !isStandaloneReframeClaim("This is where it gets interesting with educational habits."),
+  "QA-O: educational_gem: 'this is where it gets' filler → REJECTED",
 );
 
-// educational_gem bad (NEW)
+// Any type: >50-word excerpt REJECTED
 assert(
-  !isLaunchQualityMomentHook("Here's why: broadly speaking the mechanism is related to autonomic state regulation."),
-  "GAUNTLET-A: 'broadly speaking…' lowercase after 'Here's why:' → REJECTED",
+  !isStandaloneReframeClaim(
+    "Most people have no idea that the window for peak cognitive performance closes faster than " +
+    "they realize and by the time they notice the decline they have already lost years of " +
+    "compounding advantage that they will never be able to fully recover from in their lifetime " +
+    "and no amount of effort or discipline can make up for those compounding years of lost ground."
+  ),
+  "QA-O: >50 word hook → REJECTED regardless of momentType",
 );
 
-console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — known good hooks PASS display gate");
-
-// mechanism_reframe good (already pass Gate 6 too)
+// story_turning_point: clean uppercase hook PASSES
 assert(
-  isLaunchQualityMomentHook("This isn't what you think. Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally."),
-  "GAUNTLET-A: 'Caffeine after 4pm…' uppercase after mechanism_reframe prefix → PASS",
-);
-assert(
-  isLaunchQualityMomentHook("This isn't what you think. Rewarding children for drawing reduces their intrinsic motivation."),
-  "GAUNTLET-A: 'Rewarding children…' uppercase → PASS",
-);
-assert(
-  isLaunchQualityMomentHook("This isn't what you think. Dopamine must attach to effort, not only to the reward after effort."),
-  "GAUNTLET-A: 'Dopamine must attach…' uppercase → PASS",
-);
-assert(
-  isLaunchQualityMomentHook("This isn't what you think. Acetylcholine marks the error, dopamine helps wire the correction."),
-  "GAUNTLET-A: 'Acetylcholine marks…' uppercase → PASS",
-);
-assert(
-  isLaunchQualityMomentHook("This isn't what you think. 7 to 30 minutes of making errors triggers adult plasticity."),
-  "GAUNTLET-A: '7 to 30 minutes…' digit start → PASS",
+  isStandaloneReframeClaim("Everything I believed about productivity was completely wrong."),
+  "QA-O: story_turning_point: clean uppercase hook → PASSES",
 );
 
-// educational_gem good
+// emotional_confession: clean uppercase hook PASSES
 assert(
-  isLaunchQualityMomentHook("Here's why: Self-testing improves retention more than rereading."),
-  "GAUNTLET-A: 'Self-testing…' uppercase after 'Here's why:' → PASS",
-);
-assert(
-  isLaunchQualityMomentHook("Here's why: Boring breaks reduce sensory overload before focused work."),
-  "GAUNTLET-A: 'Boring breaks…' uppercase after 'Here's why:' → PASS",
+  isStandaloneReframeClaim("Willpower was the single most important factor in success, or so I thought."),
+  "QA-O: emotional_confession: clean uppercase hook → PASSES",
 );
 
-// story_turning_point good
+// contrarian_insight: clean uppercase hook PASSES
 assert(
-  isLaunchQualityMomentHook("That's when everything changed: Everything I believed about productivity was completely wrong."),
-  "GAUNTLET-A: 'Everything I believed…' uppercase after turning-point prefix → PASS",
+  isStandaloneReframeClaim("Most people optimize for the wrong metric entirely."),
+  "QA-O: contrarian_insight: insight vocab hook → PASSES",
 );
 
-// emotional_confession good
+// educational_gem: digit-start hook PASSES
 assert(
-  isLaunchQualityMomentHook("I used to believe Willpower was the single most important factor in success."),
-  "GAUNTLET-A: 'Willpower was…' uppercase after 'I used to believe' → PASS",
+  isStandaloneReframeClaim("7 to 30 minutes of focused practice is the optimal window for skill acquisition."),
+  "QA-O: educational_gem: digit-start hook → PASSES",
 );
 
-// quote_moment: no prefix in DISPLAY_PREFIXES → pass through unchecked
-assert(
-  isLaunchQualityMomentHook("“Dopamine drives desire more than satisfaction.”"),
-  "GAUNTLET-A: quote_moment (starts with “) → no prefix match → PASS",
-);
-
-console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — batch: all known-bad hooks rejected");
+// Batch: all former GAUNTLET-A bad hookSentences (lowercase after fake prefix)
+// are still caught — now by universal Gate 3b, not by the deleted Gate 7.
 {
-  const knownBadHooks = [
-    "This isn't what you think. really going to focus on the actions the motor commands",
-    "This isn't what you think. meaning balance programs but not just for learning motor commands",
-    "This isn't what you think. likelihood of performing that habit regularly and effectively",
-    "This isn't what you think. don't like working hard some people do but most people work hard",
-    "This isn't what you think. do this very hard thing and I'm going to push and push and push",
-    "That's when everything changed: broadly as states that are set by your autonomic nervous system.",
-    "I used to believe bits of calcium roll back and forth like little marbles.",
-    "Everyone gets this wrong. most people think that effort alone determines success.",
-    "Here's why: broadly speaking the mechanism is related to autonomic state regulation.",
+  const formerGauntletBadHookSentences = [
+    "broadly as states that are set by your autonomic nervous system.",
+    "bits of calcium roll back and forth like little marbles.",
+    "most people think that effort alone determines success.",
+    "really going to focus on the actions the motor commands",
+    "meaning balance programs but not just for learning motor commands",
+    "really what this means for habit formation is still unclear.",
+    "broadly speaking the mechanism is related to autonomic state regulation.",
+    "don't like working hard some people do but most people work hard in order to achieve some end goal",
+    "do this very hard thing and I'm going to push and push and push and push for that end goal",
   ];
-  const passed_bad = knownBadHooks.filter(isLaunchQualityMomentHook).length;
+  const stillRejected = formerGauntletBadHookSentences.filter(h => !isStandaloneReframeClaim(h)).length;
   assert(
-    passed_bad === 0,
-    `GAUNTLET-A: all ${knownBadHooks.length} known-bad hooks rejected (${passed_bad} incorrectly passed)`,
+    stillRejected === formerGauntletBadHookSentences.length,
+    `QA-O: all ${formerGauntletBadHookSentences.length} former GAUNTLET-A bad hookSentences rejected by universal gate (${stillRejected}/${formerGauntletBadHookSentences.length})`,
   );
 }
 
-console.log("\nCONTENT-MOMENT-QUALITY-GAUNTLET-A — batch: all known-good hooks pass");
+// Batch: good hookSentences that should reach display — no pull-quote format needed
+// (these are the hookSentence values before buildSuggestedHook wraps them)
 {
-  const knownGoodHooks = [
-    "This isn't what you think. Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally.",
-    "This isn't what you think. Rewarding children for drawing reduces their intrinsic motivation.",
-    "This isn't what you think. Dopamine must attach to effort, not only to the reward after effort.",
-    "This isn't what you think. Acetylcholine marks the error, dopamine helps wire the correction.",
-    "This isn't what you think. 7 to 30 minutes of making errors triggers adult plasticity.",
-    "Here's why: Self-testing improves retention more than rereading.",
-    "Here's why: Boring breaks reduce sensory overload before focused work.",
-    "That's when everything changed: Everything I believed about productivity was completely wrong.",
-    "I used to believe Willpower was the single most important factor in success.",
-    "“Dopamine drives desire more than satisfaction.”",
+  const goodHookSentences = [
+    "Caffeine after 4pm disrupts sleep architecture even if you fall asleep normally.",
+    "Rewarding children for drawing reduces their intrinsic motivation.",
+    "Dopamine must attach to effort, not only to the reward after effort.",
+    "Acetylcholine marks the error, dopamine helps wire the correction.",
+    "7 to 30 minutes of making errors triggers adult plasticity.",
+    "Self-testing improves retention more than rereading.",
+    "Boring breaks reduce sensory overload before focused work.",
+    "Everything I believed about productivity was completely wrong.",
+    "Willpower was the single most important factor in success, or so I thought.",
   ];
-  const failed_good = knownGoodHooks.filter(h => !isLaunchQualityMomentHook(h)).length;
+  const passCount = goodHookSentences.filter(isStandaloneReframeClaim).length;
   assert(
-    failed_good === 0,
-    `GAUNTLET-A: all ${knownGoodHooks.length} known-good hooks pass (${failed_good} incorrectly rejected)`,
+    passCount === goodHookSentences.length,
+    `QA-O: all ${goodHookSentences.length} good hookSentences pass universal gate (${passCount}/${goodHookSentences.length})`,
   );
 }
 
