@@ -7,6 +7,7 @@
 //   3. Forbidden mannequin forms: mannequin* (AI loanword) → lutke (Slovenian).
 //   4. English scaffold phrases that leak into Slovenian output → translated.
 //   5. Known recurring Slovenian typos / malformed words → corrected form.
+//   6. Known awkward / wrong-case / leaked phrases → exact natural-Slovenian form.
 //
 // This is intentionally conservative: it only changes things that are provably
 // wrong in Slovenian. It does not attempt to build a grammar engine, and the
@@ -30,6 +31,35 @@ const SL_WORD_FIXES: ReadonlyArray<readonly [string, string]> = [
   ["prepisodek", "prepis"],   // malformed blend → "prepis"
   ["mozeg", "možgani"],       // missing diacritic / wrong stem → "možgani"
   ["transcript", "prepis"],   // English word leak → "prepis" (matches nativeNote guidance)
+  // QA-E:
+  ["stimule", "dražljaje"],   // Serbian/Croatian/Latin loanword → "dražljaje"
+  ["podcástom", "podcastom"], // foreign acute accent (á) → plain "podcastom"
+];
+
+// Known awkward / wrong-case / leaked phrases → exact natural-Slovenian form.
+// Whole-phrase replacement with first-letter capitalization following the match.
+// Each left-hand side is an exact production string that is provably wrong or
+// non-Slovenian — never a phrase that valid Slovenian content would contain.
+// SL_LETTER look-arounds gate the short fragments so they only match standalone.
+const SL_PHRASE_FIXES: ReadonlyArray<readonly [RegExp, string]> = [
+  // 1. English leakage → translated (period/punctuation after the phrase is kept)
+  [/learning is repeated recall, not repeated exposure/gi,
+    "Učenje je priklic, ne ponovna izpostavljenost"],
+  // 2. Wrong preposition: "s" (not "z") before voiceless "t"
+  [new RegExp(`(?<![${SL_LETTER}])z telefonom(?![${SL_LETTER}])`, "gi"),
+    "s telefonom"],
+  // 3. Wrong noun case: "možgani" is plural-only → dative plural "možganom"
+  [new RegExp(`(?<![${SL_LETTER}])tvojemu možganu(?![${SL_LETTER}])`, "gi"),
+    "tvojim možganom"],
+  // 5. Awkward Slovenian phrase → natural rewrite
+  [/pred delom namerno naloži dolgočasje/gi,
+    "Pred delom si namerno vzemi nekaj minut dolgočasja"],
+  // 7. Latin/Balkan word leakage → Slovenian
+  [new RegExp(`(?<![${SL_LETTER}])contra vsemu(?![${SL_LETTER}])`, "gi"),
+    "v nasprotju z vsem"],
+  // 8. Broken two-sentence fragment → single natural sentence
+  [/odmore se ti po delu\.\s+to je problem\./gi,
+    "Tvoji odmori po delu so problem."],
 ];
 
 // English "scaffold" phrases that leak into Slovenian output. Translated to
@@ -57,6 +87,18 @@ function fixSlovenianWord(text: string, target: string, replacement: string): st
   });
 }
 
+// Replace a whole phrase, making the replacement's first letter follow the
+// case of the matched text (upper-initial match → upper-initial replacement).
+function applyPhraseFix(text: string, re: RegExp, replacement: string): string {
+  return text.replace(re, (match) => {
+    const first = match[0];
+    const matchedUpper = first !== first.toLowerCase() && first === first.toUpperCase();
+    return matchedUpper
+      ? replacement[0].toUpperCase() + replacement.slice(1)
+      : replacement[0].toLowerCase() + replacement.slice(1);
+  });
+}
+
 export function sanitizeSlovenianOutput(text: string): string {
   let out = text
     // Strip Cyrillic Unicode blocks (U+0400-U+052F)
@@ -74,6 +116,11 @@ export function sanitizeSlovenianOutput(text: string): string {
   // Translate leaked English scaffold phrases to natural Slovenian.
   for (const [re, replacement] of SL_SCAFFOLD_TRANSLATIONS) {
     out = out.replace(re, replacement);
+  }
+
+  // Replace known awkward / wrong-case / leaked phrases with natural Slovenian.
+  for (const [re, replacement] of SL_PHRASE_FIXES) {
+    out = applyPhraseFix(out, re, replacement);
   }
 
   // Fix known recurring Slovenian typos / malformed words.

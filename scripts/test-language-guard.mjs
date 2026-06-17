@@ -549,6 +549,8 @@ const SL_WORD_FIXES = [
   ["prepisodek", "prepis"],
   ["mozeg", "možgani"],
   ["transcript", "prepis"],
+  ["stimule", "dražljaje"],
+  ["podcástom", "podcastom"],
 ];
 
 const SL_SCAFFOLD_TRANSLATIONS = [
@@ -556,6 +558,21 @@ const SL_SCAFFOLD_TRANSLATIONS = [
   [/\bhere(?:['’]s| is) the pattern\b/gi, "To je vzorec"],
   [/\bhere(?:['’]s| is) what this reveals\b/gi, "To razkriva naslednje"],
   [/\bthis is the useful way to think about it\b/gi, "Tako je koristno razmišljati o tem"],
+];
+
+const SL_PHRASE_FIXES = [
+  [/learning is repeated recall, not repeated exposure/gi,
+    "Učenje je priklic, ne ponovna izpostavljenost"],
+  [new RegExp(`(?<![${SL_LETTER}])z telefonom(?![${SL_LETTER}])`, "gi"),
+    "s telefonom"],
+  [new RegExp(`(?<![${SL_LETTER}])tvojemu možganu(?![${SL_LETTER}])`, "gi"),
+    "tvojim možganom"],
+  [/pred delom namerno naloži dolgočasje/gi,
+    "Pred delom si namerno vzemi nekaj minut dolgočasja"],
+  [new RegExp(`(?<![${SL_LETTER}])contra vsemu(?![${SL_LETTER}])`, "gi"),
+    "v nasprotju z vsem"],
+  [/odmore se ti po delu\.\s+to je problem\./gi,
+    "Tvoji odmori po delu so problem."],
 ];
 
 function fixSlovenianWord(text, target, replacement) {
@@ -571,6 +588,16 @@ function fixSlovenianWord(text, target, replacement) {
   });
 }
 
+function applyPhraseFix(text, re, replacement) {
+  return text.replace(re, (match) => {
+    const first = match[0];
+    const matchedUpper = first !== first.toLowerCase() && first === first.toUpperCase();
+    return matchedUpper
+      ? replacement[0].toUpperCase() + replacement.slice(1)
+      : replacement[0].toLowerCase() + replacement.slice(1);
+  });
+}
+
 function sanitizeSlovenianOutput(text) {
   let out = text
     .replace(/[Ѐ-ԯ]/g, "")
@@ -579,6 +606,9 @@ function sanitizeSlovenianOutput(text) {
     .replace(/\bmannequin[a-z]*/gi, "lutke");
   for (const [re, replacement] of SL_SCAFFOLD_TRANSLATIONS) {
     out = out.replace(re, replacement);
+  }
+  for (const [re, replacement] of SL_PHRASE_FIXES) {
+    out = applyPhraseFix(out, re, replacement);
   }
   for (const [target, replacement] of SL_WORD_FIXES) {
     out = fixSlovenianWord(out, target, replacement);
@@ -769,6 +799,127 @@ assert(
 assert(
   !sanitizeSlovenianOutput("neobstojećih dejstev").includes("neobstojećih"),
   "QA-D: 'neobstojećih' (ć) still corrected to 'neobstoječih'",
+);
+
+// ─── CONTENT-LANGUAGE-QA-E: residual Slovenian grammar + English leakage ─────
+// Residual issues from the Slovenian qM6yqU7RGhU retest (after QA-D passed):
+// English leakage, wrong preposition/case, Balkan/Latin loanwords, awkward
+// phrasing, and a foreign acute accent. All exact-phrase / exact-token fixes —
+// no grammar engine. Croatian/Serbian output is explicitly out of scope.
+
+console.log("\nCONTENT-LANGUAGE-QA-E — residual fixes");
+
+// 1. English leakage → translated to Slovenian (trailing period preserved)
+assert(
+  sanitizeSlovenianOutput("Learning is repeated recall, not repeated exposure.") ===
+    "Učenje je priklic, ne ponovna izpostavljenost.",
+  "QA-E: English 'Learning is repeated recall...' → Slovenian",
+);
+assert(
+  !sanitizeSlovenianOutput("Learning is repeated recall, not repeated exposure.").includes("Learning is repeated recall"),
+  "QA-E: English 'Learning is repeated recall' no longer present",
+);
+
+// 2. Wrong preposition: "z telefonom" → "s telefonom"
+assert(
+  sanitizeSlovenianOutput("Odmor z telefonom") === "Odmor s telefonom",
+  "QA-E: 'Odmor z telefonom' → 'Odmor s telefonom'",
+);
+
+// 3. Wrong noun case: "tvojemu možganu" → "tvojim možganom"
+assert(
+  sanitizeSlovenianOutput("tvojemu možganu škodijo") === "tvojim možganom škodijo",
+  "QA-E: 'tvojemu možganu škodijo' → 'tvojim možganom škodijo'",
+);
+
+// 4. Balkan/Latin loanword: "nove stimule" → "nove dražljaje"
+assert(
+  sanitizeSlovenianOutput("nove stimule") === "nove dražljaje",
+  "QA-E: 'nove stimule' → 'nove dražljaje'",
+);
+
+// 5. Awkward phrase → natural Slovenian rewrite
+assert(
+  sanitizeSlovenianOutput("Pred delom namerno naloži dolgočasje") ===
+    "Pred delom si namerno vzemi nekaj minut dolgočasja",
+  "QA-E: 'Pred delom namerno naloži dolgočasje' → natural phrase",
+);
+
+// 6. Foreign acute accent: "podcástom" → "podcastom"
+assert(
+  sanitizeSlovenianOutput("poslušaj me na podcástom") === "poslušaj me na podcastom",
+  "QA-E: 'podcástom' → 'podcastom'",
+);
+
+// 7. Latin/Balkan leakage: "contra vsemu" → "v nasprotju z vsem"
+assert(
+  sanitizeSlovenianOutput("contra vsemu kar veš") === "v nasprotju z vsem kar veš",
+  "QA-E: 'contra vsemu' → 'v nasprotju z vsem'",
+);
+
+// 8. Broken two-sentence fragment → single natural sentence
+assert(
+  sanitizeSlovenianOutput("Odmore se ti po delu. To je problem.") ===
+    "Tvoji odmori po delu so problem.",
+  "QA-E: 'Odmore se ti po delu. To je problem.' → 'Tvoji odmori po delu so problem.'",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-E — capitalization + boundary safety");
+
+// Capitalization follows the match (sentence-initial "Contra" → "V ...")
+assert(
+  sanitizeSlovenianOutput("Contra vsemu kar veš") === "V nasprotju z vsem kar veš",
+  "QA-E: 'Contra vsemu' (Title) → 'V nasprotju z vsem'",
+);
+// "z telefonom" only as a standalone phrase — does not corrupt other "z" usage
+assert(
+  sanitizeSlovenianOutput("Govori z mano o telefonih") === "Govori z mano o telefonih",
+  "QA-E: unrelated 'z mano' / 'telefonih' not altered by 'z telefonom' rule",
+);
+// "stimule" token only — broader valid text untouched
+assert(
+  sanitizeSlovenianOutput("To so dražljaji, ne stimule") === "To so dražljaji, ne dražljaje",
+  "QA-E: standalone 'stimule' → 'dražljaje'; 'dražljaji' untouched",
+);
+// Already-correct Slovenian passes through unchanged
+assert(
+  sanitizeSlovenianOutput("Odmor s telefonom škodi tvojim možganom.") ===
+    "Odmor s telefonom škodi tvojim možganom.",
+  "QA-E: already-correct Slovenian unchanged (no false positives)",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-E — QA-D protections still pass");
+
+// no QA-D English scaffold phrase
+assert(
+  !sanitizeSlovenianOutput("Nobody talks about this — počneš narobe.").includes("Nobody talks about this"),
+  "QA-E: QA-D scaffold 'Nobody talks about this' still translated",
+);
+// no Cyrillic leakage
+assert(
+  !/[Ѐ-ԯ]/.test(sanitizeSlovenianOutput("Kdo Je Preživел?")),
+  "QA-E: Cyrillic still stripped",
+);
+// no mannequin/mannequini leakage
+assert(
+  !sanitizeSlovenianOutput("med stotimi mannequini").includes("mannequini"),
+  "QA-E: 'mannequini' still replaced",
+);
+// no "Transcript razkrije"
+assert(
+  !sanitizeSlovenianOutput("Transcript razkrije vzorec").includes("Transcript"),
+  "QA-E: English 'Transcript' still removed",
+);
+// no Serbian/Croatian "neobstojećih"
+assert(
+  !sanitizeSlovenianOutput("neobstojećih dejstev").includes("neobstojećih"),
+  "QA-E: 'neobstojećih' (ć) still corrected",
+);
+// QA-D typo fixes still active
+assert(
+  sanitizeSlovenianOutput("tvojot fokus, zapusteš aplikacijo, Zde je") ===
+    "tvoj fokus, zapustiš aplikacijo, Zdaj je",
+  "QA-E: QA-D word fixes (tvojot/zapusteš/zde) still active",
 );
 
 // ─── CONTENT-POLISH-QA-F: Slovenian nativeNote rules ────────────────────────
