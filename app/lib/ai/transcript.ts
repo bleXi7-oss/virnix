@@ -260,7 +260,7 @@ export function toFriendlyError(err: unknown): string {
     return "YouTube is temporarily blocking transcript access. Please try again in a few minutes.";
   }
   if (msg.includes("disabled")) {
-    return "This video doesn't have captions enabled. Try a public YouTube video with captions.";
+    return "This video has no captions. Paste a transcript below, or transcribe the audio externally and paste the result.";
   }
   if (msg.includes("no longer available") || msg.includes("unavailable")) {
     return "This video is unavailable.";
@@ -269,10 +269,10 @@ export function toFriendlyError(err: unknown): string {
     return "This video is private or restricted.";
   }
   if (msg.includes("no transcript") || msg.includes("no transcripts")) {
-    return "No transcript was found for this video. Try a video with captions enabled.";
+    return "No transcript was found. Paste a transcript below, or transcribe the audio externally and paste the result.";
   }
   if (msg.includes("not found") || msg.includes("http_404")) {
     return "Video not found. Please check the URL.";
   }
-  return "Couldn't fetch the transcript. Make sure the video is public and has captions enabled.";
+  return "Couldn't fetch the transcript. Paste a transcript below, or make sure the video is public and has captions enabled.";
 }

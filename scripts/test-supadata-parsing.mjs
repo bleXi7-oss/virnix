@@ -58,7 +58,7 @@ function toFriendlyError(err) {
     return "YouTube is temporarily blocking transcript access. Please try again in a few minutes.";
   }
   if (msg.includes("disabled")) {
-    return "This video doesn't have captions enabled. Try a public YouTube video with captions.";
+    return "This video has no captions. Paste a transcript below, or transcribe the audio externally and paste the result.";
   }
   if (msg.includes("no longer available") || msg.includes("unavailable")) {
     return "This video is unavailable.";
@@ -67,12 +67,12 @@ function toFriendlyError(err) {
     return "This video is private or restricted.";
   }
   if (msg.includes("no transcript") || msg.includes("no transcripts")) {
-    return "No transcript was found for this video. Try a video with captions enabled.";
+    return "No transcript was found. Paste a transcript below, or transcribe the audio externally and paste the result.";
   }
   if (msg.includes("not found") || msg.includes("http_404")) {
     return "Video not found. Please check the URL.";
   }
-  return "Couldn't fetch the transcript. Make sure the video is public and has captions enabled.";
+  return "Couldn't fetch the transcript. Paste a transcript below, or make sure the video is public and has captions enabled.";
 }
 
 // mirrors the post-fetch parsing logic from getTranscriptFull
@@ -264,16 +264,16 @@ console.log("\ntoFriendlyError — HTTP status codes");
 {
   assert(toFriendlyError(new Error("http_404")).includes("Video not found"), "404 → video not found");
   assert(toFriendlyError(new Error("http_401")).includes("Couldn't fetch"), "401 → generic error");
-  assert(toFriendlyError(new Error("captions disabled")).includes("captions enabled"), "disabled → captions message");
+  assert(toFriendlyError(new Error("captions disabled")).includes("Paste a transcript"), "disabled → paste-first message");
   assert(toFriendlyError(new Error("private video")).includes("private"), "private → private message");
-  assert(toFriendlyError(new Error("no transcripts found")).includes("captions enabled"), "no transcripts → captions message");
+  assert(toFriendlyError(new Error("no transcripts found")).includes("Paste a transcript"), "no transcripts → paste-first message");
   assert(toFriendlyError(new Error("no longer available")).includes("unavailable"), "unavailable → unavailable message");
 }
 
 console.log("\ntoFriendlyError — unknown error → generic fallback");
 {
   const msg = toFriendlyError(new Error("something completely unknown happened"));
-  assert(msg.includes("Make sure the video is public"), "unknown → generic fallback");
+  assert(msg.includes("make sure the video is public"), "unknown → generic fallback");
 }
 {
   const msg = toFriendlyError("plain string, not an Error");
