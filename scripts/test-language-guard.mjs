@@ -539,14 +539,51 @@ assert(computeHideHook("Bu içerik Türkçe bir videodur.", "tr", "sl"), "Turkis
 
 // ─── CONTENT-POLISH-QA-G: Slovenian output sanitizer ────────────────────────
 
+const SL_LETTER = "a-zA-ZčšžćđČŠŽĆĐ";
+
+const SL_WORD_FIXES = [
+  ["tvojot", "tvoj"],
+  ["zapusteš", "zapustiš"],
+  ["najlaži", "najlažji"],
+  ["zde", "zdaj"],
+  ["prepisodek", "prepis"],
+  ["mozeg", "možgani"],
+  ["transcript", "prepis"],
+];
+
+const SL_SCAFFOLD_TRANSLATIONS = [
+  [/\bnobody talks about this\b/gi, "O tem nihče ne govori"],
+  [/\bhere(?:['’]s| is) the pattern\b/gi, "To je vzorec"],
+  [/\bhere(?:['’]s| is) what this reveals\b/gi, "To razkriva naslednje"],
+  [/\bthis is the useful way to think about it\b/gi, "Tako je koristno razmišljati o tem"],
+];
+
+function fixSlovenianWord(text, target, replacement) {
+  const re = new RegExp(`(?<![${SL_LETTER}])${target}(?![${SL_LETTER}])`, "gi");
+  return text.replace(re, (match) => {
+    if (match === match.toUpperCase() && match !== match.toLowerCase()) {
+      return replacement.toUpperCase();
+    }
+    if (match[0] !== match[0].toLowerCase()) {
+      return replacement[0].toUpperCase() + replacement.slice(1);
+    }
+    return replacement;
+  });
+}
+
 function sanitizeSlovenianOutput(text) {
-  return text
+  let out = text
     .replace(/[Ѐ-ԯ]/g, "")
     .replace(/ć/g, "č").replace(/Ć/g, "Č")
     .replace(/đ/g, "dž").replace(/Đ/g, "Dž")
-    .replace(/\bmannequin[a-z]*/gi, "lutke")
-    .replace(/ {2,}/g, " ")
-    .trim();
+    .replace(/\bmannequin[a-z]*/gi, "lutke");
+  for (const [re, replacement] of SL_SCAFFOLD_TRANSLATIONS) {
+    out = out.replace(re, replacement);
+  }
+  for (const [target, replacement] of SL_WORD_FIXES) {
+    out = fixSlovenianWord(out, target, replacement);
+  }
+  return out.replace(/ {2,}/g, " ").trim();
 }
 
 console.log("\nCONTENT-POLISH-QA-G — Slovenian output sanitizer");
@@ -603,6 +640,135 @@ assert(
 assert(
   sanitizeSlovenianOutput("Lutke so na polici.") === "Lutke so na polici.",
   "QA-G: clean Slovenian text unchanged",
+);
+
+// ─── CONTENT-LANGUAGE-QA-D: Slovenian grammar polish + scaffold translation ──
+// Production failures from qM6yqU7RGhU:
+//   • "Nobody talks about this" leaked into Slovenian TikTok output
+//   • Grammar typos: tvojot/zapusteš/najlaži/zde
+// Fix: deterministic scaffold-phrase translation + whole-word typo correction.
+// Word-boundary uses an explicit Slovenian letter class because JS \b breaks
+// around words ending in š/ž (e.g. "zapusteš").
+
+console.log("\nCONTENT-LANGUAGE-QA-D — English scaffold phrases translated");
+
+// 1. "Nobody talks about this —" removed/translated (no longer English)
+assert(
+  !sanitizeSlovenianOutput("Nobody talks about this — tvoj fokus se kruši.").includes("Nobody talks about this"),
+  "QA-D: 'Nobody talks about this' translated out of Slovenian output",
+);
+assert(
+  sanitizeSlovenianOutput("Nobody talks about this — počneš narobe.") === "O tem nihče ne govori — počneš narobe.",
+  "QA-D: 'Nobody talks about this' → 'O tem nihče ne govori'",
+);
+
+// Other known scaffold phrases (straight + curly apostrophe, 'is' variant)
+assert(
+  sanitizeSlovenianOutput("Here's the pattern: ponavljaš isto napako.") === "To je vzorec: ponavljaš isto napako.",
+  "QA-D: \"Here's the pattern\" → 'To je vzorec'",
+);
+assert(
+  sanitizeSlovenianOutput("Here is the pattern.") === "To je vzorec.",
+  "QA-D: 'Here is the pattern' → 'To je vzorec'",
+);
+assert(
+  sanitizeSlovenianOutput("Here's what this reveals about fokus.") === "To razkriva naslednje about fokus.",
+  "QA-D: \"Here's what this reveals\" → 'To razkriva naslednje'",
+);
+assert(
+  sanitizeSlovenianOutput("This is the useful way to think about it.") === "Tako je koristno razmišljati o tem.",
+  "QA-D: 'This is the useful way to think about it' → translated",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-D — Slovenian grammar typo fixes");
+
+// 2. tvojot → tvoj
+assert(
+  sanitizeSlovenianOutput("tvojot fokus") === "tvoj fokus",
+  "QA-D: 'tvojot fokus' → 'tvoj fokus'",
+);
+
+// 3. zapusteš → zapustiš (ends in š — \b would fail, explicit class works)
+assert(
+  sanitizeSlovenianOutput("zapusteš aplikacijo") === "zapustiš aplikacijo",
+  "QA-D: 'zapusteš aplikacijo' → 'zapustiš aplikacijo'",
+);
+
+// 4. Najlaži → Najlažji (capitalization preserved)
+assert(
+  sanitizeSlovenianOutput("Najlaži začetek") === "Najlažji začetek",
+  "QA-D: 'Najlaži začetek' → 'Najlažji začetek'",
+);
+
+// 5. Zde → Zdaj (capitalization preserved)
+assert(
+  sanitizeSlovenianOutput("Zde je koristen način") === "Zdaj je koristen način",
+  "QA-D: 'Zde je koristen način' → 'Zdaj je koristen način'",
+);
+
+// Extra documented fixes
+assert(
+  sanitizeSlovenianOutput("prepisodek pokaže resnico") === "prepis pokaže resnico",
+  "QA-D: 'prepisodek' → 'prepis'",
+);
+assert(
+  sanitizeSlovenianOutput("tvoj mozeg se upira") === "tvoj možgani se upira",
+  "QA-D: 'mozeg' → 'možgani'",
+);
+assert(
+  sanitizeSlovenianOutput("Transcript razkrije resnico") === "Prepis razkrije resnico",
+  "QA-D: 'Transcript razkrije' → 'Prepis razkrije' (no English 'Transcript' leak)",
+);
+assert(
+  !sanitizeSlovenianOutput("Transcript razkrije resnico").includes("Transcript razkrije"),
+  "QA-D: 'Transcript razkrije' absent after sanitization",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-D — word-boundary safety (no over-aggressive replacement)");
+
+// "zde" must NOT match inside valid words (lookbehind/lookahead protect)
+assert(
+  sanitizeSlovenianOutput("izdelek je zdrav") === "izdelek je zdrav",
+  "QA-D: 'zde' not replaced inside 'izdelek'; 'zdrav' untouched",
+);
+// "najlaži" token only — "laži" (valid: lies) untouched
+assert(
+  sanitizeSlovenianOutput("njegove laži") === "njegove laži",
+  "QA-D: standalone 'laži' (lies) not altered by 'najlaži' rule",
+);
+// Capitalization variants
+assert(
+  sanitizeSlovenianOutput("Tvojot fokus") === "Tvoj fokus",
+  "QA-D: 'Tvojot' (Title) → 'Tvoj' (Title preserved)",
+);
+// Clean Slovenian with diacritics passes through
+assert(
+  sanitizeSlovenianOutput("Zdaj zapustiš aplikacijo in najlažji korak je tvoj.") ===
+    "Zdaj zapustiš aplikacijo in najlažji korak je tvoj.",
+  "QA-D: already-correct Slovenian text unchanged (no false positives)",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-D — existing sanitizer protections still pass");
+
+// no Cyrillic leakage
+assert(
+  !/[Ѐ-ԯ]/.test(sanitizeSlovenianOutput("Kdo Je Preživел?")),
+  "QA-D: Cyrillic still stripped",
+);
+// no mannequin/mannequini leakage
+assert(
+  !sanitizeSlovenianOutput("med stotimi mannequini").includes("mannequini"),
+  "QA-D: 'mannequini' still replaced",
+);
+// no "Transcript razkrije"
+assert(
+  !sanitizeSlovenianOutput("Transcript razkrije vzorec").includes("Transcript"),
+  "QA-D: English 'Transcript' fully removed",
+);
+// no Serbian/Croatian "neobstojećih"
+assert(
+  !sanitizeSlovenianOutput("neobstojećih dejstev").includes("neobstojećih"),
+  "QA-D: 'neobstojećih' (ć) still corrected to 'neobstoječih'",
 );
 
 // ─── CONTENT-POLISH-QA-F: Slovenian nativeNote rules ────────────────────────
