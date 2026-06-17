@@ -551,6 +551,8 @@ const SL_WORD_FIXES = [
   ["transcript", "prepis"],
   ["stimule", "dražljaje"],
   ["podcástom", "podcastom"],
+  ["boredom", "dolgočasje"],
+  ["prebraneš", "prebereš"],
 ];
 
 const SL_SCAFFOLD_TRANSLATIONS = [
@@ -573,6 +575,18 @@ const SL_PHRASE_FIXES = [
     "v nasprotju z vsem"],
   [/odmore se ti po delu\.\s+to je problem\./gi,
     "Tvoji odmori po delu so problem."],
+  [new RegExp(`(?<![${SL_LETTER}])mehanizem je kontraintuitivna(?![${SL_LETTER}])`, "gi"),
+    "mehanizem je kontraintuitiven"],
+  [new RegExp(`(?<![${SL_LETTER}])z ščepcem(?![${SL_LETTER}])`, "gi"),
+    "s ščepcem"],
+  [/pil sem kavo ob 7h in se spraševala, zakaj sem ob 15h popolnoma mrtev\./gi,
+    "Pil sem kavo ob 7h in se spraševal, zakaj sem ob 15h popolnoma mrtev."],
+  [new RegExp(`(?<![${SL_LETTER}])popravi crashe(?![${SL_LETTER}])`, "gi"),
+    "popravi popoldanske padce"],
+  [new RegExp(`(?<![${SL_LETTER}])peer-reviewed raziskav(?![${SL_LETTER}])`, "gi"),
+    "recenziranih raziskav"],
+  [new RegExp(`(?<![${SL_LETTER}])problema je to(?![${SL_LETTER}])`, "gi"),
+    "Problem je to"],
 ];
 
 function fixSlovenianWord(text, target, replacement) {
@@ -920,6 +934,148 @@ assert(
   sanitizeSlovenianOutput("tvojot fokus, zapusteš aplikacijo, Zde je") ===
     "tvoj fokus, zapustiš aplikacijo, Zdaj je",
   "QA-E: QA-D word fixes (tvojot/zapusteš/zde) still active",
+);
+
+// ─── CONTENT-LANGUAGE-QA-F: minor polish for production sample Pmd6knanPKw ────
+// After QA-D + QA-E, Slovenian cards are broadly usable. Pmd6knanPKw passed
+// overall but surfaced a few minor residual issues: adjective/noun gender
+// agreement, s/z preposition before voiceless š, gender-mixed first-person copy,
+// English/slang leakage, and two malformed tokens. All exact-phrase / exact-token
+// fixes — no grammar engine. Croatian/Serbian output is out of scope.
+
+console.log("\nCONTENT-LANGUAGE-QA-F — residual production polish");
+
+// 1. Adjective gender agreement (mehanizem masculine)
+assert(
+  sanitizeSlovenianOutput("mehanizem je kontraintuitivna") === "mehanizem je kontraintuitiven",
+  "QA-F: 'mehanizem je kontraintuitivna' → 'mehanizem je kontraintuitiven'",
+);
+
+// 2. Preposition before voiceless š: "z ščepcem" → "s ščepcem"
+assert(
+  sanitizeSlovenianOutput("voda z ščepcem") === "voda s ščepcem",
+  "QA-F: 'voda z ščepcem' → 'voda s ščepcem'",
+);
+
+// 3. Gender-mixed first-person sentence → masculine-consistent
+assert(
+  sanitizeSlovenianOutput("Pil sem kavo ob 7h in se spraševala, zakaj sem ob 15h popolnoma mrtev.") ===
+    "Pil sem kavo ob 7h in se spraševal, zakaj sem ob 15h popolnoma mrtev.",
+  "QA-F: gender-mixed coffee sentence → consistent masculine ('spraševala' → 'spraševal')",
+);
+assert(
+  !sanitizeSlovenianOutput("Pil sem kavo ob 7h in se spraševala, zakaj sem ob 15h popolnoma mrtev.").includes("spraševala"),
+  "QA-F: feminine 'spraševala' no longer present in the mixed sentence",
+);
+
+// 4. English slang leakage → Slovenian
+assert(
+  sanitizeSlovenianOutput("popravi crashe danes") === "popravi popoldanske padce danes",
+  "QA-F: 'popravi crashe' → 'popravi popoldanske padce'",
+);
+
+// 5. English academic phrase → Slovenian
+assert(
+  sanitizeSlovenianOutput("na podlagi peer-reviewed raziskav") === "na podlagi recenziranih raziskav",
+  "QA-F: 'peer-reviewed raziskav' → 'recenziranih raziskav'",
+);
+
+// 6. Wrong noun case: "Problema je to" → "Problem je to"
+assert(
+  sanitizeSlovenianOutput("Problema je to") === "Problem je to",
+  "QA-F: 'Problema je to' → 'Problem je to'",
+);
+
+// 7. English word leakage: "boredom" → "dolgočasje"
+assert(
+  sanitizeSlovenianOutput("boredom ni ovira") === "dolgočasje ni ovira",
+  "QA-F: 'boredom ni ovira' → 'dolgočasje ni ovira'",
+);
+
+// 8. Malformed verb: "Prebraneš stran" → "Prebereš stran"
+assert(
+  sanitizeSlovenianOutput("Prebraneš stran") === "Prebereš stran",
+  "QA-F: 'Prebraneš stran' → 'Prebereš stran'",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-F — capitalization + boundary safety");
+
+// "Problema" only as standalone phrase "Problema je to" — valid genitive untouched
+assert(
+  sanitizeSlovenianOutput("Tega problema ne razumem") === "Tega problema ne razumem",
+  "QA-F: valid genitive 'problema' (not followed by 'je to') untouched",
+);
+// "z ščepcem" rule does not touch other valid "z" usage
+assert(
+  sanitizeSlovenianOutput("z mano gre") === "z mano gre",
+  "QA-F: unrelated 'z mano' not altered by 'z ščepcem' rule",
+);
+// "kontraintuitivna" alone (valid with feminine noun) untouched outside the phrase
+assert(
+  sanitizeSlovenianOutput("ta ideja je kontraintuitivna") === "ta ideja je kontraintuitivna",
+  "QA-F: valid feminine 'kontraintuitivna' (not after 'mehanizem je') untouched",
+);
+// Capitalization follows the match (sentence-initial)
+assert(
+  sanitizeSlovenianOutput("Boredom ni ovira") === "Dolgočasje ni ovira",
+  "QA-F: 'Boredom' (Title) → 'Dolgočasje' (Title preserved)",
+);
+
+console.log("\nCONTENT-LANGUAGE-QA-F — QA-D + QA-E protections still pass");
+
+// QA-D
+assert(
+  !sanitizeSlovenianOutput("Nobody talks about this — počneš narobe.").includes("Nobody talks about this"),
+  "QA-F: 'Nobody talks about this' still translated",
+);
+assert(
+  sanitizeSlovenianOutput("tvojot fokus") === "tvoj fokus",
+  "QA-F: QA-D 'tvojot' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("zapusteš aplikacijo") === "zapustiš aplikacijo",
+  "QA-F: QA-D 'zapusteš' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("Najlaži začetek") === "Najlažji začetek",
+  "QA-F: QA-D 'najlaži' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("Zde je") === "Zdaj je",
+  "QA-F: QA-D 'zde' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("tvoj mozeg") === "tvoj možgani",
+  "QA-F: QA-D 'mozeg' still fixed",
+);
+assert(
+  !sanitizeSlovenianOutput("Transcript razkrije vzorec").includes("Transcript"),
+  "QA-F: QA-D 'Transcript' still removed",
+);
+// QA-E
+assert(
+  !sanitizeSlovenianOutput("Learning is repeated recall, not repeated exposure.").includes("Learning is repeated recall"),
+  "QA-F: QA-E 'Learning is repeated recall...' still translated",
+);
+assert(
+  sanitizeSlovenianOutput("Odmor z telefonom") === "Odmor s telefonom",
+  "QA-F: QA-E 'z telefonom' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("tvojemu možganu škodijo") === "tvojim možganom škodijo",
+  "QA-F: QA-E 'tvojemu možganu' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("nove stimule") === "nove dražljaje",
+  "QA-F: QA-E 'nove stimule' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("poslušaj me na podcástom") === "poslušaj me na podcastom",
+  "QA-F: QA-E 'podcástom' still fixed",
+);
+assert(
+  sanitizeSlovenianOutput("contra vsemu kar veš") === "v nasprotju z vsem kar veš",
+  "QA-F: QA-E 'contra vsemu' still fixed",
 );
 
 // ─── CONTENT-POLISH-QA-F: Slovenian nativeNote rules ────────────────────────

@@ -34,6 +34,9 @@ const SL_WORD_FIXES: ReadonlyArray<readonly [string, string]> = [
   // QA-E:
   ["stimule", "dražljaje"],   // Serbian/Croatian/Latin loanword → "dražljaje"
   ["podcástom", "podcastom"], // foreign acute accent (á) → plain "podcastom"
+  // QA-F:
+  ["boredom", "dolgočasje"],  // English word leak → "dolgočasje"
+  ["prebraneš", "prebereš"],  // malformed verb → "prebereš" (you read)
 ];
 
 // Known awkward / wrong-case / leaked phrases → exact natural-Slovenian form.
@@ -60,6 +63,25 @@ const SL_PHRASE_FIXES: ReadonlyArray<readonly [RegExp, string]> = [
   // 8. Broken two-sentence fragment → single natural sentence
   [/odmore se ti po delu\.\s+to je problem\./gi,
     "Tvoji odmori po delu so problem."],
+  // QA-F:
+  // 1. Adjective gender agreement: "mehanizem" is masculine → "kontraintuitiven"
+  [new RegExp(`(?<![${SL_LETTER}])mehanizem je kontraintuitivna(?![${SL_LETTER}])`, "gi"),
+    "mehanizem je kontraintuitiven"],
+  // 2. Wrong preposition: "s" (not "z") before voiceless "š"
+  [new RegExp(`(?<![${SL_LETTER}])z ščepcem(?![${SL_LETTER}])`, "gi"),
+    "s ščepcem"],
+  // 3. Gender-mixed first-person sentence → masculine-consistent (spraševala → spraševal)
+  [/pil sem kavo ob 7h in se spraševala, zakaj sem ob 15h popolnoma mrtev\./gi,
+    "Pil sem kavo ob 7h in se spraševal, zakaj sem ob 15h popolnoma mrtev."],
+  // 4. English slang leakage → Slovenian
+  [new RegExp(`(?<![${SL_LETTER}])popravi crashe(?![${SL_LETTER}])`, "gi"),
+    "popravi popoldanske padce"],
+  // 5. English academic phrase → Slovenian
+  [new RegExp(`(?<![${SL_LETTER}])peer-reviewed raziskav(?![${SL_LETTER}])`, "gi"),
+    "recenziranih raziskav"],
+  // 6. Wrong noun case: nominative "Problem", not genitive "Problema"
+  [new RegExp(`(?<![${SL_LETTER}])problema je to(?![${SL_LETTER}])`, "gi"),
+    "Problem je to"],
 ];
 
 // English "scaffold" phrases that leak into Slovenian output. Translated to
